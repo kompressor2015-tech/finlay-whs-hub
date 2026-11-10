@@ -202,7 +202,7 @@ function StockPanel({ chem, stock, sites, allStock, office, officer, onChanged }
           {stock.map(s => (
             <StockRow key={s.id} s={s} site={sites.find(x => x.id === s.site_id)} office={office} officer={officer} onChanged={onChanged}
               siteLocations={Array.from(new Set(allStock.filter(x => x.site_id === s.site_id).map(x => x.location))).sort()}
-              taken={stock.filter(x => x.site_id === s.site_id && x.id !== s.id).map(x => x.location.toLowerCase())} />
+              taken={stock.filter(x => x.site_id === s.site_id && x.id !== s.id).map(x => `${x.location.toLowerCase()}|${x.container_size ?? ''}`)} />
           ))}
         </tbody>
       </table>
@@ -256,7 +256,7 @@ function StockRow({ s, site, office, officer, onChanged, siteLocations, taken }:
   async function save() {
     const loc = location.trim();
     if (!loc) return setError('Enter the storage location.');
-    if (taken.includes(loc.toLowerCase())) return setError(`This chemical already has a line for ${loc} at this site. Remove one of them instead.`);
+    if (taken.includes(`${loc.toLowerCase()}|${size ? Number(size) : ''}`)) return setError(`This chemical already has a line for ${loc} with that container size. Remove one of them, or give this line a different size.`);
     const res = await updateStock(s.id, { location: loc, container: container.trim(), container_size: size ? Number(size) : null, unit, max_count: max ? Number(max) : null });
     if (res.error) return setError(res.error);
     setEdit(false);
