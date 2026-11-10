@@ -12,7 +12,8 @@
 --                      draft pre-start and the Burpengary Yard site inspection (from Assignar).
 --   whs_checks       : every completed pre-start, Take 5 and site inspection. Each keeps a
 --                      copy of the questions it was done with, so editing a checklist later
---                      never changes old records.
+--                      never changes old records. Site inspections must be signed (the
+--                      signature is saved as an image in the private whs-photos store).
 --   whs_plant_flags  : safety flags on units. A failed pre-start raises one automatically,
 --                      with an action for the workshop. The fleet status is NOT changed.
 --
@@ -63,6 +64,7 @@ create table if not exists public.whs_checks (
   comments          text not null default '',
   photos            text[] not null default '{}',
   signed_off        boolean not null default false,
+  signature_path    text,
   result            text not null default 'ok' check (result in ('ok', 'fault', 'stop', 'issues')),
   issue_count       integer not null default 0,
   done_by           uuid not null default auth.uid(),
@@ -87,6 +89,9 @@ create table if not exists public.whs_plant_flags (
   cleared_by_name text not null default '',
   clear_note    text not null default ''
 );
+
+-- Added after the first version of this file: safe if the table already exists.
+alter table public.whs_checks add column if not exists signature_path text;
 
 create index if not exists whs_checks_kind_idx on public.whs_checks (kind, done_at desc);
 create index if not exists whs_checks_machine_idx on public.whs_checks (machine_id, done_at desc) where kind = 'prestart';
@@ -152,6 +157,11 @@ begin
     new.items := cl.items;
   elsif new.kind <> 'take5' then
     raise exception 'A pre-start or site inspection needs a checklist';
+  end if;
+
+  -- A site inspection is signed by the person who did it.
+  if new.kind = 'site' and (not new.signed_off or coalesce(btrim(new.signature_path), '') = '') then
+    raise exception 'A site inspection needs a signature';
   end if;
 
   for it in select * from jsonb_array_elements(new.items) loop

@@ -71,6 +71,8 @@ export interface Check {
   comments: string;
   photos: string[];
   signed_off: boolean;
+  /** Site inspections: the signature image in the photo store */
+  signature_path: string | null;
   result: CheckResult;
   issue_count: number;
   done_by: string;

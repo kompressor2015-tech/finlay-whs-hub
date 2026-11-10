@@ -10,6 +10,7 @@ import { finaliseAnswers, plainAnswers } from '../utils/draftAnswers.ts';
 import { ChecklistQuestions, type DraftAnswers } from './ChecklistQuestions.tsx';
 import { ErrorNote, Field, MachinePicker, PhotoPicker, PrimaryButton, SitePicker, inputClass, textareaClass } from './Form.tsx';
 import { Pill } from './Pill.tsx';
+import { SignaturePad } from './SignaturePad.tsx';
 
 const RESULT_BOX = {
   stop: { cls: 'bg-finlay text-white', title: 'Do not operate', note: 'A critical check failed. Tag the unit out and tell your supervisor. The unit is flagged until the workshop clears it.' },
@@ -266,6 +267,7 @@ export function SiteInspectionForm({ checklistId, user }: { checklistId: string;
   const [comments, setComments] = useState('');
   const [extra, setExtra] = useState<File[]>([]);
   const [signed, setSigned] = useState(false);
+  const [signature, setSignature] = useState<File | null>(null);
   const [missing, setMissing] = useState<string[]>([]);
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -280,7 +282,7 @@ export function SiteInspectionForm({ checklistId, user }: { checklistId: string;
     e.preventDefault();
     if (!checklist) return;
     setError(null);
-    const miss = [...missingAnswers(checklist.items, plain), ...(signed ? [] : ['Sign-off'])];
+    const miss = [...missingAnswers(checklist.items, plain), ...(signed ? [] : ['Sign-off tick box']), ...(signature ? [] : ['Signature'])];
     setMissing(miss);
     if (miss.length) return;
     setBusy(true);
@@ -289,6 +291,8 @@ export function SiteInspectionForm({ checklistId, user }: { checklistId: string;
       if (fin.error || !fin.answers) return setError(fin.error ?? 'Could not save the photos.');
       const more = await uploadPhotos(extra);
       if (more.error) return setError(more.error);
+      const sig = await uploadPhotos(signature ? [signature] : []);
+      if (sig.error || !sig.data?.[0]) return setError(sig.error ?? 'Could not save the signature.');
       const res = await createCheck({
         kind: 'site',
         checklist_id: checklist.id,
@@ -298,6 +302,7 @@ export function SiteInspectionForm({ checklistId, user }: { checklistId: string;
         comments: comments.trim(),
         photos: more.data ?? [],
         signed_off: true,
+        signature_path: sig.data[0],
       });
       if (res.error || !res.data) return setError(res.error ?? 'Could not save the inspection.');
       go({ name: 'check', id: res.data.id });
@@ -327,6 +332,7 @@ export function SiteInspectionForm({ checklistId, user }: { checklistId: string;
           <input type="checkbox" checked={signed} onChange={e => setSigned(e.target.checked)} className="w-[22px] h-[22px] flex-none accent-[#B9151C]" />
           I, {user.name}, confirm this inspection is complete and accurate.
         </label>
+        <SignaturePad label={`Signature: ${user.name}`} onChange={setSignature} />
         {issues > 0 && <p className="m-0 text-sm"><Pill tone="amber">{issues} issue{issues > 1 ? 's' : ''}</Pill> <span className="text-muted">You can turn each issue into an action after saving.</span></p>}
       </section>
       <MissingNote missing={missing} />

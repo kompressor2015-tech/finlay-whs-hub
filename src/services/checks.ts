@@ -10,7 +10,7 @@ type Result<T> = { data?: T; error?: string };
 
 function friendly(message: string | undefined): string {
   if (!message) return 'Something went wrong. Please try again.';
-  if (/^(Only|Add a note|A pre-start|That checklist)/.test(message)) return message;
+  if (/^(Only|Add a note|A pre-start|A site inspection|That checklist)/.test(message)) return message;
   if (/row-level security|permission denied/i.test(message)) return 'You do not have permission to do that.';
   if (/does not exist/i.test(message)) return 'The inspection tables are not set up yet. Run the step 3 SQL in Supabase.';
   return message;
@@ -39,7 +39,7 @@ export async function createChecklist(input: Pick<Checklist, 'kind' | 'name' | '
 
 export type NewCheck = Partial<Pick<Check,
   'checklist_id' | 'answers' | 'machine_id' | 'unit_no' | 'site_id' | 'site_name' | 'engine_hours' | 'task' | 'hazards' |
-  'controls' | 'crew' | 'safe_to_start' | 'comments' | 'photos' | 'signed_off'>> & { kind: Check['kind'] };
+  'controls' | 'crew' | 'safe_to_start' | 'comments' | 'photos' | 'signed_off' | 'signature_path'>> & { kind: Check['kind'] };
 
 export async function createCheck(input: NewCheck): Promise<Result<Check>> {
   const { data, error } = await supabase.from('whs_checks').insert(input).select('*').single();

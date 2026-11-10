@@ -26,7 +26,7 @@ export function CheckPage({ id, user }: { id: string; user: WhsUser }) {
     if (res.error || !res.data) return setError(res.error ?? 'Not found');
     const c = res.data;
     setCheck(c);
-    const paths = [...Object.values(c.answers).flatMap(a => a.photos ?? []), ...c.photos];
+    const paths = [...Object.values(c.answers).flatMap(a => a.photos ?? []), ...c.photos, ...(c.signature_path ? [c.signature_path] : [])];
     const [urls, acts, fl] = await Promise.all([photoLinks(paths), listActions({ type: 'inspection', id }), listFlags()]);
     setLinks(Object.fromEntries(paths.map((p, i) => [p, urls[i]]).filter(([, u]) => u)));
     setActions(acts.data ?? []);
@@ -121,7 +121,17 @@ export function CheckPage({ id, user }: { id: string; user: WhsUser }) {
           {photoRow(check.photos)}
         </section>
       )}
-      {check.kind === 'site' && <p className="m-0 text-sm text-muted">{check.signed_off ? `Signed off by ${check.done_by_name}.` : 'Not signed off.'}</p>}
+      {check.kind === 'site' && (
+        <section className="bg-white border border-line rounded-xl px-5 py-4">
+          <h2 className="mt-0 mb-2 text-[15px] font-semibold">Sign-off</h2>
+          <p className="m-0 text-sm">
+            {check.signed_off ? `Confirmed complete and accurate by ${check.done_by_name}, ${formatDate(check.done_at)} ${formatTime(check.done_at)}.` : 'Not signed off.'}
+          </p>
+          {check.signature_path && links[check.signature_path] && (
+            <img src={links[check.signature_path]} alt={`Signature of ${check.done_by_name}`} className="mt-3 h-24 max-w-full object-contain border border-line rounded-lg bg-white" />
+          )}
+        </section>
+      )}
 
       {check.kind !== 'take5' && (
         <ActionsPanel
