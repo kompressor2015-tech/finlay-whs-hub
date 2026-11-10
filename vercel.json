@@ -1,3 +1,4 @@
 {
+  "buildCommand": "npx tsc --noEmit && npx tsx --test src/utils/*.test.ts && npm run build",
   "rewrites": [{ "source": "/(.*)", "destination": "/index.html" }]
 }
