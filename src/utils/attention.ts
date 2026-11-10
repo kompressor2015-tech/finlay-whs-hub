@@ -17,6 +17,8 @@ export interface AttentionItem {
   /** YYYY-MM-DD the item is due, if it has one */
   due?: string;
   moduleId: string;
+  /** Where clicking it goes (defaults to the module) */
+  href?: string;
 }
 
 export type Tone = 'red' | 'amber' | 'blue' | 'green' | 'grey';

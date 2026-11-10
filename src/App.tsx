@@ -42,10 +42,11 @@ export default function App() {
     };
   }, []);
 
+  // Reload the home screen's numbers each time someone comes back to it.
   useEffect(() => {
-    if (!user) return;
-    loadHomeData().then(setRealData);
-  }, [user]);
+    if (!user || route.name !== 'home') return;
+    loadHomeData(user.id).then(setRealData);
+  }, [user, route.name]);
 
   const changeSample = useCallback((on: boolean) => {
     setSample(on);

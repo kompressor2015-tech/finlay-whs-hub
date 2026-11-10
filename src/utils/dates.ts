@@ -72,6 +72,30 @@ export function formatWhen(value: Date | string, now: Date = new Date()): string
   return formatDate(d);
 }
 
+/** Today's Brisbane date and time for form fields: { date: '2026-11-10', time: '10:52' }. */
+export function nowForInputs(now: Date = new Date()): { date: string; time: string } {
+  return { date: brisbaneDay(now), time: formatTime(now) };
+}
+
+/** A Brisbane date and time from form fields as an ISO timestamp (Brisbane is always UTC+10). */
+export function fromInputs(date: string, time: string): string {
+  return new Date(`${date}T${time || '00:00'}:00+10:00`).toISOString();
+}
+
+/** Adds whole days to a YYYY-MM-DD date. */
+export function addDays(day: string, days: number): string {
+  const d = new Date(`${day.slice(0, 10)}T00:00:00Z`);
+  d.setUTCDate(d.getUTCDate() + days);
+  return d.toISOString().slice(0, 10);
+}
+
+/** 2026-11-13 -> 13/11/2026 (for date-only values such as due dates). */
+export function formatDay(day: string | null | undefined): string {
+  if (!day) return '';
+  const [y, m, d] = day.slice(0, 10).split('-');
+  return y && m && d ? `${d}/${m}/${y}` : '';
+}
+
 /** Good morning / Good afternoon / Good evening, by the time in Brisbane. */
 export function greeting(now: Date = new Date()): string {
   const hour = Number(timeFmt.format(now).slice(0, 2));

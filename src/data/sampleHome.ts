@@ -18,7 +18,7 @@ export function sampleHomeData(now: Date = new Date()): HomeData {
     summary: [
       { id: 'incidents', label: 'Open incidents', value: 3, sub: '1 under investigation' },
       { id: 'actions', label: 'Overdue actions', value: 4, sub: 'of 9 open', alert: true },
-      { id: 'sds', label: 'SDS to review', value: 3, sub: 'over 5 years old' },
+      { id: 'hazards', label: 'Hazards to review', value: 2, sub: '5 open' },
       { id: 'plant', label: 'Plant flagged', value: 2, sub: 'failed pre-start' },
     ],
     attention: [

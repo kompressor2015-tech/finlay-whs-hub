@@ -6,9 +6,9 @@ import { accessLabel, canOpenModule } from '../utils/access.ts';
 import { pillFor, sortAttention } from '../utils/attention.ts';
 import { formatDate, formatLongDate, formatWhen, greeting } from '../utils/dates.ts';
 import { MODULES } from '../utils/modules.ts';
-import { hrefFor, type Route } from '../hooks/useRoute.ts';
+import { hrefFor, moduleOf, type Route } from '../hooks/useRoute.ts';
 import { Pill } from './Pill.tsx';
-import { ModulePage } from './ModulePage.tsx';
+import { Screen } from './Screen.tsx';
 import { SampleToggle } from './SampleToggle.tsx';
 
 interface Props {
@@ -23,15 +23,15 @@ interface Props {
 }
 
 const QUICK = [
-  { id: 'hazards', title: 'Report a hazard', sub: 'Something unsafe you have seen' },
-  { id: 'inspections', title: 'Pre-start check', sub: 'Daily plant check by unit number' },
-  { id: 'inspections', title: 'Take 5', sub: 'Quick check before a task' },
-  { id: 'inspections', title: 'Site inspection', sub: 'Yard or workshop checklist' },
+  { href: hrefFor({ name: 'hazard', id: 'new' }), title: 'Report a hazard', sub: 'Something unsafe you have seen' },
+  { href: hrefFor({ name: 'module', id: 'inspections' }), title: 'Pre-start check', sub: 'Daily plant check by unit number' },
+  { href: hrefFor({ name: 'module', id: 'inspections' }), title: 'Take 5', sub: 'Quick check before a task' },
+  { href: hrefFor({ name: 'module', id: 'inspections' }), title: 'Site inspection', sub: 'Yard or workshop checklist' },
 ];
 
 export function DesktopApp({ user, data, route, sample, onSampleChange, onSignOut, onPhoneLayout }: Props) {
   const navItems = MODULES.filter(m => canOpenModule(user.access, m.id));
-  const activeId = route.name === 'module' ? route.id : 'home';
+  const activeId = moduleOf(route);
   const navLink = (active: boolean) =>
     `no-underline flex items-center justify-between px-3 py-2.5 rounded-lg text-sm ${
       active ? 'bg-finlay-soft text-finlay-dark font-semibold' : 'text-ink hover:bg-white'
@@ -84,11 +84,7 @@ export function DesktopApp({ user, data, route, sample, onSampleChange, onSignOu
         </nav>
 
         <main className="flex-[999_1_640px] min-w-0 max-w-[1200px] px-7 pt-7 pb-12">
-          {route.name === 'module' ? (
-            <ModulePage id={route.id} access={user.access} />
-          ) : (
-            <DesktopHome data={data} />
-          )}
+          <Screen route={route} user={user} home={() => <DesktopHome data={data} />} />
         </main>
       </div>
     </div>
@@ -105,14 +101,14 @@ function DesktopHome({ data }: { data: HomeData }) {
           <h1 className="m-0 text-[26px] font-bold">{greeting(now)}</h1>
           <p className="mt-1.5 mb-0 text-muted text-[15px]">{formatLongDate(now)} · All Finlay sites</p>
         </div>
-        <a href={hrefFor({ name: 'module', id: 'incidents' })} className="no-underline bg-finlay hover:bg-finlay-dark text-white font-semibold text-[15px] px-4.5 py-3 rounded-lg">
+        <a href={hrefFor({ name: 'incident', id: 'new' })} className="no-underline bg-finlay hover:bg-finlay-dark text-white font-semibold text-[15px] px-4.5 py-3 rounded-lg">
           Report an incident
         </a>
       </div>
 
       <section aria-label="Quick actions" className="grid grid-cols-2 lg:grid-cols-4 gap-3">
         {QUICK.map(q => (
-          <a key={q.title} href={hrefFor({ name: 'module', id: q.id })} className="no-underline text-ink bg-white border border-line hover:border-[#CFCAC2] rounded-xl p-4 flex flex-col gap-1.5 min-h-[92px]">
+          <a key={q.title} href={q.href} className="no-underline text-ink bg-white border border-line hover:border-[#CFCAC2] rounded-xl p-4 flex flex-col gap-1.5 min-h-[92px]">
             <span className="font-semibold text-[15px]">{q.title}</span>
             <span className="text-muted text-[13px] leading-snug">{q.sub}</span>
           </a>
@@ -143,7 +139,7 @@ function DesktopHome({ data }: { data: HomeData }) {
             attention.map(a => {
               const pill = pillFor(a.urgency);
               return (
-                <a key={a.id} href={hrefFor({ name: 'module', id: a.moduleId })} className="no-underline text-ink flex items-center gap-3.5 px-4.5 py-3.5 border-b border-line-soft last:border-b-0 hover:bg-[#FAFAF9]">
+                <a key={a.id} href={a.href ?? hrefFor({ name: 'module', id: a.moduleId })} className="no-underline text-ink flex items-center gap-3.5 px-4.5 py-3.5 border-b border-line-soft last:border-b-0 hover:bg-[#FAFAF9]">
                   <Pill tone={pill.tone} className="min-w-[100px]">{pill.label}</Pill>
                   <span className="flex-1 min-w-0">
                     <span className="block text-sm font-medium">

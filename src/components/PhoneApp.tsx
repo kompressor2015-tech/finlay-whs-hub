@@ -6,7 +6,7 @@ import { accessLabel } from '../utils/access.ts';
 import { formatDate } from '../utils/dates.ts';
 import { hrefFor, type Route } from '../hooks/useRoute.ts';
 import { Pill } from './Pill.tsx';
-import { ModulePage } from './ModulePage.tsx';
+import { Screen } from './Screen.tsx';
 import { SampleToggle } from './SampleToggle.tsx';
 
 interface Props {
@@ -20,19 +20,19 @@ interface Props {
 }
 
 const QUICK = [
-  { id: 'inspections', title: 'Pre-start', sub: 'Plant check' },
-  { id: 'inspections', title: 'Take 5', sub: 'Before a task' },
-  { id: 'hazards', title: 'Hazard', sub: 'Report it' },
+  { href: hrefFor({ name: 'module', id: 'inspections' }), title: 'Pre-start', sub: 'Plant check' },
+  { href: hrefFor({ name: 'module', id: 'inspections' }), title: 'Take 5', sub: 'Before a task' },
+  { href: hrefFor({ name: 'hazard', id: 'new' }), title: 'Hazard', sub: 'Report it' },
 ];
 
 export function PhoneApp({ user, data, route, sample, onSampleChange, onSignOut, onFullVersion }: Props) {
   const [tab, setTab] = useState<'home' | 'me'>('home');
-  const onModule = route.name === 'module';
-  const activeTab = onModule ? (route.id === 'incidents' ? 'report' : route.id === 'inspections' ? 'checks' : '') : tab;
+  const onModule = route.name !== 'home';
+  const activeTab = route.name === 'incident' && route.id === 'new' ? 'report' : route.name === 'module' && route.id === 'inspections' ? 'checks' : onModule ? '' : tab;
 
   const tabs = [
     { key: 'home', label: 'Home', href: hrefFor({ name: 'home' }), onClick: () => setTab('home') },
-    { key: 'report', label: 'Report', href: hrefFor({ name: 'module', id: 'incidents' }) },
+    { key: 'report', label: 'Report', href: hrefFor({ name: 'incident', id: 'new' }) },
     { key: 'checks', label: 'Checks', href: hrefFor({ name: 'module', id: 'inspections' }) },
     { key: 'me', label: 'Me', href: hrefFor({ name: 'home' }), onClick: () => setTab('me') },
   ];
@@ -59,7 +59,7 @@ export function PhoneApp({ user, data, route, sample, onSampleChange, onSignOut,
 
       <main className="flex-1 px-4 py-4.5 pb-28 flex flex-col gap-4.5">
         {onModule ? (
-          <ModulePage id={route.id} access={user.access} />
+          <Screen route={route} user={user} home={() => <PhoneHome data={data} />} />
         ) : tab === 'me' ? (
           <MePanel user={user} sample={sample} onSampleChange={onSampleChange} onSignOut={onSignOut} onFullVersion={onFullVersion} />
         ) : (
@@ -89,7 +89,7 @@ export function PhoneApp({ user, data, route, sample, onSampleChange, onSignOut,
 function PhoneHome({ data }: { data: HomeData }) {
   return (
     <>
-      <a href={hrefFor({ name: 'module', id: 'incidents' })} className="no-underline bg-finlay text-white rounded-[14px] p-4.5 flex items-center gap-3.5">
+      <a href={hrefFor({ name: 'incident', id: 'new' })} className="no-underline bg-finlay text-white rounded-[14px] p-4.5 flex items-center gap-3.5">
         <AlertTriangle className="w-7 h-7 shrink-0" aria-hidden="true" />
         <span>
           <span className="block font-bold text-lg">Report an incident</span>
@@ -99,7 +99,7 @@ function PhoneHome({ data }: { data: HomeData }) {
 
       <div className="grid grid-cols-3 gap-2.5">
         {QUICK.map(q => (
-          <a key={q.title} href={hrefFor({ name: 'module', id: q.id })} className="no-underline text-ink bg-white border border-line rounded-xl min-h-[84px] p-2.5 flex flex-col justify-center items-center text-center gap-1">
+          <a key={q.title} href={q.href} className="no-underline text-ink bg-white border border-line rounded-xl min-h-[84px] p-2.5 flex flex-col justify-center items-center text-center gap-1">
             <span className="font-semibold text-sm">{q.title}</span>
             <span className="text-xs text-muted">{q.sub}</span>
           </a>
@@ -114,7 +114,8 @@ function PhoneHome({ data }: { data: HomeData }) {
         </span>
       </a>
 
-      <TaskList title="Today" items={data.phoneToday} empty="Nothing to do yet. Pre-starts arrive in step 3." />
+      <TaskList title="My actions" items={data.phoneToday} empty="Nothing given to you right now." />
+      <a href={hrefFor({ name: 'module', id: 'incidents' })} className="no-underline text-ink bg-white border border-line rounded-xl p-3.5 min-h-14 flex items-center text-[15px] font-semibold">My reports</a>
       <TaskList title="To read and sign" items={data.phoneToSign} empty="Nothing to sign. Documents arrive in step 5." />
     </>
   );

@@ -1,6 +1,6 @@
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
-import { brisbaneDay, daysUntil, formatDate, formatLongDate, formatWhen, greeting } from './dates.ts';
+import { addDays, brisbaneDay, daysUntil, formatDate, formatDay, formatLongDate, formatWhen, fromInputs, greeting, nowForInputs } from './dates.ts';
 
 // 10/11/2026 10:53 in Brisbane is 00:53 UTC.
 const now = new Date('2026-11-10T00:53:00Z');
@@ -25,6 +25,14 @@ test('formatWhen uses plain words for recent reports', () => {
   assert.equal(formatWhen('2026-11-09T06:40:00Z', now), 'Yesterday 16:40');
   assert.equal(formatWhen('2026-11-08T01:00:00Z', now), 'Sun 08/11');
   assert.equal(formatWhen('2026-10-01T01:00:00Z', now), '01/10/2026');
+});
+
+test('form fields use Brisbane time both ways', () => {
+  assert.deepEqual(nowForInputs(now), { date: '2026-11-10', time: '10:53' });
+  assert.equal(fromInputs('2026-11-10', '10:53'), '2026-11-10T00:53:00.000Z');
+  assert.equal(addDays('2026-11-28', 5), '2026-12-03');
+  assert.equal(formatDay('2026-11-13'), '13/11/2026');
+  assert.equal(formatDay(null), '');
 });
 
 test('greeting follows the Brisbane clock', () => {
