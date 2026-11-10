@@ -9,7 +9,7 @@ import { useCallback, useEffect, useState } from 'react';
  *   #/checks/new-prestart, #/checks/new-take5, #/checks/new-site-<checklist id>, #/checks/<id>
  *   #/checklists/<id>  edit a checklist
  *   #/chemicals/<id>   one chemical (or "new")
- *   #/chem/<tool>      chemical tools: find-sds, upload-sds, totals-<site>, stocktake-<site>, print-<site>
+ *   #/chem/<tool>      chemical tools: find-sds, upload-sds, totals-<site>, stocktake-<site>, print-<site>, sheet-<stocktake id>
  */
 export type Route =
   | { name: 'home' }

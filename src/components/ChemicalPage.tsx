@@ -8,6 +8,7 @@ import { formatDay, formatWhen } from '../utils/dates.ts';
 import {
   SECTIONS, amountOf, classLabel, classTone, formatAmount, issueDateFromName, sdsPill, sdsValidUntil, type Chemical, type DgClass, type PackingGroup, type Stock,
 } from '../utils/chemicals.ts';
+import { classToConfirm } from '../utils/stocktakes.ts';
 import { ErrorNote, Field, inputClass, textareaClass } from './Form.tsx';
 import { Pill } from './Pill.tsx';
 
@@ -17,7 +18,7 @@ const small = 'min-h-10 rounded-lg border border-[#D6D2CC] bg-white px-2.5 text-
 
 const BLANK: ChemicalInput = {
   name: '', manufacturer: '', dg_class: null, subsidiary: '', packing_group: null, un_number: null, aerosol: false, combustible: null, ghs_hazardous: null,
-  hazard_summary: '', h_statements: [], ppe: [], first_aid: '', spill: '', supplier_phone: '', section: SECTIONS[2], notes: '', active: true,
+  hazard_summary: '', h_statements: [], ppe: [], first_aid: '', spill: '', supplier_phone: '', section: SECTIONS[2], class_confirmed: true, notes: '', active: true,
 };
 
 /** One chemical: hazards, where it's kept at every site, and its SDS versions. */
@@ -50,6 +51,7 @@ export function ChemicalPage({ id, user }: { id: string; user: WhsUser }) {
             <Pill tone={classTone(chem)}>{classLabel(chem)}</Pill>
             <Pill tone={pill.tone}>{pill.label}</Pill>
             {!chem.active && <Pill tone="grey">No longer used</Pill>}
+            {classToConfirm(chem) && <Pill tone="amber">Class to confirm</Pill>}
           </div>
           <h1 className="mt-2 mb-0 text-2xl font-bold">{chem.name}</h1>
           <p className="mt-1.5 mb-0 text-muted text-[15px]">{chem.manufacturer}{chem.hazard_summary ? ` · ${chem.hazard_summary}` : ''}</p>
@@ -59,6 +61,12 @@ export function ChemicalPage({ id, user }: { id: string; user: WhsUser }) {
           {current && <button type="button" onClick={() => openSds(current.file_path)} className="min-h-11 px-4 rounded-lg border-0 bg-ink text-white text-sm font-semibold cursor-pointer">Open SDS</button>}
         </div>
       </div>
+
+      {classToConfirm(chem) && (
+        <p className="m-0 text-sm leading-relaxed text-[#4A3200] bg-[#FFF1D6] border border-[#F2D9A6] rounded-xl px-4 py-3">
+          <strong>Class to confirm.</strong> This product came from the Burpengary DG audit without its dangerous goods class. Until the class is entered from section 14 of the SDS, it isn't counted in the site totals against the manifest quantities.{office ? ' Use Edit to enter it.' : ''}
+        </p>
+      )}
 
       <div className="flex flex-wrap gap-5 items-start">
         <div className="flex-[2_1_560px] min-w-0 flex flex-col gap-5">
@@ -335,7 +343,7 @@ function ChemicalForm({ chem, onDone, onCancel }: { chem: Chemical | null; onDon
       </div>
       <div className={`${card} p-4.5 grid grid-cols-2 sm:grid-cols-4 gap-3.5`}>
         <Field label="DG class" htmlFor="c-class">
-          <select id="c-class" className={inputClass} value={f.dg_class ?? ''} onChange={e => set({ dg_class: (e.target.value || null) as DgClass | null })}>
+          <select id="c-class" className={inputClass} value={f.dg_class ?? ''} onChange={e => set({ dg_class: (e.target.value || null) as DgClass | null, class_confirmed: true })}>
             <option value="">Not a DG</option>{CLASSES.map(c => <option key={c} value={c}>Class {c}</option>)}
           </select>
         </Field>
@@ -347,7 +355,7 @@ function ChemicalForm({ chem, onDone, onCancel }: { chem: Chemical | null; onDon
         <Field label="UN number" htmlFor="c-un"><input id="c-un" inputMode="numeric" className={inputClass} value={f.un_number ?? ''} onChange={e => set({ un_number: e.target.value.replace(/\D/g, '').slice(0, 4) || null })} /></Field>
         <Field label="Subsidiary risk" htmlFor="c-sub" optional><input id="c-sub" className={inputClass} value={f.subsidiary} onChange={e => set({ subsidiary: e.target.value })} placeholder="e.g. 5.1" /></Field>
         <Field label="Combustible liquid" htmlFor="c-comb">
-          <select id="c-comb" className={inputClass} value={f.combustible ?? ''} onChange={e => set({ combustible: (e.target.value || null) as 'C1' | 'C2' | null })}>
+          <select id="c-comb" className={inputClass} value={f.combustible ?? ''} onChange={e => set({ combustible: (e.target.value || null) as 'C1' | 'C2' | null, class_confirmed: true })}>
             <option value="">No</option><option>C1</option><option>C2</option>
           </select>
         </Field>
@@ -361,6 +369,10 @@ function ChemicalForm({ chem, onDone, onCancel }: { chem: Chemical | null; onDon
         </label>
         <label className="flex gap-2.5 items-center text-sm min-h-11 cursor-pointer self-end">
           <input type="checkbox" checked={f.active} onChange={e => set({ active: e.target.checked })} className="w-5 h-5" /> Still used
+        </label>
+        <label className={`col-span-2 sm:col-span-4 flex gap-2.5 items-center text-sm min-h-11 cursor-pointer rounded-lg px-3 ${f.class_confirmed ? '' : 'bg-[#FFF1D6]'}`}>
+          <input type="checkbox" checked={f.class_confirmed} onChange={e => set({ class_confirmed: e.target.checked })} className="w-5 h-5" />
+          Class checked against the SDS (section 14), including "not a DG"
         </label>
       </div>
       <div className={`${card} p-4.5 grid grid-cols-1 gap-3.5`}>

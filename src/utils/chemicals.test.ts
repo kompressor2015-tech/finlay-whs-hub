@@ -10,7 +10,7 @@ const now = new Date('2026-11-10T00:53:00Z');
 function chem(id: string, over: Partial<Chemical> = {}): Chemical {
   return {
     id, name: id, manufacturer: '', dg_class: null, subsidiary: '', packing_group: null, un_number: null, aerosol: false, combustible: null,
-    ghs_hazardous: null, hazard_summary: '', h_statements: [], ppe: [], first_aid: '', spill: '', supplier_phone: '', section: '', notes: '', active: true,
+    ghs_hazardous: null, hazard_summary: '', h_statements: [], ppe: [], first_aid: '', spill: '', supplier_phone: '', section: '', class_confirmed: true, notes: '', active: true,
     ...over,
   };
 }

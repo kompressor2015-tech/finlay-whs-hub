@@ -2,15 +2,16 @@
 
 import { supabase } from './supabase.ts';
 import type { Chemical, Sds, Site, Stock } from '../utils/chemicals.ts';
+import type { Stocktake, StocktakeLine } from '../utils/stocktakes.ts';
 
 type Result<T> = { data?: T; error?: string };
 
 function friendly(message: string | undefined): string {
   if (!message) return 'Something went wrong. Please try again.';
-  if (/^(A count|That storage|You do not)/.test(message)) return message;
+  if (/^(A count|That storage|You do not|Authorising a stocktake|This stocktake)/.test(message)) return message;
   if (/duplicate key.*whs_chemicals_name/i.test(message)) return 'There is already a chemical with that name.';
   if (/row-level security|permission denied/i.test(message)) return 'You do not have permission to do that.';
-  if (/does not exist/i.test(message)) return 'The chemical tables are not set up yet. Run the step 4 SQL in Supabase.';
+  if (/does not exist|class_confirmed|whs_stocktakes/i.test(message)) return 'The chemical tables are not up to date. Run the latest step 4 SQL in Supabase.';
   return message;
 }
 
@@ -99,4 +100,42 @@ export async function openSds(path: string): Promise<void> {
   if (url && tab) tab.location.href = url;
   else if (url) window.location.href = url;
   else tab?.close();
+}
+
+/** How often a site's stocktake is due (WHS officer). */
+export async function updateSite(id: string, patch: Pick<Site, 'stocktake_days'>): Promise<Result<Site>> {
+  const { data, error } = await supabase.from('whs_sites').update(patch).eq('id', id).select('*').single();
+  return error ? { error: friendly(error.message) } : { data: data as Site };
+}
+
+// ---------------------------------------------------------------------------------
+// Finished stocktakes (the record of each count, authorised with a signature)
+// ---------------------------------------------------------------------------------
+
+function toStocktake(row: Record<string, unknown>): Stocktake {
+  return { ...(row as unknown as Stocktake), lines: Array.isArray(row.lines) ? (row.lines as StocktakeLine[]) : [] };
+}
+
+export async function listStocktakes(siteId?: string): Promise<Result<Stocktake[]>> {
+  let q = supabase.from('whs_stocktakes').select('*').order('done_at', { ascending: false }).limit(60);
+  if (siteId) q = q.eq('site_id', siteId);
+  const { data, error } = await q;
+  return error ? { error: friendly(error.message) } : { data: (data ?? []).map(toStocktake) };
+}
+
+export async function getStocktake(id: string): Promise<Result<Stocktake>> {
+  const { data, error } = await supabase.from('whs_stocktakes').select('*').eq('id', id).maybeSingle();
+  if (error) return { error: friendly(error.message) };
+  return data ? { data: toStocktake(data) } : { error: 'Stocktake not found.' };
+}
+
+export async function finishStocktake(siteId: string, lines: StocktakeLine[], notes: string): Promise<Result<Stocktake>> {
+  const { data, error } = await supabase.from('whs_stocktakes').insert({ site_id: siteId, lines, notes }).select('*').single();
+  return error ? { error: friendly(error.message) } : { data: toStocktake(data) };
+}
+
+/** Office roles: authorise with a drawn signature (already uploaded to the photo store). */
+export async function authoriseStocktake(id: string, signaturePath: string): Promise<Result<Stocktake>> {
+  const { data, error } = await supabase.from('whs_stocktakes').update({ authorised_signature: signaturePath }).eq('id', id).select('*').single();
+  return error ? { error: friendly(error.message) } : { data: toStocktake(data) };
 }

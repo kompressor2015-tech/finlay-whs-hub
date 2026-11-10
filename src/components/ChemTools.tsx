@@ -1,15 +1,20 @@
-import { useEffect, useMemo, useState, type FormEvent } from 'react';
+import { Fragment, useEffect, useMemo, useState, type FormEvent } from 'react';
 import type { WhsUser } from '../services/auth.ts';
-import { openSds, recordCount, uploadSds } from '../services/chemicals.ts';
+import { authoriseStocktake, finishStocktake, getStocktake, listStocktakes, openSds, recordCount, updateSite, uploadSds } from '../services/chemicals.ts';
+import { photoLinks, uploadPhotos } from '../services/records.ts';
 import { rememberSite, rememberedSite, useRegister } from '../hooks/useRegister.ts';
-import { hrefFor } from '../hooks/useRoute.ts';
+import { go, hrefFor } from '../hooks/useRoute.ts';
 import { isOfficeAccess } from '../utils/access.ts';
-import { formatDate, formatDay, formatWhen } from '../utils/dates.ts';
+import { brisbaneDay, formatDate, formatDay, formatWhen } from '../utils/dates.ts';
 import { looseMatch } from '../utils/search.ts';
 import {
-  SECTIONS, WARN_AT, amountOf, classLabel, classTone, formatAmount, issueDateFromName, matchSdsFile, sdsPill, siteTotals, stateRules, stocktakeDue,
+  SECTIONS, WARN_AT, amountOf, classLabel, classTone, formatAmount, issueDateFromName, matchSdsFile, sdsPill, siteTotals, stateRules, stocktakeDue, worstLine,
   type Stock,
 } from '../utils/chemicals.ts';
+import {
+  FREQUENCIES, buildSheet, classToConfirm, countedThisRound, frequencyLabel, roundProgress, sheetTotals, snapshotLines, stocktakeRef, type Stocktake,
+} from '../utils/stocktakes.ts';
+import { SignaturePad } from './SignaturePad.tsx';
 import { ErrorNote } from './Form.tsx';
 import { Pill } from './Pill.tsx';
 
@@ -17,9 +22,10 @@ import { Pill } from './Pill.tsx';
 export function ChemTool({ tool, user }: { tool: string; user: WhsUser }) {
   if (tool === 'find-sds') return <FindSds />;
   if (tool === 'upload-sds') return <BulkSdsUpload user={user} />;
-  const m = /^(totals|stocktake|print)-([a-z0-9_-]+)$/.exec(tool);
+  const m = /^(totals|stocktake|print|sheet)-([a-z0-9_-]+)$/.exec(tool);
   if (m?.[1] === 'totals') return <SiteTotals siteId={m[2]} />;
-  if (m?.[1] === 'stocktake') return <Stocktake siteId={m[2]} />;
+  if (m?.[1] === 'stocktake') return <Stocktake siteId={m[2]} user={user} />;
+  if (m?.[1] === 'sheet') return <StocktakeSheet id={m[2]} user={user} />;
   if (m?.[1] === 'print') return <PrintRegister siteId={m[2]} />;
   return <ErrorNote message="Page not found." />;
 }
@@ -43,6 +49,7 @@ function SiteTotals({ siteId }: { siteId: string }) {
   const placard = lines.filter(l => l.overPlacard);
   const unknown = lines.reduce((n, l) => n + l.unknown, 0);
   const take = stocktakeDue(site, stock);
+  const unconfirmed = reg.chemicals.filter(c => c.active && classToConfirm(c) && stock.some(s => s.chemical_id === c.id));
 
   return (
     <div className="flex flex-col gap-4.5 max-w-[1200px]">
@@ -69,6 +76,15 @@ function SiteTotals({ siteId }: { siteId: string }) {
           <div className="text-muted text-xs mt-0.5">{take.state === 'never' ? `${take.counted} of ${take.total} items counted so far` : take.due ? `Next stocktake due ${formatDay(take.due)}` : ''}</div>
         </div>
       </div>
+
+      {unconfirmed.length > 0 && (
+        <section className="bg-[#FFF1D6] border border-[#F2D9A6] rounded-xl px-4.5 py-3.5 text-sm leading-relaxed text-[#4A3200]">
+          <strong>{unconfirmed.length} product(s) are not in these totals yet: DG class to confirm.</strong> Enter each class from section 14 of its SDS. If any of them is a dangerous good, the totals below are too low until then.
+          <span className="flex flex-wrap gap-x-3 gap-y-1 mt-2">
+            {unconfirmed.map(c => <a key={c.id} href={hrefFor({ name: 'chemical', id: c.id })} className="text-[#4A3200] font-semibold">{c.name}</a>)}
+          </span>
+        </section>
+      )}
 
       <section className="bg-white border border-line rounded-xl overflow-x-auto">
         <table className="w-full border-collapse text-sm min-w-[900px]">
@@ -207,8 +223,9 @@ function FindSds() {
 // Stocktake (made for a phone)
 // ---------------------------------------------------------------------------------
 
-function Stocktake({ siteId }: { siteId: string }) {
+function Stocktake({ siteId, user }: { siteId: string; user: WhsUser }) {
   const reg = useRegister();
+  const officer = user.access === 'admin' || user.access === 'whs_officer';
   const site = reg.sites.find(s => s.id === siteId);
   const stock = reg.stock.filter(s => s.site_id === siteId);
   const locations = Array.from(new Set(stock.map(s => s.location))).sort();
@@ -217,18 +234,28 @@ function Stocktake({ siteId }: { siteId: string }) {
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [saved, setSaved] = useState<string | null>(null);
+  const [past, setPast] = useState<Stocktake[] | null>(null);
+  const [notes, setNotes] = useState('');
 
   useEffect(() => {
-    if (!loc && locations.length) {
-      const firstUncounted = locations.find(l => stock.some(s => s.location === l && !s.last_counted_at));
-      setLoc(firstUncounted ?? locations[0]);
+    listStocktakes(siteId).then(res => setPast(res.data ?? []));
+  }, [siteId]);
+
+  const lastDone = past?.[0]?.done_at ?? null;
+
+  useEffect(() => {
+    if (!loc && locations.length && past) {
+      const firstLeft = locations.find(l => stock.some(s => s.location === l && !countedThisRound(s, lastDone)));
+      setLoc(firstLeft ?? locations[0]);
     }
-  }, [locations, loc, stock]);
+  }, [locations, loc, stock, past, lastDone]);
 
   if (!site) return reg.loaded ? <ErrorNote message="Site not found." /> : <p className="text-sm text-muted">Loading…</p>;
   const here = stock.filter(s => s.location === loc);
-  const done = (s: Stock) => s.id in counts;
+  const done = (s: Stock) => s.id in counts || countedThisRound(s, lastDone);
   const take = stocktakeDue(site, stock);
+  const round = roundProgress(stock, lastDone);
+  const unsaved = Object.keys(counts).length;
 
   async function save() {
     setBusy(true);
@@ -241,11 +268,27 @@ function Stocktake({ siteId }: { siteId: string }) {
       }
     }
     setBusy(false);
-    setSaved(`Saved ${Object.keys(counts).length} count(s) for ${loc}.`);
+    setSaved(`Saved ${unsaved} count(s) for ${loc}.`);
     setCounts({});
     await reg.reload();
     const next = locations[locations.indexOf(loc) + 1];
     if (next) setLoc(next);
+  }
+
+  async function finish() {
+    if (round.left.length && !notes.trim()) return setError('Say why some items were not counted.');
+    setBusy(true);
+    setError(null);
+    const res = await finishStocktake(siteId, snapshotLines(stock, reg.chemById), notes.trim());
+    setBusy(false);
+    if (res.error || !res.data) return setError(res.error ?? 'Could not finish the stocktake.');
+    go({ name: 'chem', id: `sheet-${res.data.id}` });
+  }
+
+  async function changeFrequency(days: number) {
+    const res = await updateSite(siteId, { stocktake_days: days });
+    if (res.error) setError(res.error);
+    else reg.reload();
   }
 
   return (
@@ -253,13 +296,23 @@ function Stocktake({ siteId }: { siteId: string }) {
       {back}
       <div>
         <h1 className="m-0 text-xl font-bold">Stocktake: {site.name}</h1>
-        <p className="mt-1 mb-0 text-[13px] text-muted">{take.state === 'never' ? `First stocktake: ${take.counted} of ${take.total} items counted` : `Every ${site.stocktake_days} days · next due ${formatDay(take.due)}`}. Count the containers; the app works out the litres or kilograms.</p>
+        <p className="mt-1 mb-0 text-[13px] text-muted">
+          {frequencyLabel(site.stocktake_days)} · {take.state === 'never' ? 'first stocktake' : `next due ${formatDay(take.due)}`}. Count the containers; the app works out the litres or kilograms.
+        </p>
+        {officer && (
+          <label className="mt-2 flex items-center gap-2 text-[13px]">
+            <span className="text-muted">How often:</span>
+            <select value={site.stocktake_days} onChange={e => changeFrequency(Number(e.target.value))} className="min-h-10 rounded-lg border border-[#D6D2CC] bg-white px-2 text-[13px]">
+              {[...FREQUENCIES, ...(FREQUENCIES.some(f => f.days === site.stocktake_days) ? [] : [{ days: site.stocktake_days, label: frequencyLabel(site.stocktake_days) }])].map(f => <option key={f.days} value={f.days}>{f.label}</option>)}
+            </select>
+          </label>
+        )}
       </div>
       <label htmlFor="st-loc" className="text-sm font-medium">Location</label>
       <select id="st-loc" value={loc} onChange={e => { setLoc(e.target.value); setSaved(null); }} className="min-h-12 rounded-[10px] border border-[#D6D2CC] bg-white px-3 text-[15px]">
         {locations.map(l => {
-          const left = stock.filter(s => s.location === l && !s.last_counted_at).length;
-          return <option key={l} value={l}>{l}{left ? ` (${left} not counted)` : ''}</option>;
+          const left = stock.filter(s => s.location === l && !countedThisRound(s, lastDone)).length;
+          return <option key={l} value={l}>{l}{left ? ` (${left} to count)` : ' (done)'}</option>;
         })}
       </select>
       <p className="m-0 text-[13px] text-muted">{here.filter(done).length} of {here.length} counted here</p>
@@ -272,7 +325,7 @@ function Stocktake({ siteId }: { siteId: string }) {
             <span className="text-[15px] font-semibold">
               {c?.name}
               <span className="block text-xs font-normal text-muted">
-                {c ? classLabel(c) : ''} · {s.container || 'container not set'}{s.container_size ? ` (${s.container_size} ${s.unit})` : ''} · last {s.last_counted_at ? formatWhen(s.last_counted_at) : 'never'}
+                {c ? (classToConfirm(c) ? 'Class to confirm' : classLabel(c)) : ''} · {s.container || 'container not set'}{s.container_size ? ` (${s.container_size} ${s.unit})` : ''} · last {s.last_counted_at ? formatWhen(s.last_counted_at) : 'never'}
               </span>
             </span>
             <div className="flex items-center gap-2">
@@ -289,12 +342,222 @@ function Stocktake({ siteId }: { siteId: string }) {
           </div>
         );
       })}
-      <ErrorNote message={error} />
       {saved && <p role="status" className="m-0 text-sm text-[#1E6B3A] bg-[#E3F3E8] rounded-lg px-3 py-2.5">{saved}</p>}
-      <button type="button" disabled={busy || !Object.keys(counts).length} onClick={save} className="min-h-[52px] rounded-xl border-0 bg-finlay text-white text-base font-bold cursor-pointer disabled:opacity-50">
-        {busy ? 'Saving…' : `Save ${Object.keys(counts).length || ''} count(s)`}
+      <button type="button" disabled={busy || !unsaved} onClick={save} className="min-h-[52px] rounded-xl border-0 bg-finlay text-white text-base font-bold cursor-pointer disabled:opacity-50">
+        {busy ? 'Saving…' : `Save ${unsaved || ''} count(s)`}
       </button>
-      <p className="mt-0 mb-6 text-xs text-muted text-center">Every count is dated and kept, so the register shows when it was last checked.</p>
+
+      <section className="mt-3 bg-white border border-line rounded-xl p-3.5 flex flex-col gap-2.5">
+        <h2 className="m-0 text-[15px] font-semibold">Finish the stocktake</h2>
+        <p className="m-0 text-[13px] text-muted">
+          {round.counted} of {round.total} items counted this round{lastDone ? ` (since the last stocktake on ${formatDate(lastDone)})` : ''}. Finishing keeps a copy of every count as the stocktake sheet, ready to print and authorise.
+        </p>
+        {round.left.length > 0 && (
+          <p className="m-0 text-[13px] text-[#4A3200] bg-[#FFF1D6] rounded-lg px-3 py-2">
+            Still to count: {round.left.slice(0, 6).map(s => `${reg.chemById.get(s.chemical_id)?.name ?? ''} (${s.location})`).join(', ')}{round.left.length > 6 ? ` and ${round.left.length - 6} more` : ''}. Their last count will go on the sheet.
+          </p>
+        )}
+        <label htmlFor="st-notes" className="text-sm font-medium">Notes{round.left.length ? ' (why some were not counted)' : ' (optional)'}</label>
+        <textarea id="st-notes" rows={2} value={notes} onChange={e => setNotes(e.target.value)} className="rounded-[10px] border border-[#D6D2CC] bg-white px-3 py-2 text-[15px]" />
+        <ErrorNote message={error} />
+        <button type="button" disabled={busy || unsaved > 0 || !round.total} onClick={finish}
+          className="min-h-[52px] rounded-xl border-2 border-ink bg-white text-ink text-base font-bold cursor-pointer disabled:opacity-50">
+          {unsaved ? 'Save the counts above first' : round.left.length ? `Finish with ${round.left.length} not counted` : 'Finish stocktake'}
+        </button>
+      </section>
+
+      <section className="mb-6">
+        <h2 className="m-0 mb-2 text-[15px] font-semibold">Past stocktakes</h2>
+        <div className="bg-white border border-line rounded-xl overflow-hidden">
+          {past === null ? <p className="m-0 p-3.5 text-sm text-muted">Loading…</p> : past.length === 0 ? (
+            <p className="m-0 p-3.5 text-sm text-muted">None finished yet.</p>
+          ) : past.map(t => (
+            <a key={t.id} href={hrefFor({ name: 'chem', id: `sheet-${t.id}` })} className="no-underline text-ink flex items-center gap-3 px-3.5 py-3 min-h-14 border-b border-line-soft last:border-b-0">
+              <span className="flex-1 min-w-0">
+                <span className="block text-[15px] font-medium">{formatDate(t.done_at)}</span>
+                <span className="block text-[13px] text-muted">Counted by {t.counted_by_name || 'unknown'}{t.authorised_at ? ` · authorised by ${t.authorised_by_name}` : ''}</span>
+              </span>
+              {t.authorised_at ? <Pill tone="green">Authorised</Pill> : <Pill tone="amber">To authorise</Pill>}
+            </a>
+          ))}
+        </div>
+      </section>
+    </div>
+  );
+}
+
+// ---------------------------------------------------------------------------------
+// Stocktake sheet: printable, in the layout of the old Monthly Dangerous Goods Audit
+// ---------------------------------------------------------------------------------
+
+function StocktakeSheet({ id, user }: { id: string; user: WhsUser }) {
+  const reg = useRegister();
+  const office = isOfficeAccess(user.access);
+  const [st, setSt] = useState<Stocktake | null>(null);
+  const [error, setError] = useState<string | null>(null);
+  const [sigUrl, setSigUrl] = useState<string | null>(null);
+  const [signature, setSignature] = useState<File | null>(null);
+  const [busy, setBusy] = useState(false);
+
+  useEffect(() => {
+    getStocktake(id).then(res => (res.data ? setSt(res.data) : setError(res.error ?? 'Stocktake not found.')));
+  }, [id]);
+
+  useEffect(() => {
+    if (st?.authorised_signature) photoLinks([st.authorised_signature]).then(urls => setSigUrl(urls[0] ?? null));
+  }, [st?.authorised_signature]);
+
+  const sheet = useMemo(() => (st ? buildSheet(st.lines) : null), [st]);
+  const site = st ? reg.sites.find(s => s.id === st.site_id) : undefined;
+
+  if (error && !st) return <ErrorNote message={error} />;
+  if (!st || !sheet || !site) return <p className="text-sm text-muted">Loading…</p>;
+
+  const worst = worstLine(sheetTotals(site.state, st.lines));
+  const ref = stocktakeRef(site.code, st.done_at, brisbaneDay);
+  const cols = Array.from({ length: sheet.columns }, (_, i) => i);
+  const cell = 'border border-[#BDB7AE] px-1.5 py-1 align-top';
+  const num = `${cell} text-right tabular-nums`;
+  const fmt = (n: number | null | undefined) => (n === null || n === undefined ? '' : n.toLocaleString('en-AU', { maximumFractionDigits: 1 }));
+
+  async function authorise() {
+    if (!signature) return setError('Sign in the box first.');
+    setBusy(true);
+    setError(null);
+    const up = await uploadPhotos([signature]);
+    if (up.error || !up.data?.[0]) {
+      setBusy(false);
+      return setError(up.error ?? 'Could not save the signature.');
+    }
+    const res = await authoriseStocktake(id, up.data[0]);
+    setBusy(false);
+    if (res.error || !res.data) return setError(res.error ?? 'Could not authorise.');
+    setSt(res.data);
+  }
+
+  return (
+    <div className="flex flex-col gap-3 max-w-[1100px] print:max-w-none">
+      <div className="print:hidden flex gap-2 items-center flex-wrap">
+        <a href={hrefFor({ name: 'chem', id: `stocktake-${site.id}` })} className="text-sm no-underline text-muted">← Stocktake: {site.name}</a>
+        <button type="button" onClick={() => window.print()} className="ml-auto min-h-11 px-4 rounded-lg border-0 bg-finlay text-white text-sm font-semibold cursor-pointer">Print or save as PDF</button>
+      </div>
+
+      {!st.authorised_at && (
+        <section className="print:hidden bg-white border border-line rounded-xl p-4 flex flex-col gap-3">
+          <h2 className="m-0 text-[15px] font-semibold">Authorise this stocktake</h2>
+          {office ? (
+            <>
+              <p className="m-0 text-sm text-muted">Check the counts below, then sign. Once authorised the sheet can't be changed.</p>
+              <div className="max-w-[460px]"><SignaturePad label={`Signature: ${user.name}`} onChange={setSignature} /></div>
+              <ErrorNote message={error} />
+              <button type="button" disabled={busy || !signature} onClick={authorise} className="self-start min-h-12 px-5 rounded-lg border-0 bg-finlay text-white font-semibold cursor-pointer disabled:opacity-50">
+                {busy ? 'Saving…' : 'Authorise stocktake'}
+              </button>
+            </>
+          ) : (
+            <p className="m-0 text-sm text-muted">Waiting for a supervisor or the WHS officer to check and sign it.</p>
+          )}
+        </section>
+      )}
+
+      <article className="bg-white p-6 print:p-0 text-[12px] leading-snug">
+        <header className="flex justify-between items-start gap-4 border-b-2 border-finlay pb-3 mb-3">
+          <div>
+            <img src="/finlay-banner.jpg" alt="Finlay" className="h-10 w-auto block mb-2" />
+            <p className="m-0 font-semibold">Finlay Screening and Crushing Systems Pty Ltd</p>
+            <h1 className="m-0 text-lg font-bold">CHEMICAL &amp; DANGEROUS GOODS STOCKTAKE</h1>
+          </div>
+          <div className="text-right">
+            <p className="m-0">Ref: {ref}</p>
+            <p className="m-0"><strong>Area:</strong> {site.name} ({site.state})</p>
+            <p className="m-0"><strong>Date:</strong> {formatDate(st.done_at)}</p>
+            <p className="m-0"><strong>Conducted by:</strong> {st.counted_by_name}</p>
+            <p className="m-0">{frequencyLabel(site.stocktake_days)}</p>
+          </div>
+        </header>
+
+        <table className="w-full border-collapse">
+          <thead>
+            <tr className="text-left">
+              <th scope="col" className={`${cell} bg-[#FAFAF9]`}>Product</th>
+              {cols.map(i => (
+                <Fragment key={i}>
+                  <th scope="col" className={`${cell} bg-[#FAFAF9] text-right`}>Cont (L/kg)</th>
+                  <th scope="col" className={`${cell} bg-[#FAFAF9] text-right`}>Qty</th>
+                  <th scope="col" className={`${cell} bg-[#FAFAF9] text-right`}>Subtotal</th>
+                </Fragment>
+              ))}
+              <th scope="col" className={`${cell} bg-[#FAFAF9] text-right`}>Total</th>
+            </tr>
+          </thead>
+          <tbody>
+            {sheet.sections.map(sec => (
+              <Fragment key={sec.section}>
+                <tr><th scope="rowgroup" colSpan={sheet.columns * 3 + 2} className={`${cell} text-left uppercase bg-[#F1EEEA]`}>{sec.letter}. {sec.section}</th></tr>
+                {sec.rows.map(r => (
+                  <tr key={r.chemical_id} className="break-inside-avoid">
+                    <td className={cell}>
+                      <span className="font-semibold">{r.name}</span>
+                      <span className="block text-[10px] text-muted">{r.class_confirmed ? r.class_label : 'CLASS TO CONFIRM'} · {r.locations.join(', ')}</span>
+                    </td>
+                    {cols.map(i => {
+                      const g = r.groups[i];
+                      return (
+                        <Fragment key={i}>
+                          <td className={num}>{g ? (g.size === null ? 'size?' : fmt(g.size)) : ''}</td>
+                          <td className={num}>{g ? (g.qty === null ? 'not counted' : fmt(g.qty)) : ''}</td>
+                          <td className={num}>{fmt(g?.subtotal)}</td>
+                        </Fragment>
+                      );
+                    })}
+                    <td className={`${num} font-semibold`}>{fmt(r.total)}</td>
+                  </tr>
+                ))}
+                <tr>
+                  <td className={`${cell} text-right font-semibold`} colSpan={sheet.columns * 3 + 1}>{sec.letter}. total</td>
+                  <td className={`${num} font-semibold`}>{fmt(sec.total)}</td>
+                </tr>
+              </Fragment>
+            ))}
+            <tr className="bg-[#F1EEEA] font-bold">
+              <td className={cell}>Grand total</td>
+              {cols.map(i => (
+                <Fragment key={i}>
+                  <td className={cell} /><td className={cell} />
+                  <td className={num}>{fmt(sheet.columnTotals[i])}</td>
+                </Fragment>
+              ))}
+              <td className={num}>{fmt(sheet.grandTotal)}</td>
+            </tr>
+          </tbody>
+        </table>
+
+        <div className="mt-3 flex flex-col gap-1 break-inside-avoid">
+          <p className="m-0">
+            <strong>Against the manifest quantities ({stateRules(site.state).thresholds}):</strong>{' '}
+            {worst ? `highest is ${worst.label.split(',')[0]} at ${Math.round(worst.pctManifest * 100)}% (${worst.total.toLocaleString('en-AU')} of ${worst.manifest.toLocaleString('en-AU')} ${worst.unit}): ${worst.status === 'over' ? 'OVER, a manifest and notification are required' : worst.status === 'close' ? 'under, but close' : 'under'}.` : 'no dangerous goods or C1 liquids counted.'}
+          </p>
+          {sheet.toConfirm > 0 && <p className="m-0">{sheet.toConfirm} product(s) had the DG class still to confirm and are not in that check.</p>}
+          {sheet.incomplete > 0 && <p className="m-0">{sheet.incomplete} item(s) not counted or with no container size are not in the totals.</p>}
+          {st.notes && <p className="m-0"><strong>Notes:</strong> {st.notes}</p>}
+        </div>
+
+        <div className="mt-5 grid grid-cols-2 gap-8 break-inside-avoid">
+          <div>
+            <p className="m-0"><strong>Count done by:</strong> {st.counted_by_name}</p>
+            <p className="m-0 text-muted">{formatDate(st.done_at)}</p>
+          </div>
+          <div>
+            <p className="m-0"><strong>Authorised:</strong> {st.authorised_at ? `${st.authorised_by_name}, ${formatDate(st.authorised_at)}` : ''}</p>
+            {sigUrl ? <img src={sigUrl} alt={`Signature of ${st.authorised_by_name}`} className="mt-1 h-16 max-w-full object-contain" /> : <div className="mt-6 border-b border-ink w-64" aria-hidden="true" />}
+          </div>
+        </div>
+
+        <footer className="mt-4 pt-2 border-t border-[#BDB7AE] text-[11px] text-muted flex justify-between">
+          <span>Finlay Screening &amp; Crushing · {site.name}</span>
+          <span>{ref} · {sheet.items} item(s) counted</span>
+        </footer>
+      </article>
     </div>
   );
 }
@@ -357,7 +620,7 @@ function PrintRegister({ siteId }: { siteId: string }) {
                           <td className={cell}>{n}</td>
                           <td className={cell}>{c.name}</td>
                           <td className={cell}>{c.manufacturer}</td>
-                          <td className={cell}>{classLabel(c)}{c.hazard_summary && !c.dg_class ? ` · ${c.hazard_summary}` : ''}</td>
+                          <td className={cell}>{classToConfirm(c) ? <strong>CLASS TO CONFIRM FROM SDS</strong> : classLabel(c)}{c.hazard_summary && !c.dg_class ? ` · ${c.hazard_summary}` : ''}</td>
                           <td className={cell}>{c.un_number ?? ''}</td>
                           <td className={cell}>{s.location}</td>
                           <td className={cell}>{formatAmount(amountOf(s), s.unit)}</td>

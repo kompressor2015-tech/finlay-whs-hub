@@ -13,8 +13,9 @@ import {
 import { ErrorNote } from './Form.tsx';
 import { Pill } from './Pill.tsx';
 import type { Tone } from '../utils/attention.ts';
+import { classToConfirm } from '../utils/stocktakes.ts';
 
-type Filter = 'all' | 'dg' | 'sds' | 'uncounted';
+type Filter = 'all' | 'dg' | 'sds' | 'uncounted' | 'confirm';
 const th = 'px-2 py-2.5 font-semibold border-b border-[#EEEBE6] text-left';
 const td = 'px-2 py-2.5 border-b border-line-soft align-top';
 
@@ -40,6 +41,7 @@ export function ChemicalsPage({ user }: { user: WhsUser }) {
   const shown = chemicals.filter(c => {
     if (filter === 'dg' && !c.dg_class && c.combustible !== 'C1') return false;
     if (filter === 'sds' && sdsState(reg.currentSdsOf(c.id)) === 'ok') return false;
+    if (filter === 'confirm' && !classToConfirm(c)) return false;
     if (filter === 'uncounted' && !siteStock.some(s => s.chemical_id === c.id && amountOf(s) === null)) return false;
     const locs = siteStock.filter(s => s.chemical_id === c.id).map(s => s.location);
     return looseMatch(q, [c.name, c.manufacturer, c.un_number, c.dg_class ? `class ${c.dg_class}` : '', ...locs]);
@@ -48,6 +50,7 @@ export function ChemicalsPage({ user }: { user: WhsUser }) {
   const missing = chemicals.filter(c => sdsState(reg.currentSdsOf(c.id)) === 'missing').length;
   const old = chemicals.filter(c => sdsState(reg.currentSdsOf(c.id)) === 'expired').length;
   const soon = chemicals.filter(c => sdsState(reg.currentSdsOf(c.id)) === 'due_soon').length;
+  const toConfirm = chemicals.filter(classToConfirm).length;
   const worst = site ? worstLine(siteTotals(site.state, siteStock, reg.chemById)) : null;
   const take = site ? stocktakeDue(site, siteStock) : null;
 
@@ -61,7 +64,7 @@ export function ChemicalsPage({ user }: { user: WhsUser }) {
     for (const c of shown) {
       const sds = reg.currentSdsOf(c.id);
       for (const s of siteStock.filter(x => x.chemical_id === c.id)) {
-        rows.push([reg.sites.find(x => x.id === s.site_id)?.name ?? s.site_id, c.section, c.name, c.manufacturer, classLabel(c), c.un_number ?? '', s.location, s.container, amountOf(s), s.unit, s.max_count, sds ? formatDay(sds.issue_date) : 'No SDS']);
+        rows.push([reg.sites.find(x => x.id === s.site_id)?.name ?? s.site_id, c.section, c.name, c.manufacturer, classToConfirm(c) ? 'Class to confirm' : classLabel(c), c.un_number ?? '', s.location, s.container, amountOf(s), s.unit, s.max_count, sds ? formatDay(sds.issue_date) : 'No SDS']);
       }
     }
     downloadCsv(`chemical-register-${site?.code ?? 'all'}.csv`, csvFor(['Site', 'Section', 'Product', 'Manufacturer', 'DG class / hazard', 'UN', 'Location', 'Container', 'Quantity', 'Unit', 'Max containers', 'SDS issued'], rows));
@@ -134,7 +137,7 @@ export function ChemicalsPage({ user }: { user: WhsUser }) {
         <label htmlFor="chem-q" className="sr-only">Search</label>
         <input id="chem-q" type="search" value={q} onChange={e => setQ(e.target.value)} placeholder="Search product, manufacturer, UN number, class or location"
           className="flex-[1_1_320px] max-w-[460px] min-h-11 rounded-lg border border-[#D6D2CC] bg-white px-3 text-sm" />
-        {([['all', 'All'], ['dg', 'Dangerous goods'], ['sds', 'SDS problems'], ['uncounted', 'Not counted']] as [Filter, string][]).map(([id, label]) => (
+        {([['all', 'All'], ['dg', 'Dangerous goods'], ['sds', 'SDS problems'], ['uncounted', 'Not counted'], ...(toConfirm ? [['confirm', `Class to confirm (${toConfirm})`]] : [])] as [Filter, string][]).map(([id, label]) => (
           <button key={id} type="button" aria-pressed={filter === id} onClick={() => setFilter(id)}
             className={`min-h-10 px-3.5 rounded-full text-[13px] font-semibold cursor-pointer border ${filter === id ? 'bg-ink text-white border-ink' : 'bg-white text-ink border-[#D6D2CC]'}`}>
             {label}
@@ -185,7 +188,9 @@ function Row({ c, stock, showSite, sites, sds: p }: { c: Chemical; stock: Stock[
         <a href={hrefFor({ name: 'chemical', id: c.id })} className="font-semibold no-underline">{c.name}</a>
         <span className="block text-xs text-muted">{c.manufacturer}</span>
       </td>
-      <td className={td}><Pill tone={classTone(c)}>{classLabel(c)}</Pill></td>
+      <td className={td}>
+        {classToConfirm(c) ? <Pill tone="amber">Class to confirm</Pill> : <Pill tone={classTone(c)}>{classLabel(c)}</Pill>}
+      </td>
       <td className={`${td} font-mono text-[13px]`}>{c.un_number ?? '—'}</td>
       <td className={`${td} text-muted`}>
         {stock.map(s => <span key={s.id} className="block">{showSite ? `${sites.find(x => x.id === s.site_id)?.name ?? s.site_id}: ` : ''}{s.location}</span>)}

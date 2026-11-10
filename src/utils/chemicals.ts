@@ -44,6 +44,8 @@ export interface Chemical {
   spill: string;
   supplier_phone: string;
   section: string;
+  /** False for products added without their DG class checked against the SDS yet */
+  class_confirmed: boolean;
   notes: string;
   active: boolean;
 }

@@ -16,11 +16,14 @@
 --                       the most you mean to keep, and when it was last counted.
 --   whs_stock_counts  : every stocktake count, dated, so the register shows it was checked.
 --   whs_sds           : SDS files and their issue dates (old versions are kept).
+--   whs_stocktakes    : each completed stocktake: a copy of every count, who counted, and who
+--                       authorised it with a signature (the same record as the monthly DG audit sheet).
 --   whs-sds           : a private store for the SDS PDFs.
 --
 -- STARTING DATA: the 77 products from the Somerton and Tomago registers (2026), with their
--- storage locations. Burpengary starts with all 77; add the rest there. Quantities start
--- empty until the first stocktake.
+-- storage locations. Burpengary starts with all 77, plus 24 products and waste items from its
+-- monthly DG audit (18/12/2025) marked "class to confirm". Quantities start empty until the
+-- first stocktake.
 --
 -- WHO CAN DO WHAT
 --   Everyone with WHS access can read the register and open SDS files, and can record
@@ -60,11 +63,13 @@ create table if not exists public.whs_chemicals (
   spill          text not null default '',
   supplier_phone text not null default '',
   section        text not null default 'Chemicals, adhesives & reagents',
+  class_confirmed boolean not null default true,
   notes          text not null default '',
   active         boolean not null default true,
   created_at     timestamptz not null default now(),
   updated_at     timestamptz not null default now()
 );
+alter table public.whs_chemicals add column if not exists class_confirmed boolean not null default true;
 create unique index if not exists whs_chemicals_name_idx on public.whs_chemicals (lower(name));
 
 create table if not exists public.whs_chem_stock (
@@ -105,6 +110,21 @@ create table if not exists public.whs_sds (
 );
 create index if not exists whs_sds_chem_idx on public.whs_sds (chemical_id, issue_date desc);
 
+create table if not exists public.whs_stocktakes (
+  id                  uuid primary key default gen_random_uuid(),
+  site_id             text not null references public.whs_sites (id),
+  done_at             timestamptz not null default now(),
+  counted_by          uuid default auth.uid(),
+  counted_by_name     text not null default '',
+  lines               jsonb not null default '[]'::jsonb check (jsonb_typeof(lines) = 'array'),
+  notes               text not null default '',
+  authorised_at       timestamptz,
+  authorised_by       uuid,
+  authorised_by_name  text not null default '',
+  authorised_signature text
+);
+create index if not exists whs_stocktakes_site_idx on public.whs_stocktakes (site_id, done_at desc);
+
 -- 2. Stamps ----------------------------------------------------------------------
 
 create or replace function public.whs_chemical_touch()
@@ -132,6 +152,43 @@ $$;
 drop trigger if exists whs_sds_stamps on public.whs_sds;
 create trigger whs_sds_stamps before insert on public.whs_sds
   for each row execute function public.whs_sds_stamps();
+
+-- A finished stocktake: who counted is stamped; authorising (office roles, with a signature)
+-- is stamped too, and after that the record cannot be changed.
+create or replace function public.whs_stocktake_stamps()
+returns trigger language plpgsql security definer set search_path = public
+as $$
+begin
+  if tg_op = 'INSERT' then
+    new.done_at := now();
+    new.counted_by := coalesce(auth.uid(), new.counted_by);
+    new.counted_by_name := public.whs_actor_name();
+    new.authorised_at := null;
+    new.authorised_by := null;
+    new.authorised_by_name := '';
+    new.authorised_signature := null;
+    return new;
+  end if;
+  if old.authorised_at is not null then
+    raise exception 'This stocktake has already been authorised and cannot be changed';
+  end if;
+  new.site_id := old.site_id;
+  new.done_at := old.done_at;
+  new.counted_by := old.counted_by;
+  new.counted_by_name := old.counted_by_name;
+  new.lines := old.lines;
+  if coalesce(btrim(new.authorised_signature), '') = '' then
+    raise exception 'Authorising a stocktake needs a signature';
+  end if;
+  new.authorised_at := now();
+  new.authorised_by := auth.uid();
+  new.authorised_by_name := public.whs_actor_name();
+  return new;
+end;
+$$;
+drop trigger if exists whs_stocktake_stamps on public.whs_stocktakes;
+create trigger whs_stocktake_stamps before insert or update on public.whs_stocktakes
+  for each row execute function public.whs_stocktake_stamps();
 
 -- Stocktake: anyone with WHS access records a count; the database stamps who and when
 -- and keeps every count.
@@ -167,6 +224,7 @@ alter table public.whs_chemicals    enable row level security;
 alter table public.whs_chem_stock   enable row level security;
 alter table public.whs_stock_counts enable row level security;
 alter table public.whs_sds          enable row level security;
+alter table public.whs_stocktakes   enable row level security;
 
 drop policy if exists "whs read sites" on public.whs_sites;
 drop policy if exists "whs officer sites" on public.whs_sites;
@@ -205,7 +263,17 @@ create policy "whs read sds" on public.whs_sds for select to authenticated using
 create policy "whs office add sds" on public.whs_sds for insert to authenticated with check (public.whs_is_office());
 create policy "whs officer delete sds" on public.whs_sds for delete to authenticated using (public.whs_is_officer());
 
-grant select, insert, update, delete on public.whs_sites, public.whs_chemicals, public.whs_chem_stock, public.whs_sds to authenticated;
+drop policy if exists "whs read stocktakes" on public.whs_stocktakes;
+drop policy if exists "whs finish stocktakes" on public.whs_stocktakes;
+drop policy if exists "whs office authorise stocktakes" on public.whs_stocktakes;
+drop policy if exists "whs officer delete stocktakes" on public.whs_stocktakes;
+create policy "whs read stocktakes" on public.whs_stocktakes for select to authenticated using (public.whs_is_member());
+create policy "whs finish stocktakes" on public.whs_stocktakes for insert to authenticated with check (public.whs_is_member());
+create policy "whs office authorise stocktakes" on public.whs_stocktakes for update to authenticated
+  using (public.whs_is_office()) with check (public.whs_is_office());
+create policy "whs officer delete stocktakes" on public.whs_stocktakes for delete to authenticated using (public.whs_is_officer());
+
+grant select, insert, update, delete on public.whs_sites, public.whs_chemicals, public.whs_chem_stock, public.whs_sds, public.whs_stocktakes to authenticated;
 grant select on public.whs_stock_counts to authenticated;
 
 -- 4. Private store for SDS PDFs ----------------------------------------------------
@@ -521,8 +589,69 @@ select c.id, s.site, s.location, s.unit from (values
 join public.whs_chemicals c on lower(c.name) = lower(s.name)
 where not exists (select 1 from public.whs_chem_stock k where k.chemical_id = c.id and k.site_id = s.site and k.location = s.location);
 
+-- Burpengary products from the Monthly Dangerous Goods Audit (18/12/2025) not on the other registers.
+-- Class to confirm: the register and site totals flag them until the class is entered from the SDS.
+insert into public.whs_chemicals (name, section, class_confirmed, notes)
+select v.name, v.section, false, 'Added from the Burpengary monthly DG audit (18/12/2025). Enter the DG class from the SDS.' from (values
+  ('Blackjack Cleaner', 'Paints, coatings & bonding'),
+  ('Dulux Enamel', 'Paints, coatings & bonding'),
+  ('Durebild STE Part A', 'Paints, coatings & bonding'),
+  ('Durebild STE Part B', 'Paints, coatings & bonding'),
+  ('Eraze Bi Aquatic', 'Paints, coatings & bonding'),
+  ('House Paint', 'Paints, coatings & bonding'),
+  ('Line Marker Paint', 'Paints, coatings & bonding'),
+  ('Metalshield RAL Paint', 'Paints, coatings & bonding'),
+  ('Paint Remover', 'Paints, coatings & bonding'),
+  ('Polyurethane', 'Paints, coatings & bonding'),
+  ('Primer 201', 'Paints, coatings & bonding'),
+  ('Isopropyl Alcohol (Solvent)', 'Paints, coatings & bonding'),
+  ('Rustillo', 'Paints, coatings & bonding'),
+  ('Spray Paint (general)', 'Gases, fuels & aerosols'),
+  ('Thinners', 'Paints, coatings & bonding'),
+  ('Waste Paint', 'Paints, coatings & bonding'),
+  ('Pool Chlorine', 'Chemicals, adhesives & reagents'),
+  ('Coolant', 'Chemicals, adhesives & reagents'),
+  ('5W30 Engine Oil', 'Oils, hydraulic fluids & greases'),
+  ('Intec 320', 'Oils, hydraulic fluids & greases'),
+  ('150 Gear Oil', 'Oils, hydraulic fluids & greases'),
+  ('Degreaser', 'Chemicals, adhesives & reagents'),
+  ('Weed Killer', 'Chemicals, adhesives & reagents'),
+  ('Waste Oil', 'Oils, hydraulic fluids & greases')
+) as v(name, section)
+where not exists (select 1 from public.whs_chemicals c where lower(c.name) = lower(v.name));
+
+insert into public.whs_chem_stock (chemical_id, site_id, location, unit)
+select c.id, 'burpengary', v.location, 'L' from (values
+  ('Blackjack Cleaner', 'Paint Store'),
+  ('Dulux Enamel', 'Paint Store'),
+  ('Durebild STE Part A', 'Paint Store'),
+  ('Durebild STE Part B', 'Paint Store'),
+  ('Eraze Bi Aquatic', 'Paint Store'),
+  ('House Paint', 'Paint Store'),
+  ('Line Marker Paint', 'Paint Store'),
+  ('Metalshield RAL Paint', 'Paint Store'),
+  ('Paint Remover', 'Paint Store'),
+  ('Polyurethane', 'Paint Store'),
+  ('Primer 201', 'Paint Store'),
+  ('Isopropyl Alcohol (Solvent)', 'Paint Store'),
+  ('Rustillo', 'Paint Store'),
+  ('Spray Paint (general)', 'Paint Store'),
+  ('Thinners', 'Paint Store'),
+  ('Waste Paint', 'Paint Store'),
+  ('Pool Chlorine', 'Paint Store'),
+  ('Coolant', 'Oil Store'),
+  ('5W30 Engine Oil', 'Oil Store'),
+  ('Intec 320', 'Oil Store'),
+  ('150 Gear Oil', 'Oil Store'),
+  ('Degreaser', 'Oil Store'),
+  ('Weed Killer', 'Oil Store'),
+  ('Waste Oil', 'Oil Store')
+) as v(name, location)
+join public.whs_chemicals c on lower(c.name) = lower(v.name)
+where not exists (select 1 from public.whs_chem_stock k where k.chemical_id = c.id and k.site_id = 'burpengary' and k.location = v.location);
+
 commit;
 
 -- CHECK IT WORKED (optional):
 --   select s.name, count(*) as stored_items from public.whs_chem_stock k join public.whs_sites s on s.id = k.site_id group by s.name;
---   -- expect Burpengary Yard 77, Somerton Workshop 47, Tomago Site 75
+--   -- expect Burpengary Yard 101, Somerton Workshop 47, Tomago Site 75

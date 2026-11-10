@@ -1,9 +1,14 @@
 /** Adds the chemical register's warnings to the home screen. */
 
 import type { HomeData } from './homeData.ts';
+import { brisbaneDay } from './dates.ts';
+import { classToConfirm, type Stocktake } from './stocktakes.ts';
 import { currentSds, sdsState, siteTotals, stocktakeDue, type Chemical, type Sds, type Site, type Stock } from './chemicals.ts';
 
-export function withChemicals(home: HomeData, sites: Site[], chemicals: Chemical[], stock: Stock[], sds: Sds[], now: Date = new Date()): HomeData {
+export function withChemicals(
+  home: HomeData, sites: Site[], chemicals: Chemical[], stock: Stock[], sds: Sds[], now: Date = new Date(),
+  stocktakes: Pick<Stocktake, 'id' | 'site_id' | 'done_at' | 'authorised_at'>[] = [],
+): HomeData {
   const attention = [...home.attention];
   const byChem = new Map(chemicals.map(c => [c.id, c]));
   const active = chemicals.filter(c => c.active);
@@ -29,6 +34,13 @@ export function withChemicals(home: HomeData, sites: Site[], chemicals: Chemical
       attention.push({ id: `k-${site.id}`, urgency: take.state === 'overdue' ? 'overdue' : 'due_soon', title: `Chemical stocktake: ${site.name}`, detail: 'Every 3 months', due: take.due ?? undefined, moduleId: 'chemicals', href: `#/chem/stocktake-${site.id}` });
     } else if (take.state === 'never' && take.total) {
       attention.push({ id: `k-${site.id}`, urgency: 'review', title: `First chemical stocktake: ${site.name}`, detail: `${take.counted} of ${take.total} items counted`, moduleId: 'chemicals', href: `#/chem/stocktake-${site.id}` });
+    }
+    const unconfirmed = active.filter(c => classToConfirm(c) && here.some(s => s.chemical_id === c.id)).length;
+    if (unconfirmed) {
+      attention.push({ id: `c-${site.id}`, urgency: 'review', title: `${site.name}: ${unconfirmed} product(s) with the DG class to confirm`, detail: 'Not in the manifest totals until the class is entered from the SDS', moduleId: 'chemicals', href: '#/m/chemicals' });
+    }
+    for (const t of stocktakes.filter(x => x.site_id === site.id && !x.authorised_at)) {
+      attention.push({ id: `a-${t.id}`, urgency: 'not_signed', title: `Chemical stocktake to authorise: ${site.name}`, detail: 'Check the sheet and sign it off', due: brisbaneDay(t.done_at), moduleId: 'chemicals', href: `#/chem/sheet-${t.id}` });
     }
   }
   if (expired) attention.push({ id: 'sds-old', urgency: 'review', title: `${expired} SDS over 5 years old`, detail: 'Get the current SDS from the supplier', moduleId: 'chemicals', href: '#/m/chemicals' });
