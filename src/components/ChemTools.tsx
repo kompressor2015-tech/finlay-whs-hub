@@ -22,12 +22,45 @@ import { Pill } from './Pill.tsx';
 export function ChemTool({ tool, user }: { tool: string; user: WhsUser }) {
   if (tool === 'find-sds') return <FindSds />;
   if (tool === 'upload-sds') return <BulkSdsUpload user={user} />;
+  if (tool === 'stocktake') return <StocktakePicker />;
   const m = /^(totals|stocktake|print|sheet)-([a-z0-9_-]+)$/.exec(tool);
   if (m?.[1] === 'totals') return <SiteTotals siteId={m[2]} />;
   if (m?.[1] === 'stocktake') return <Stocktake siteId={m[2]} user={user} />;
   if (m?.[1] === 'sheet') return <StocktakeSheet id={m[2]} user={user} />;
   if (m?.[1] === 'print') return <PrintRegister siteId={m[2]} />;
   return <ErrorNote message="Page not found." />;
+}
+
+// ---------------------------------------------------------------------------------
+// Pick a site to count (the phone's way in to stocktakes)
+// ---------------------------------------------------------------------------------
+
+function StocktakePicker() {
+  const reg = useRegister();
+  return (
+    <div className="flex flex-col gap-3 max-w-[560px]">
+      <h1 className="m-0 text-xl font-bold">Chemical stocktake</h1>
+      <p className="m-0 text-[13px] text-muted">Pick the site you are counting.</p>
+      <ErrorNote message={reg.error} />
+      {!reg.loaded && <p className="m-0 text-sm text-muted">Loading…</p>}
+      {reg.sites.map(site => {
+        const stock = reg.stock.filter(s => s.site_id === site.id);
+        const take = stocktakeDue(site, stock);
+        const tone = take.state === 'overdue' ? 'red' : take.state === 'due_soon' || take.state === 'never' ? 'amber' : 'green';
+        const label = take.state === 'never' ? 'First stocktake' : take.state === 'overdue' ? 'Overdue' : `Due ${formatDay(take.due)}`;
+        return (
+          <a key={site.id} href={hrefFor({ name: 'chem', id: `stocktake-${site.id}` })} onClick={() => rememberSite(site.id)}
+            className="no-underline text-ink bg-white border border-line rounded-xl p-3.5 min-h-16 flex items-center gap-3">
+            <span className="flex-1 min-w-0">
+              <span className="block text-[15px] font-semibold">{site.name}</span>
+              <span className="block text-[13px] text-muted mt-0.5">{site.state} · {stock.length} items</span>
+            </span>
+            <Pill tone={tone}>{label}</Pill>
+          </a>
+        );
+      })}
+    </div>
+  );
 }
 
 const back = <a href={hrefFor({ name: 'module', id: 'chemicals' })} className="text-sm no-underline text-muted">← Chemical register</a>;

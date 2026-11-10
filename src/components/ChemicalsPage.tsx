@@ -1,4 +1,5 @@
 import { useEffect, useMemo, useState } from 'react';
+import { ChevronDown, ChevronRight } from 'lucide-react';
 import type { WhsUser } from '../services/auth.ts';
 import { rememberSite, rememberedSite, useRegister } from '../hooks/useRegister.ts';
 import { hrefFor } from '../hooks/useRoute.ts';
@@ -26,6 +27,14 @@ export function ChemicalsPage({ user }: { user: WhsUser }) {
   const [siteId, setSiteId] = useState<string>(() => rememberedSite() ?? 'all');
   const [filter, setFilter] = useState<Filter>('all');
   const [q, setQ] = useState('');
+  const [open, setOpen] = useState<string[]>(() => {
+    try { return JSON.parse(localStorage.getItem('whs-chem-open') ?? '[]') as string[]; } catch { return []; }
+  });
+  const toggle = (section: string) => setOpen(prev => {
+    const next = prev.includes(section) ? prev.filter(x => x !== section) : [...prev, section];
+    try { localStorage.setItem('whs-chem-open', JSON.stringify(next)); } catch { /* per-viewer only */ }
+    return next;
+  });
   const [pairA, setPairA] = useState('');
   const [pairB, setPairB] = useState('');
 
@@ -146,13 +155,43 @@ export function ChemicalsPage({ user }: { user: WhsUser }) {
         <button type="button" onClick={exportCsv} className="ml-auto min-h-10 px-3 rounded-lg border border-[#D6D2CC] bg-white text-[13px] font-semibold cursor-pointer">Export CSV</button>
       </div>
 
+      {(() => {
+        const sectionList = [...SECTIONS, ...Array.from(new Set(shown.map(c => c.section))).filter(s => !SECTIONS.includes(s))].filter(sec => shown.some(c => c.section === sec));
+        const narrowed = q.trim() !== '' || filter !== 'all';
+        const allOpen = sectionList.every(sec => open.includes(sec));
+        if (narrowed || !sectionList.length) return null;
+        return (
+          <div className="flex justify-end -mb-2">
+            <button type="button" onClick={() => {
+              const next = allOpen ? [] : sectionList;
+              setOpen(next);
+              try { localStorage.setItem('whs-chem-open', JSON.stringify(next)); } catch { /* per-viewer only */ }
+            }} className="bg-transparent border-0 p-0 min-h-8 text-[13px] font-semibold text-ink underline cursor-pointer">
+              {allOpen ? 'Collapse all' : 'Expand all'}
+            </button>
+          </div>
+        );
+      })()}
       {[...SECTIONS, ...Array.from(new Set(shown.map(c => c.section))).filter(s => !SECTIONS.includes(s))].map(section => {
         const rows = shown.filter(c => c.section === section);
         if (!rows.length) return null;
+        // Searching or filtering shows every match; otherwise sections open and close
+        const isOpen = q.trim() !== '' || filter !== 'all' || open.includes(section);
+        const noSds = rows.filter(c => ['missing', 'expired'].includes(sdsState(reg.currentSdsOf(c.id)))).length;
+        const confirm = rows.filter(classToConfirm).length;
         return (
           <section key={section} className="bg-white border border-line rounded-xl overflow-x-auto">
-            <h2 className="m-0 px-4 py-3 border-b border-[#EEEBE6] text-[13px] tracking-wide uppercase text-muted">{section} <span className="normal-case tracking-normal">· {rows.length}</span></h2>
-            <table className="w-full border-collapse text-sm min-w-[900px]">
+            <h2 className="m-0">
+              <button type="button" aria-expanded={isOpen} onClick={() => toggle(section)}
+                className={`w-full flex flex-wrap items-center gap-2 px-4 py-3 bg-transparent border-0 text-left cursor-pointer hover:bg-[#FAFAF9] ${isOpen ? 'border-b border-[#EEEBE6]' : ''}`}>
+                {isOpen ? <ChevronDown className="w-4 h-4 text-muted" aria-hidden="true" /> : <ChevronRight className="w-4 h-4 text-muted" aria-hidden="true" />}
+                <span className="text-[13px] tracking-wide uppercase text-muted font-semibold">{section}</span>
+                <span className="text-[13px] text-muted">· {rows.length}</span>
+                {noSds > 0 && <Pill tone="red">{noSds} SDS to fix</Pill>}
+                {confirm > 0 && <Pill tone="amber">{confirm} class to confirm</Pill>}
+              </button>
+            </h2>
+            {isOpen && <table className="w-full border-collapse text-sm min-w-[900px]">
               <thead>
                 <tr className="text-muted text-xs">
                   <th scope="col" className={`${th} pl-4`}>Product</th><th scope="col" className={th}>DG class / hazard</th><th scope="col" className={th}>UN</th>
@@ -162,7 +201,7 @@ export function ChemicalsPage({ user }: { user: WhsUser }) {
               <tbody>
                 {rows.map(c => <Row key={c.id} c={c} stock={siteStock.filter(s => s.chemical_id === c.id)} showSite={!site} sites={reg.sites} sds={sdsPill(reg.currentSdsOf(c.id))} />)}
               </tbody>
-            </table>
+            </table>}
           </section>
         );
       })}
