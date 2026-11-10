@@ -20,15 +20,15 @@ interface Props {
 }
 
 const QUICK = [
-  { href: hrefFor({ name: 'module', id: 'inspections' }), title: 'Pre-start', sub: 'Plant check' },
-  { href: hrefFor({ name: 'module', id: 'inspections' }), title: 'Take 5', sub: 'Before a task' },
+  { href: hrefFor({ name: 'check', id: 'new-prestart' }), title: 'Pre-start', sub: 'Plant check' },
+  { href: hrefFor({ name: 'check', id: 'new-take5' }), title: 'Take 5', sub: 'Before a task' },
   { href: hrefFor({ name: 'hazard', id: 'new' }), title: 'Hazard', sub: 'Report it' },
 ];
 
 export function PhoneApp({ user, data, route, sample, onSampleChange, onSignOut, onFullVersion }: Props) {
   const [tab, setTab] = useState<'home' | 'me'>('home');
   const onModule = route.name !== 'home';
-  const activeTab = route.name === 'incident' && route.id === 'new' ? 'report' : route.name === 'module' && route.id === 'inspections' ? 'checks' : onModule ? '' : tab;
+  const activeTab = route.name === 'incident' && route.id === 'new' ? 'report' : (route.name === 'module' && route.id === 'inspections') || route.name === 'check' ? 'checks' : onModule ? '' : tab;
 
   const tabs = [
     { key: 'home', label: 'Home', href: hrefFor({ name: 'home' }), onClick: () => setTab('home') },

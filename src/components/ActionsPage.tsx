@@ -20,6 +20,7 @@ function sourceHref(a: WhsAction): string | null {
   if (!a.source_id) return null;
   if (a.source_type === 'incident') return hrefFor({ name: 'incident', id: a.source_id });
   if (a.source_type === 'hazard') return hrefFor({ name: 'hazard', id: a.source_id });
+  if (a.source_type === 'inspection') return hrefFor({ name: 'check', id: a.source_id });
   return null;
 }
 
@@ -109,6 +110,7 @@ export function ActionsPage({ user }: { user: WhsUser }) {
           <option value="all">From anything</option>
           <option value="incident">Incidents</option>
           <option value="hazard">Hazards</option>
+          <option value="inspection">Inspections</option>
         </select>
       </div>
 

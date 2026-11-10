@@ -9,12 +9,26 @@ import { IncidentForm } from './IncidentForm.tsx';
 import { IncidentPage } from './IncidentPage.tsx';
 import { ModulePage } from './ModulePage.tsx';
 import { RegisterPage } from './RegisterPage.tsx';
+import { PrestartForm, SiteInspectionForm, Take5Form } from './CheckForms.tsx';
+import { CheckPage } from './CheckPage.tsx';
+import { ChecklistEditor } from './ChecklistEditor.tsx';
+import { InspectionsPage } from './InspectionsPage.tsx';
+import { PlantPage } from './PlantPage.tsx';
 
 /** Picks the screen for the current address. Home is drawn by the desktop or phone layout. */
 export function Screen({ route, user, home }: { route: Route; user: WhsUser; home: () => ReactElement }) {
   if (route.name === 'incident') return route.id === 'new' ? <IncidentForm user={user} /> : <IncidentPage id={route.id} user={user} />;
   if (route.name === 'hazard') return route.id === 'new' ? <HazardForm user={user} /> : <HazardPage id={route.id} user={user} />;
+  if (route.name === 'check') {
+    if (route.id === 'new-prestart') return <PrestartForm user={user} />;
+    if (route.id === 'new-take5') return <Take5Form user={user} />;
+    if (route.id.startsWith('new-site-')) return <SiteInspectionForm key={route.id} checklistId={route.id.slice('new-site-'.length)} user={user} />;
+    return <CheckPage key={route.id} id={route.id} user={user} />;
+  }
+  if (route.name === 'checklist') return <ChecklistEditor key={route.id} id={route.id} user={user} />;
   if (route.name === 'module' && canOpenModule(user.access, route.id)) {
+    if (route.id === 'inspections') return <InspectionsPage user={user} />;
+    if (route.id === 'plant') return <PlantPage user={user} />;
     if (route.id === 'incidents' || route.id === 'hazards') return <RegisterPage key={route.id} tab={route.id} />;
     if (route.id === 'actions') return <ActionsPage user={user} />;
   }

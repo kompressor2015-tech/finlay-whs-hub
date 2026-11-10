@@ -24,8 +24,8 @@ interface Props {
 
 const QUICK = [
   { href: hrefFor({ name: 'hazard', id: 'new' }), title: 'Report a hazard', sub: 'Something unsafe you have seen' },
-  { href: hrefFor({ name: 'module', id: 'inspections' }), title: 'Pre-start check', sub: 'Daily plant check by unit number' },
-  { href: hrefFor({ name: 'module', id: 'inspections' }), title: 'Take 5', sub: 'Quick check before a task' },
+  { href: hrefFor({ name: 'check', id: 'new-prestart' }), title: 'Pre-start check', sub: 'Daily plant check by unit number' },
+  { href: hrefFor({ name: 'check', id: 'new-take5' }), title: 'Take 5', sub: 'Quick check before a task' },
   { href: hrefFor({ name: 'module', id: 'inspections' }), title: 'Site inspection', sub: 'Yard or workshop checklist' },
 ];
 

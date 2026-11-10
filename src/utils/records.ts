@@ -326,7 +326,7 @@ export function buildHome(
       detail: [a.source_ref, a.owner_name && `owner ${a.owner_name}`].filter(Boolean).join(' · '),
       due: a.due ?? undefined,
       moduleId: 'actions',
-      href: a.source_id && (a.source_type === 'incident' || a.source_type === 'hazard') ? `#/${a.source_type}s/${a.source_id}` : '#/m/actions',
+      href: a.source_id && a.source_type !== 'other' ? `#/${a.source_type === 'inspection' ? 'check' : a.source_type}s/${a.source_id}` : '#/m/actions',
     });
   }
   for (const i of openIncidents) {
