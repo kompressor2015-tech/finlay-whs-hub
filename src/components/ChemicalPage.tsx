@@ -199,7 +199,11 @@ function StockPanel({ chem, stock, sites, allStock, office, officer, onChanged }
           </tr>
         </thead>
         <tbody>
-          {stock.map(s => <StockRow key={s.id} s={s} site={sites.find(x => x.id === s.site_id)} office={office} officer={officer} onChanged={onChanged} />)}
+          {stock.map(s => (
+            <StockRow key={s.id} s={s} site={sites.find(x => x.id === s.site_id)} office={office} officer={officer} onChanged={onChanged}
+              siteLocations={Array.from(new Set(allStock.filter(x => x.site_id === s.site_id).map(x => x.location))).sort()}
+              taken={stock.filter(x => x.site_id === s.site_id && x.id !== s.id).map(x => x.location.toLowerCase())} />
+          ))}
         </tbody>
       </table>
       {stock.length === 0 && <p className="m-0 px-4.5 py-4 text-sm text-muted">Not stored at any site yet.</p>}
@@ -237,8 +241,11 @@ function StockPanel({ chem, stock, sites, allStock, office, officer, onChanged }
   );
 }
 
-function StockRow({ s, site, office, officer, onChanged }: { s: Stock; site?: { name: string; state: string }; office: boolean; officer: boolean; onChanged: () => void }) {
+function StockRow({ s, site, office, officer, onChanged, siteLocations, taken }: {
+  s: Stock; site?: { name: string; state: string }; office: boolean; officer: boolean; onChanged: () => void; siteLocations: string[]; taken: string[];
+}) {
   const [edit, setEdit] = useState(false);
+  const [location, setLocation] = useState(s.location);
   const [container, setContainer] = useState(s.container);
   const [size, setSize] = useState(s.container_size === null ? '' : String(s.container_size));
   const [unit, setUnit] = useState(s.unit);
@@ -247,7 +254,10 @@ function StockRow({ s, site, office, officer, onChanged }: { s: Stock; site?: { 
   const cell = 'px-2 py-2.5 border-b border-line-soft align-top';
 
   async function save() {
-    const res = await updateStock(s.id, { container: container.trim(), container_size: size ? Number(size) : null, unit, max_count: max ? Number(max) : null });
+    const loc = location.trim();
+    if (!loc) return setError('Enter the storage location.');
+    if (taken.includes(loc.toLowerCase())) return setError(`This chemical already has a line for ${loc} at this site. Remove one of them instead.`);
+    const res = await updateStock(s.id, { location: loc, container: container.trim(), container_size: size ? Number(size) : null, unit, max_count: max ? Number(max) : null });
     if (res.error) return setError(res.error);
     setEdit(false);
     onChanged();
@@ -262,7 +272,14 @@ function StockRow({ s, site, office, officer, onChanged }: { s: Stock; site?: { 
   return (
     <tr>
       <td className={`${cell} pl-4.5`}>{site?.name ?? s.site_id} <span className="text-xs text-muted">{site?.state}</span></td>
-      <td className={`${cell} text-muted`}>{s.location}</td>
+      <td className={`${cell} text-muted`}>
+        {edit ? (
+          <>
+            <input aria-label="Storage location" list={`locs-${s.id}`} className={`${small} w-full min-w-[140px]`} value={location} onChange={e => setLocation(e.target.value)} />
+            <datalist id={`locs-${s.id}`}>{siteLocations.map(l => <option key={l} value={l} />)}</datalist>
+          </>
+        ) : s.location}
+      </td>
       <td className={cell}>
         {edit ? (
           <span className="flex flex-col gap-1.5">
@@ -288,7 +305,7 @@ function StockRow({ s, site, office, officer, onChanged }: { s: Stock; site?: { 
             {edit ? (
               <>
                 <button type="button" onClick={save} className="bg-transparent border-0 p-0 text-[13px] font-semibold text-finlay cursor-pointer min-h-8">Save</button>
-                <button type="button" onClick={() => setEdit(false)} className="bg-transparent border-0 p-0 text-[13px] cursor-pointer min-h-8">Cancel</button>
+                <button type="button" onClick={() => { setEdit(false); setLocation(s.location); setError(null); }} className="bg-transparent border-0 p-0 text-[13px] cursor-pointer min-h-8">Cancel</button>
               </>
             ) : (
               <button type="button" onClick={() => setEdit(true)} className="bg-transparent border-0 p-0 text-[13px] font-semibold text-ink underline cursor-pointer min-h-8">Edit</button>
