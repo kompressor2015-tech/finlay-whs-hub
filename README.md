@@ -31,7 +31,7 @@ React 19, TypeScript, Vite, Tailwind v4, Supabase (`@supabase/supabase-js`) and 
 1. **Foundation:** logins and roles, and the home screen. *(Done 10/11/2026. `whs_001_roles.sql` has been run.)*
 2. **Incidents, hazards and Actions.** *(Done 10/11/2026. `whs_002_incidents_hazards_actions.sql` has been run.)*
 3. **Inspections and pre-starts.** *(Done 10/11/2026. `whs_003_checks_and_plant_flags.sql` has been run.)* A failed pre-start flags the unit and creates a workshop action; it does not change the fleet status. Site inspections are signed with a drawn signature.
-4. Chemicals and SDS.
+4. **Chemicals and SDS.** *(Done 10/11/2026. `whs_004_chemicals_and_sds.sql` has been run.)* A register for each site (Burpengary QLD, Somerton VIC, Tomago NSW); SDS files with a 5-year review date; phone SDS lookup; site totals against placard and manifest quantities, warning at 80%; stocktakes on a phone, with a signed stocktake sheet.
 5. Documents (read-and-sign).
 6. Later: Risk and SWMS, Contractors and Reports.
 
@@ -52,6 +52,7 @@ Training and tickets is handled elsewhere for now.
 - **Photos:** kept in the private `whs-photos` storage bucket.
 - **Notifiable incidents:** cannot be deleted. Keep them at least 5 years.
 - **Closing:** only an admin or the WHS officer can close an incident, and only once its actions are done.
+- **Chemicals:** SDS PDFs are kept in the private `whs-sds` bucket, and older versions are kept. Each count is logged in `whs_stock_counts`. A finished stocktake (`whs_stocktakes`) keeps a copy of every count; once an office role signs it, it is locked. Products marked "class to confirm" are not in the site totals until their DG class is entered from the SDS.
 
 ## Branding
 The logos are the same as the Fleet Hub's and live in `public/`:
