@@ -46,7 +46,10 @@ export function PhoneApp({ user, data, route, sample, onSampleChange, onSignOut,
           </a>
         ) : (
           <div>
-            <div className="font-bold text-[17px]">Finlay <span className="text-finlay">WHS</span></div>
+            <div className="flex items-center gap-2.5">
+              <img src="/finlay-logo.jpg" alt="Finlay" className="h-6 w-auto block" />
+              <span className="border-l border-line pl-2.5 font-bold text-[15px] text-finlay tracking-wide">WHS</span>
+            </div>
             <div className="text-[13px] text-muted mt-0.5">
               {formatDate(new Date())}{user.location ? ` · ${user.location}` : ''}
             </div>

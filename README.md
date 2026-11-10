@@ -30,7 +30,7 @@ React 19, TypeScript, Vite, Tailwind v4, Supabase (`@supabase/supabase-js`) and 
 ## Build steps
 1. **Foundation:** logins and roles, and the home screen. *(Done 10/11/2026. `whs_001_roles.sql` has been run.)*
 2. **Incidents, hazards and Actions.** *(Done 10/11/2026. `whs_002_incidents_hazards_actions.sql` has been run.)*
-3. Inspections and pre-starts. A failed pre-start flags the unit; it does not change the fleet status.
+3. **Inspections and pre-starts.** *(Done 10/11/2026. `whs_003_checks_and_plant_flags.sql` has been run.)* A failed pre-start flags the unit and creates a workshop action; it does not change the fleet status. Site inspections are signed with a drawn signature.
 4. Chemicals and SDS.
 5. Documents (read-and-sign).
 6. Later: Risk and SWMS, Contractors and Reports.
@@ -52,6 +52,12 @@ Training and tickets is handled elsewhere for now.
 - **Photos:** kept in the private `whs-photos` storage bucket.
 - **Notifiable incidents:** cannot be deleted. Keep them at least 5 years.
 - **Closing:** only an admin or the WHS officer can close an incident, and only once its actions are done.
+
+## Branding
+The logos are the same as the Fleet Hub's and live in `public/`:
+- `finlay-logo.jpg`: header
+- `finlay-banner.jpg`: login screen
+- `finlay-gear.png`, `favicon.png` and the app icons
 
 ## Dates
 All dates are in Brisbane time and shown as DD/MM/YYYY.

@@ -40,9 +40,9 @@ export function DesktopApp({ user, data, route, sample, onSampleChange, onSignOu
   return (
     <div className="min-h-screen bg-canvas">
       <header className="bg-white border-b border-line px-6 py-3.5 flex flex-wrap items-center gap-4">
-        <a href={hrefFor({ name: 'home' })} className="flex items-center gap-2.5 no-underline text-ink">
-          <span className="w-8 h-8 rounded-lg bg-finlay text-white flex items-center justify-center font-bold text-[15px]" aria-hidden="true">F</span>
-          <span className="font-bold text-[17px]">Finlay <span className="text-finlay">WHS</span></span>
+        <a href={hrefFor({ name: 'home' })} className="flex items-center gap-3 no-underline text-ink" aria-label="Finlay WHS home">
+          <img src="/finlay-logo.jpg" alt="Finlay" className="h-7 w-auto block" />
+          <span className="border-l border-line pl-3 font-bold text-[17px] text-finlay tracking-wide">WHS</span>
         </a>
         <div className="relative flex-[1_1_280px] max-w-[520px]">
           <label htmlFor="search" className="sr-only">Search</label>

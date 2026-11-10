@@ -38,11 +38,9 @@ export function LoginScreen({ onSignedIn }: { onSignedIn: (user: WhsUser) => voi
   return (
     <div className="min-h-screen flex items-center justify-center px-4 py-10 bg-canvas">
       <div className="w-full max-w-[400px]">
-        <div className="flex items-center gap-2.5 mb-8">
-          <div className="w-9 h-9 rounded-lg bg-finlay text-white flex items-center justify-center font-bold">F</div>
-          <div className="font-bold text-lg">
-            Finlay <span className="text-finlay">WHS</span>
-          </div>
+        <div className="mb-8 flex flex-col gap-3">
+          <img src="/finlay-banner.jpg" alt="Finlay: Screening & Crushing, Waste & Recycling, Washing Systems" className="w-full max-w-[360px] h-auto block" />
+          <div className="text-xs font-semibold tracking-[0.14em] text-finlay">WORK HEALTH &amp; SAFETY</div>
         </div>
         <form onSubmit={submit} className="bg-white border border-line rounded-xl p-6 flex flex-col gap-4">
           <div>
