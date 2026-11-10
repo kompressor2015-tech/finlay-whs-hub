@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { AlertTriangle, ChevronLeft, Search } from 'lucide-react';
+import { AlertTriangle, ChevronLeft, ClipboardList, FlaskConical, Search } from 'lucide-react';
 import type { WhsUser } from '../services/auth.ts';
 import type { HomeData, PhoneTask } from '../utils/homeData.ts';
 import { accessLabel } from '../utils/access.ts';
@@ -109,13 +109,32 @@ function PhoneHome({ data }: { data: HomeData }) {
         ))}
       </div>
 
-      <a href={hrefFor({ name: 'chem', id: 'find-sds' })} className="no-underline text-ink bg-white border border-line rounded-xl p-3.5 min-h-14 flex items-center gap-3">
-        <Search className="w-5.5 h-5.5" aria-hidden="true" />
-        <span className="flex-1">
-          <span className="block text-[15px] font-semibold">Find a safety data sheet</span>
-          <span className="block text-[13px] text-muted mt-0.5">Search chemicals at this site</span>
-        </span>
-      </a>
+      <section>
+        <h2 className="m-0 mb-2 text-[15px] font-semibold">Chemicals</h2>
+        <div className="bg-white border border-line rounded-xl overflow-hidden">
+          <a href={hrefFor({ name: 'chem', id: 'find-sds' })} className="no-underline text-ink p-3.5 min-h-14 flex items-center gap-3 border-b border-line-soft">
+            <Search className="w-5.5 h-5.5 shrink-0" aria-hidden="true" />
+            <span className="flex-1">
+              <span className="block text-[15px] font-semibold">Find a safety data sheet</span>
+              <span className="block text-[13px] text-muted mt-0.5">Search chemicals at this site</span>
+            </span>
+          </a>
+          <a href={hrefFor({ name: 'chem', id: 'stocktake' })} className="no-underline text-ink p-3.5 min-h-14 flex items-center gap-3 border-b border-line-soft">
+            <ClipboardList className="w-5.5 h-5.5 shrink-0" aria-hidden="true" />
+            <span className="flex-1">
+              <span className="block text-[15px] font-semibold">Chemical stocktake</span>
+              <span className="block text-[13px] text-muted mt-0.5">Count containers by location</span>
+            </span>
+          </a>
+          <a href={hrefFor({ name: 'module', id: 'chemicals' })} className="no-underline text-ink p-3.5 min-h-14 flex items-center gap-3">
+            <FlaskConical className="w-5.5 h-5.5 shrink-0" aria-hidden="true" />
+            <span className="flex-1">
+              <span className="block text-[15px] font-semibold">Chemical register</span>
+              <span className="block text-[13px] text-muted mt-0.5">What is kept where, classes and SDS</span>
+            </span>
+          </a>
+        </div>
+      </section>
 
       <TaskList title="My actions" items={data.phoneToday} empty="Nothing given to you right now." />
       <a href={hrefFor({ name: 'module', id: 'incidents' })} className="no-underline text-ink bg-white border border-line rounded-xl p-3.5 min-h-14 flex items-center text-[15px] font-semibold">My reports</a>
