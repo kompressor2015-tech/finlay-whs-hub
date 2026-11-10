@@ -28,7 +28,7 @@ React 19, TypeScript, Vite, Tailwind v4, Supabase (`@supabase/supabase-js`) and 
 - **Phone layout:** used on screens narrower than 768px. People can switch to the full version.
 
 ## Build steps
-1. **Foundation:** logins and roles, and the home screen. *(this branch)*
+1. **Foundation:** logins and roles, and the home screen. *(Done 10/11/2026. `whs_001_roles.sql` has been run.)*
 2. Incidents, hazards and Actions.
 3. Inspections and pre-starts. A failed pre-start flags the unit; it does not change the fleet status.
 4. Chemicals and SDS.
@@ -36,6 +36,11 @@ React 19, TypeScript, Vite, Tailwind v4, Supabase (`@supabase/supabase-js`) and 
 6. Later: Risk and SWMS, Contractors and Reports.
 
 Training and tickets is handled elsewhere for now.
+
+## Live site
+- **Production:** https://finlay-whs-hub-finlay7.vercel.app
+- **Previews:** each branch gets `finlay-whs-hub-git-<branch>-finlay7.vercel.app`.
+- **Checks:** the Vercel build runs the type-check and unit tests before building.
 
 ## Settings
 - **Supabase keys:** the Supabase URL and anon key default to the Fleet Hub's project. Set `VITE_SUPABASE_URL` and `VITE_SUPABASE_ANON_KEY` in Vercel to override them.
