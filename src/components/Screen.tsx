@@ -14,6 +14,9 @@ import { CheckPage } from './CheckPage.tsx';
 import { ChecklistEditor } from './ChecklistEditor.tsx';
 import { InspectionsPage } from './InspectionsPage.tsx';
 import { PlantPage } from './PlantPage.tsx';
+import { ChemicalsPage } from './ChemicalsPage.tsx';
+import { ChemicalPage } from './ChemicalPage.tsx';
+import { ChemTool } from './ChemTools.tsx';
 
 /** Picks the screen for the current address. Home is drawn by the desktop or phone layout. */
 export function Screen({ route, user, home }: { route: Route; user: WhsUser; home: () => ReactElement }) {
@@ -26,9 +29,12 @@ export function Screen({ route, user, home }: { route: Route; user: WhsUser; hom
     return <CheckPage key={route.id} id={route.id} user={user} />;
   }
   if (route.name === 'checklist') return <ChecklistEditor key={route.id} id={route.id} user={user} />;
+  if (route.name === 'chemical') return <ChemicalPage key={route.id} id={route.id} user={user} />;
+  if (route.name === 'chem') return <ChemTool key={route.id} tool={route.id} user={user} />;
   if (route.name === 'module' && canOpenModule(user.access, route.id)) {
     if (route.id === 'inspections') return <InspectionsPage user={user} />;
     if (route.id === 'plant') return <PlantPage user={user} />;
+    if (route.id === 'chemicals') return <ChemicalsPage user={user} />;
     if (route.id === 'incidents' || route.id === 'hazards') return <RegisterPage key={route.id} tab={route.id} />;
     if (route.id === 'actions') return <ActionsPage user={user} />;
   }

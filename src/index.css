@@ -30,3 +30,9 @@
     outline-offset: 2px;
   }
 }
+
+/* Printing a register: plain white page, no app chrome */
+@media print {
+  body { background: #FFFFFF; }
+  @page { size: A4 landscape; margin: 12mm; }
+}

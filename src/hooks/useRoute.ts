@@ -8,6 +8,8 @@ import { useCallback, useEffect, useState } from 'react';
  *   #/hazards/new      report a hazard;     #/hazards/<id>    one hazard
  *   #/checks/new-prestart, #/checks/new-take5, #/checks/new-site-<checklist id>, #/checks/<id>
  *   #/checklists/<id>  edit a checklist
+ *   #/chemicals/<id>   one chemical (or "new")
+ *   #/chem/<tool>      chemical tools: find-sds, upload-sds, totals-<site>, stocktake-<site>, print-<site>, sheet-<stocktake id>
  */
 export type Route =
   | { name: 'home' }
@@ -15,14 +17,16 @@ export type Route =
   | { name: 'incident'; id: string }
   | { name: 'hazard'; id: string }
   | { name: 'check'; id: string }
-  | { name: 'checklist'; id: string };
+  | { name: 'checklist'; id: string }
+  | { name: 'chemical'; id: string }
+  | { name: 'chem'; id: string };
 
 export function parseHash(hash: string): Route {
   const m = /^#\/m\/([a-z-]+)/.exec(hash);
   if (m) return { name: 'module', id: m[1] };
-  const r = /^#\/(incidents|hazards|checks|checklists)\/([A-Za-z0-9-]+)/.exec(hash);
+  const r = /^#\/(incidents|hazards|checks|checklists|chemicals|chem)\/([A-Za-z0-9-]+)/.exec(hash);
   if (r) {
-    const names = { incidents: 'incident', hazards: 'hazard', checks: 'check', checklists: 'checklist' } as const;
+    const names = { incidents: 'incident', hazards: 'hazard', checks: 'check', checklists: 'checklist', chemicals: 'chemical', chem: 'chem' } as const;
     return { name: names[r[1] as keyof typeof names], id: r[2] };
   }
   return { name: 'home' };
@@ -42,6 +46,10 @@ export function hrefFor(route: Route): string {
       return `#/checks/${route.id}`;
     case 'checklist':
       return `#/checklists/${route.id}`;
+    case 'chemical':
+      return `#/chemicals/${route.id}`;
+    case 'chem':
+      return `#/chem/${route.id}`;
   }
 }
 
@@ -55,6 +63,7 @@ export function moduleOf(route: Route): string {
   if (route.name === 'incident') return 'incidents';
   if (route.name === 'hazard') return 'hazards';
   if (route.name === 'check' || route.name === 'checklist') return 'inspections';
+  if (route.name === 'chemical' || route.name === 'chem') return 'chemicals';
   return 'home';
 }
 
