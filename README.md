@@ -29,7 +29,7 @@ React 19, TypeScript, Vite, Tailwind v4, Supabase (`@supabase/supabase-js`) and 
 
 ## Build steps
 1. **Foundation:** logins and roles, and the home screen. *(Done 10/11/2026. `whs_001_roles.sql` has been run.)*
-2. Incidents, hazards and Actions.
+2. **Incidents, hazards and Actions.** *(Done 10/11/2026. `whs_002_incidents_hazards_actions.sql` has been run.)*
 3. Inspections and pre-starts. A failed pre-start flags the unit; it does not change the fleet status.
 4. Chemicals and SDS.
 5. Documents (read-and-sign).
@@ -40,11 +40,18 @@ Training and tickets is handled elsewhere for now.
 ## Live site
 - **Production:** https://finlay-whs-hub-finlay7.vercel.app
 - **Previews:** each branch gets `finlay-whs-hub-git-<branch>-finlay7.vercel.app`.
-- **Checks:** the Vercel build runs the type-check and unit tests before building.
+- **Checks:** `vercel.json` makes the Vercel build run the type-check and unit tests before building.
 
 ## Settings
 - **Supabase keys:** the Supabase URL and anon key default to the Fleet Hub's project. Set `VITE_SUPABASE_URL` and `VITE_SUPABASE_ANON_KEY` in Vercel to override them.
 - **Password reset links:** add the WHS site's address to the redirect URLs, under Supabase > Authentication > URL Configuration.
+
+## Records
+- **References:** INC-0001 and HAZ-0001, set by the database.
+- **History:** written by database triggers into `whs_history`.
+- **Photos:** kept in the private `whs-photos` storage bucket.
+- **Notifiable incidents:** cannot be deleted. Keep them at least 5 years.
+- **Closing:** only an admin or the WHS officer can close an incident, and only once its actions are done.
 
 ## Dates
 All dates are in Brisbane time and shown as DD/MM/YYYY.
