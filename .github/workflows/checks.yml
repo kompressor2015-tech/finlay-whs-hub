@@ -1,0 +1,45 @@
+name: Checks
+
+# Runs the type-check, the unit tests and a build on GitHub for every push and pull request,
+# so nobody needs Node installed locally. Results show next to each commit.
+on:
+  push:
+  pull_request:
+
+jobs:
+  typecheck:
+    name: Type-check
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: oven-sh/setup-bun@v2
+      - run: bun install
+      - name: Run TypeScript
+        run: |
+          set +e
+          bunx tsc --noEmit --pretty false > tsc.log 2>&1
+          code=$?
+          if [ $code -ne 0 ]; then
+            count=$(grep -c 'error TS' tsc.log)
+            msg=$(head -c 30000 tsc.log | sed ':a;N;$!ba;s/%/%25/g;s/\r/%0D/g;s/\n/%0A/g')
+            echo "::error title=TypeScript found ${count} error(s)::${msg}"
+          fi
+          exit $code
+
+  tests:
+    name: Unit tests
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: oven-sh/setup-bun@v2
+      - run: bun install
+      - run: bun run test
+
+  build:
+    name: Build
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: oven-sh/setup-bun@v2
+      - run: bun install
+      - run: bun run build

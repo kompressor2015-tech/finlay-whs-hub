@@ -1,0 +1,48 @@
+# Finlay WHS
+
+Work health and safety records for The Finlay Group: incidents, hazards, actions, inspections and pre-starts, chemicals and SDS, and documents. It runs as a web app, with a phone layout for field staff.
+
+It shares the Fleet Hub's Supabase project (`kompressor2015-tech/finlay-fleet-hub`) for logins, people and the machine list. WHS tables are prefixed `whs_`, and fleet tables are never changed by this app's migrations.
+
+## Stack
+React 19, TypeScript, Vite, Tailwind v4, Supabase (`@supabase/supabase-js`) and Vercel. GitHub Actions runs the type-check, the unit tests (`tsx --test src/utils/*.test.ts`) and a build on every push.
+
+## Way of working
+1. Mock up on the design canvas.
+2. You approve ("build it").
+3. Build on a branch until the checks are green.
+4. Check the Vercel preview.
+5. "Merge to main".
+6. Run any SQL in Supabase.
+7. You say "confirmed".
+8. Update the docs.
+
+## Access
+- **Fleet admins:** WHS admins.
+- **Everyone else:** needs `profiles.whs_role`, set to one of:
+  - `whs_officer`
+  - `supervisor`
+  - `field`
+
+  Set it with `supabase/migrations/whs_001_roles.sql`, which explains how.
+- **Phone layout:** used on screens narrower than 768px. People can switch to the full version.
+
+## Build steps
+1. **Foundation:** logins and roles, and the home screen. *(this branch)*
+2. Incidents, hazards and Actions.
+3. Inspections and pre-starts. A failed pre-start flags the unit; it does not change the fleet status.
+4. Chemicals and SDS.
+5. Documents (read-and-sign).
+6. Later: Risk and SWMS, Contractors and Reports.
+
+Training and tickets is handled elsewhere for now.
+
+## Settings
+- **Supabase keys:** the Supabase URL and anon key default to the Fleet Hub's project. Set `VITE_SUPABASE_URL` and `VITE_SUPABASE_ANON_KEY` in Vercel to override them.
+- **Password reset links:** add the WHS site's address to the redirect URLs, under Supabase > Authentication > URL Configuration.
+
+## Dates
+All dates are in Brisbane time and shown as DD/MM/YYYY.
+
+## Compliance
+The app helps keep records. It does not by itself make the business compliant with the Queensland WHS Act and Regulation. Notifiable incidents still go to WHSQ.
