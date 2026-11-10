@@ -109,7 +109,7 @@ function PhoneHome({ data }: { data: HomeData }) {
         ))}
       </div>
 
-      <a href={hrefFor({ name: 'module', id: 'chemicals' })} className="no-underline text-ink bg-white border border-line rounded-xl p-3.5 min-h-14 flex items-center gap-3">
+      <a href={hrefFor({ name: 'chem', id: 'find-sds' })} className="no-underline text-ink bg-white border border-line rounded-xl p-3.5 min-h-14 flex items-center gap-3">
         <Search className="w-5.5 h-5.5" aria-hidden="true" />
         <span className="flex-1">
           <span className="block text-[15px] font-semibold">Find a safety data sheet</span>

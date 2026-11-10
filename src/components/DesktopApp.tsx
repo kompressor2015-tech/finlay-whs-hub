@@ -39,7 +39,7 @@ export function DesktopApp({ user, data, route, sample, onSampleChange, onSignOu
 
   return (
     <div className="min-h-screen bg-canvas">
-      <header className="bg-white border-b border-line px-6 py-3.5 flex flex-wrap items-center gap-4">
+      <header className="bg-white border-b border-line px-6 py-3.5 flex flex-wrap items-center gap-4 print:hidden">
         <a href={hrefFor({ name: 'home' })} className="flex items-center gap-3 no-underline text-ink" aria-label="Finlay WHS home">
           <img src="/finlay-logo.jpg" alt="Finlay" className="h-7 w-auto block" />
           <span className="border-l border-line pl-3 font-bold text-[17px] text-finlay tracking-wide">WHS</span>
@@ -73,7 +73,7 @@ export function DesktopApp({ user, data, route, sample, onSampleChange, onSignOu
       </header>
 
       <div className="flex flex-wrap items-start">
-        <nav aria-label="Modules" className="flex-[1_1_220px] max-w-[240px] px-3 py-5 flex flex-col gap-0.5">
+        <nav aria-label="Modules" className="flex-[1_1_220px] max-w-[240px] px-3 py-5 flex flex-col gap-0.5 print:hidden">
           <a href={hrefFor({ name: 'home' })} className={navLink(activeId === 'home')} aria-current={activeId === 'home' ? 'page' : undefined}>Home</a>
           {navItems.map(m => (
             <a key={m.id} href={hrefFor({ name: 'module', id: m.id })} className={navLink(activeId === m.id)} aria-current={activeId === m.id ? 'page' : undefined}>
