@@ -33,6 +33,13 @@
 
 /* Printing a register: plain white page, no app chrome */
 @media print {
-  body { background: #FFFFFF; }
-  @page { size: A4 landscape; margin: 12mm; }
+  @page { size: A4 landscape; margin: 10mm; }
+  html, body { background: #FFFFFF; }
+  /* Let the page flow: no full-screen heights or screen padding on paper */
+  .min-h-screen { min-height: 0 !important; }
+  main { padding: 0 !important; max-width: none !important; }
+  /* Tables run across pages: repeat the header row, never split a row */
+  thead { display: table-header-group; }
+  tr, img { break-inside: avoid; }
+  h1, h2 { break-after: avoid; }
 }

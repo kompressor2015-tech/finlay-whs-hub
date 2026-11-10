@@ -440,6 +440,7 @@ function StocktakeSheet({ id, user }: { id: string; user: WhsUser }) {
       <div className="print:hidden flex gap-2 items-center flex-wrap">
         <a href={hrefFor({ name: 'chem', id: `stocktake-${site.id}` })} className="text-sm no-underline text-muted">← Stocktake: {site.name}</a>
         <button type="button" onClick={() => window.print()} className="ml-auto min-h-11 px-4 rounded-lg border-0 bg-finlay text-white text-sm font-semibold cursor-pointer">Print or save as PDF</button>
+        <span className="basis-full text-right text-xs text-muted">For a PDF file, choose "Save as PDF" as the printer in the print window.</span>
       </div>
 
       {!st.authorised_at && (
@@ -582,6 +583,7 @@ function PrintRegister({ siteId }: { siteId: string }) {
       <div className="print:hidden flex gap-2 items-center flex-wrap">
         {back}
         <button type="button" onClick={() => window.print()} className="ml-auto min-h-11 px-4 rounded-lg border-0 bg-finlay text-white text-sm font-semibold cursor-pointer">Print or save as PDF</button>
+        <span className="basis-full text-right text-xs text-muted">For a PDF file, choose "Save as PDF" as the printer in the print window.</span>
       </div>
       <article className="bg-white p-6 print:p-0 text-[12px] leading-snug">
         <header className="flex justify-between items-start gap-4 border-b-2 border-finlay pb-3 mb-3">
@@ -602,8 +604,8 @@ function PrintRegister({ siteId }: { siteId: string }) {
           const rows = chems.filter(c => c.section === section);
           if (!rows.length) return null;
           return (
-            <section key={section} className="mb-4 break-inside-avoid-page">
-              <h2 className="m-0 mb-1 text-[13px] font-bold uppercase bg-[#F1EEEA] px-1.5 py-1">{section}</h2>
+            <section key={section} className="mb-4">
+              <h2 className="m-0 mb-1 text-[13px] font-bold uppercase bg-[#F1EEEA] px-1.5 py-1 break-after-avoid">{section}</h2>
               <table className="w-full border-collapse">
                 <thead>
                   <tr className="text-left">
@@ -616,7 +618,7 @@ function PrintRegister({ siteId }: { siteId: string }) {
                       n += 1;
                       const sds = reg.currentSdsOf(c.id);
                       return (
-                        <tr key={s.id}>
+                        <tr key={s.id} className="break-inside-avoid">
                           <td className={cell}>{n}</td>
                           <td className={cell}>{c.name}</td>
                           <td className={cell}>{c.manufacturer}</td>
