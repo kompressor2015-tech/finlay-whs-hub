@@ -57,7 +57,7 @@ export async function listChecks(sinceDays = 90): Promise<Result<Check[]>> {
   const since = new Date(Date.now() - sinceDays * 86_400_000).toISOString();
   const { data, error } = await supabase
     .from('whs_checks')
-    .select('id, kind, checklist_id, checklist_name, machine_id, unit_no, site_name, engine_hours, task, crew, safe_to_start, result, issue_count, done_by, done_by_name, done_at, answers')
+    .select('id, kind, checklist_id, checklist_name, machine_id, unit_no, site_id, site_name, engine_hours, task, crew, safe_to_start, result, issue_count, done_by, done_by_name, done_at, answers')
     .gte('done_at', since)
     .order('done_at', { ascending: false })
     .limit(1000);

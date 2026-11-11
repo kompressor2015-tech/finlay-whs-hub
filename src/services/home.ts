@@ -1,34 +1,27 @@
 /**
- * Loads the home screen from the WHS tables. If the step 2 tables are not there yet
- * (SQL not run), it falls back to the empty home screen instead of failing.
+ * Loads the lists the home screen is built from. If the later tables are not there yet
+ * (SQL not run), those parts are left out instead of failing.
  */
 
-import { emptyHomeData, type HomeData } from '../utils/homeData.ts';
-import { buildHome } from '../utils/records.ts';
+import { emptyHomeData } from '../utils/homeData.ts';
+import type { HomeRaw } from '../utils/homeBuild.ts';
 import { listActions, listHazards, listIncidents } from './records.ts';
 import { listChecklists, listChecks, listFlags } from './checks.ts';
-import { withChecks } from '../utils/homeChecks.ts';
 import { listStocktakes, loadRegister } from './chemicals.ts';
-import { withChemicals } from '../utils/homeChemicals.ts';
-import { buildCharts } from '../utils/homeCharts.ts';
-import { buildBoard } from '../utils/homeBoard.ts';
 
-export async function loadHomeData(me: string): Promise<HomeData> {
+export async function loadHomeRaw(): Promise<HomeRaw | null> {
   const [incidents, hazards, actions, flags, checklists, checks, register, stocktakes] = await Promise.all([
     listIncidents(), listHazards(), listActions(), listFlags(), listChecklists(), listChecks(60), loadRegister(), listStocktakes(),
   ]);
-  if (incidents.error || hazards.error || actions.error) return emptyHomeData();
-  const home = buildHome(incidents.data ?? [], hazards.data ?? [], actions.data ?? [], me);
-  // Step 3 tables may not be there yet; the home screen still works without them.
-  // Later steps' tables may not be there yet; the home screen still works without them.
-  const withStep3 = flags.error || checklists.error || checks.error ? home : withChecks(home, flags.data ?? [], checklists.data ?? [], checks.data ?? []);
-  const now = new Date();
-  const chemicals = !register.error && register.data ? register.data : null;
-  const charts = buildCharts(incidents.data ?? [], hazards.data ?? [], actions.data ?? [], chemicals?.chemicals ?? [], chemicals?.sds ?? [], now);
-  const board = buildBoard(
-    chemicals?.sites ?? [], chemicals?.chemicals ?? [], chemicals?.stock ?? [], chemicals?.sds ?? [], checklists.data ?? [], checks.data ?? [], now,
-  );
-  if (!chemicals) return { ...withStep3, charts, board };
-  const r = chemicals;
-  return { ...withChemicals(withStep3, r.sites, r.chemicals, r.stock, r.sds, now, stocktakes.data ?? []), charts, board };
+  if (incidents.error || hazards.error || actions.error) return null;
+  return {
+    incidents: incidents.data ?? [],
+    hazards: hazards.data ?? [],
+    actions: actions.data ?? [],
+    checks: flags.error || checklists.error || checks.error ? null : { flags: flags.data ?? [], checklists: checklists.data ?? [], checks: checks.data ?? [] },
+    register: !register.error && register.data ? register.data : null,
+    stocktakes: stocktakes.data ?? [],
+  };
 }
+
+export { emptyHomeData };

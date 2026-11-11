@@ -11,6 +11,8 @@ import { HazardPage } from './HazardPage.tsx';
 import { IncidentPage } from './IncidentPage.tsx';
 import { SidePanel, linkOpens, rowOpens, useListPanel } from './SidePanel.tsx';
 import { Pill } from './Pill.tsx';
+import { useSiteScope } from '../hooks/useSiteScope.tsx';
+import { actionsInScope, inScope } from '../utils/siteScope.ts';
 
 type Tab = 'incidents' | 'hazards';
 type Filter = 'open' | 'notifiable' | 'injury' | 'near_miss' | 'all';
@@ -20,9 +22,13 @@ const td = 'px-2 py-3.5 border-b border-line-soft align-top';
 
 /** The incident and hazard registers, as two tabs. */
 export function RegisterPage({ tab, user }: { tab: Tab; user: WhsUser }) {
-  const [incidents, setIncidents] = useState<Incident[]>([]);
-  const [hazards, setHazards] = useState<Hazard[]>([]);
-  const [actions, setActions] = useState<WhsAction[]>([]);
+  const { site } = useSiteScope();
+  const [allIncidents, setIncidents] = useState<Incident[]>([]);
+  const [allHazards, setHazards] = useState<Hazard[]>([]);
+  const [allActions, setActions] = useState<WhsAction[]>([]);
+  const incidents = useMemo(() => allIncidents.filter(i => inScope(site, i)), [allIncidents, site]);
+  const hazards = useMemo(() => allHazards.filter(h => inScope(site, h)), [allHazards, site]);
+  const actions = useMemo(() => actionsInScope(site, allActions, [...incidents, ...hazards]), [allActions, incidents, hazards, site]);
   const [error, setError] = useState<string | null>(null);
   const [loaded, setLoaded] = useState(false);
   const [q, setQ] = useState('');
@@ -94,7 +100,7 @@ export function RegisterPage({ tab, user }: { tab: Tab; user: WhsUser }) {
     <div className="flex-1 min-w-0 flex flex-col gap-4.5">
       <div className="flex flex-wrap justify-between items-end gap-3">
         <div>
-          <h1 className="m-0 text-[26px] font-bold">{tab === 'incidents' ? 'Incidents' : 'Hazards'}</h1>
+          <h1 className="m-0 text-[26px] font-bold">{tab === 'incidents' ? 'Incidents' : 'Hazards'}{site && <span className="text-finlay-dark font-semibold"> · {site.name}</span>}</h1>
           <p className="mt-1.5 mb-0 text-muted text-[15px]">
             {tab === 'incidents'
               ? `${incidents.filter(i => i.status !== 'closed').length} open · ${notifiableThisYear} notifiable this year · ${incidents.length} in total`

@@ -1,5 +1,7 @@
 import { useEffect, useMemo, useState } from 'react';
 import { createChecklist, listChecklists, listChecks } from '../services/checks.ts';
+import { useSiteScope } from '../hooks/useSiteScope.tsx';
+import { inScope } from '../utils/siteScope.ts';
 import type { WhsUser } from '../services/auth.ts';
 import { go, hrefFor } from '../hooks/useRoute.ts';
 import { brisbaneDay, daysUntil, formatDay, formatWhen } from '../utils/dates.ts';
@@ -15,8 +17,12 @@ const td = 'px-2 py-3 border-b border-line-soft align-top';
 
 export function InspectionsPage({ user }: { user: WhsUser }) {
   const officer = user.access === 'admin' || user.access === 'whs_officer';
-  const [checks, setChecks] = useState<Check[]>([]);
-  const [checklists, setChecklists] = useState<Checklist[]>([]);
+  const { site } = useSiteScope();
+  const [allChecks, setChecks] = useState<Check[]>([]);
+  const [allChecklists, setChecklists] = useState<Checklist[]>([]);
+  // Pre-starts are by machine, not site, so they stay in; Take 5s and site inspections follow the site
+  const checks = useMemo(() => allChecks.filter(c => c.kind === 'prestart' || inScope(site, c)), [allChecks, site]);
+  const checklists = useMemo(() => allChecklists.filter(c => inScope(site, c)), [allChecklists, site]);
   const [error, setError] = useState<string | null>(null);
   const [loaded, setLoaded] = useState(false);
   const [tab, setTab] = useState<Tab>('prestart');

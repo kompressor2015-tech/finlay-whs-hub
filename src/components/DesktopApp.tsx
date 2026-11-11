@@ -10,14 +10,12 @@ import { hrefFor, moduleOf, type Route } from '../hooks/useRoute.ts';
 import { HomeCharts } from './HomeCharts.tsx';
 import { Pill } from './Pill.tsx';
 import { Screen } from './Screen.tsx';
-import { SampleToggle } from './SampleToggle.tsx';
+import { SiteSwitcher } from './SiteSwitcher.tsx';
 
 interface Props {
   user: WhsUser;
   data: HomeData;
   route: Route;
-  sample: boolean;
-  onSampleChange: (on: boolean) => void;
   onSignOut: () => void;
   /** Shown on a phone that chose the full version */
   onPhoneLayout?: () => void;
@@ -37,7 +35,7 @@ const GROUPS: { label: string; ids: string[] }[] = [
   { label: 'Registers', ids: ['chemicals', 'plant', 'documents'] },
 ];
 
-export function DesktopApp({ user, data, route, sample, onSampleChange, onSignOut, onPhoneLayout }: Props) {
+export function DesktopApp({ user, data, route, onSignOut, onPhoneLayout }: Props) {
   const navItems = MODULES.filter(m => canOpenModule(user.access, m.id));
   const activeId = moduleOf(route);
   const navLink = (active: boolean) =>
@@ -64,7 +62,7 @@ export function DesktopApp({ user, data, route, sample, onSampleChange, onSignOu
           />
         </div>
         <div className="ml-auto flex items-center gap-3">
-          <SampleToggle on={sample} onChange={onSampleChange} />
+          <SiteSwitcher />
           <details className="relative">
             <summary className="list-none h-10 px-4 rounded-lg bg-finlay hover:bg-finlay-dark text-white font-semibold text-sm flex items-center gap-1.5 cursor-pointer select-none [&::-webkit-details-marker]:hidden">
               <Plus className="w-4 h-4" aria-hidden="true" /> New <ChevronDown className="w-3.5 h-3.5" aria-hidden="true" />

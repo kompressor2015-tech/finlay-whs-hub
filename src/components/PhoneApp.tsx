@@ -5,16 +5,14 @@ import type { HomeData, PhoneTask } from '../utils/homeData.ts';
 import { accessLabel } from '../utils/access.ts';
 import { formatDate } from '../utils/dates.ts';
 import { hrefFor, type Route } from '../hooks/useRoute.ts';
+import { SiteSwitcher } from './SiteSwitcher.tsx';
 import { Pill } from './Pill.tsx';
 import { Screen } from './Screen.tsx';
-import { SampleToggle } from './SampleToggle.tsx';
 
 interface Props {
   user: WhsUser;
   data: HomeData;
   route: Route;
-  sample: boolean;
-  onSampleChange: (on: boolean) => void;
   onSignOut: () => void;
   onFullVersion: () => void;
 }
@@ -25,7 +23,7 @@ const QUICK = [
   { href: hrefFor({ name: 'hazard', id: 'new' }), title: 'Hazard', sub: 'Report it' },
 ];
 
-export function PhoneApp({ user, data, route, sample, onSampleChange, onSignOut, onFullVersion }: Props) {
+export function PhoneApp({ user, data, route, onSignOut, onFullVersion }: Props) {
   const [tab, setTab] = useState<'home' | 'me'>('home');
   const onModule = route.name !== 'home';
   const activeTab = route.name === 'incident' && route.id === 'new' ? 'report' : (route.name === 'module' && route.id === 'inspections') || route.name === 'check' ? 'checks' : onModule ? '' : tab;
@@ -64,7 +62,7 @@ export function PhoneApp({ user, data, route, sample, onSampleChange, onSignOut,
         {onModule ? (
           <Screen route={route} user={user} home={() => <PhoneHome data={data} />} />
         ) : tab === 'me' ? (
-          <MePanel user={user} sample={sample} onSampleChange={onSampleChange} onSignOut={onSignOut} onFullVersion={onFullVersion} />
+          <MePanel user={user} onSignOut={onSignOut} onFullVersion={onFullVersion} />
         ) : (
           <PhoneHome data={data} />
         )}
@@ -168,10 +166,8 @@ function TaskList({ title, items, empty }: { title: string; items: PhoneTask[]; 
   );
 }
 
-function MePanel({ user, sample, onSampleChange, onSignOut, onFullVersion }: {
+function MePanel({ user, onSignOut, onFullVersion }: {
   user: WhsUser;
-  sample: boolean;
-  onSampleChange: (on: boolean) => void;
   onSignOut: () => void;
   onFullVersion: () => void;
 }) {
@@ -182,9 +178,9 @@ function MePanel({ user, sample, onSampleChange, onSignOut, onFullVersion }: {
         <div className="font-semibold text-[17px]">{user.name}</div>
         <div className="text-sm text-muted mt-0.5">{accessLabel(user.access)} · {user.email}</div>
       </div>
-      <div className="flex items-center justify-between">
-        <span className="text-sm text-muted">Preview the layout</span>
-        <SampleToggle on={sample} onChange={onSampleChange} />
+      <div className="bg-white border border-line rounded-xl p-4 flex items-center justify-between gap-3">
+        <span className="text-[15px]">Site</span>
+        <SiteSwitcher />
       </div>
       <div className="bg-white border border-line rounded-xl overflow-hidden">
         <button type="button" onClick={onFullVersion} className={row}>Use the full version</button>
