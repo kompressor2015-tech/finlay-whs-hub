@@ -13,6 +13,8 @@ import { actionCounts, actionPill, actionState, sortActions, type WhsAction } fr
 import { DoneDialog } from './ActionsPanel.tsx';
 import { ErrorNote } from './Form.tsx';
 import { Pill } from './Pill.tsx';
+import { ActionDetail } from './ActionDetail.tsx';
+import { SidePanel, rowOpens, useListPanel } from './SidePanel.tsx';
 
 type View = 'overdue' | 'due_soon' | 'open' | 'done';
 
@@ -74,6 +76,9 @@ export function ActionsPage({ user }: { user: WhsUser }) {
     );
   }, [actions, view, mine, from, q, user.id]);
 
+  const panel = useListPanel(() => shown.map(a => a.id));
+  const openAction = panel.openId ? actions.find(a => a.id === panel.openId) ?? null : null;
+
   const cards: { id: View; label: string; value: number; alert?: boolean }[] = [
     { id: 'overdue', label: 'Overdue', value: counts.overdue, alert: true },
     { id: 'due_soon', label: 'Due this week', value: counts.dueSoon },
@@ -82,7 +87,8 @@ export function ActionsPage({ user }: { user: WhsUser }) {
   ];
 
   return (
-    <div className="flex flex-col gap-4.5">
+    <div className="flex gap-5 items-start">
+    <div className="flex-1 min-w-0 flex flex-col gap-4.5">
       <div className="flex flex-wrap justify-between items-end gap-3">
         <div>
           <h1 className="m-0 text-[26px] font-bold">Actions</h1>
@@ -139,7 +145,7 @@ export function ActionsPage({ user }: { user: WhsUser }) {
               const late = pill.label === 'Overdue';
               const href = sourceHref(a);
               return (
-                <tr key={a.id}>
+                <tr key={a.id} onClick={e => rowOpens(e, () => panel.setOpenId(a.id))} aria-selected={panel.openId === a.id} className={`cursor-pointer ${panel.openId === a.id ? 'bg-finlay-soft' : 'hover:bg-[#FAFAF9]'}`}>
                   <td className={`${td} pl-4`}>
                     <span className="block font-medium">{a.title} {a.unit_no && <span className="text-finlay font-bold">{a.unit_no}</span>}</span>
                     {a.status === 'done' && a.done_note && <span className="block text-[13px] text-muted mt-0.5">{a.done_note}</span>}
@@ -164,6 +170,12 @@ export function ActionsPage({ user }: { user: WhsUser }) {
       <p className="m-0 text-[13px] text-muted">Add actions from an incident or hazard page, so each fix stays linked to why it was needed.</p>
 
       <DoneDialog action={finishing} onClose={() => setFinishing(null)} onDone={() => { setFinishing(null); load(); }} />
+    </div>
+    {openAction && (
+      <SidePanel label="Action" fullHref={hrefFor({ name: 'module', id: 'actions' })} onClose={panel.close}>
+        <ActionDetail key={openAction.id} action={openAction} user={user} sourceHref={sourceHref(openAction)} onChanged={() => void load()} />
+      </SidePanel>
+    )}
     </div>
   );
 }
