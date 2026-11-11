@@ -13,6 +13,7 @@ import type { Incident, WhsAction } from '../utils/records.ts';
 import { ErrorNote, Field, inputClass } from './Form.tsx';
 import { Pill } from './Pill.tsx';
 
+import { askConfirm } from './ConfirmHost.tsx';
 const card = 'bg-white border border-line rounded-xl';
 const btn = 'min-h-10 px-3.5 rounded-lg border border-[#D6D2CC] bg-white text-[13px] font-semibold cursor-pointer disabled:opacity-60';
 const btnPri = 'min-h-10 px-4 rounded-lg border-0 bg-ink text-white text-[13px] font-semibold cursor-pointer disabled:opacity-60';
@@ -168,7 +169,7 @@ export function InvestigationTab({ incident, user, actions, people, canEdit, off
             <Pill tone="grey">{EVIDENCE_KINDS.find(k => k.id === e.kind)?.label ?? e.kind}</Pill>
             <span className="flex-1 min-w-0">{e.description}<span className="block text-xs text-muted">{e.created_by_name} · {formatWhen(e.created_at)}</span></span>
             {e.file_path && <button type="button" className={linkBtn} onClick={() => openFile('whs-incident-files', e.file_path)}>Open {e.file_name ? `(${e.file_name.slice(-18)})` : ''}</button>}
-            {officer && <button type="button" className={linkBtn} onClick={() => window.confirm('Remove this evidence?') && run(() => removeEvidence(e))}>Remove</button>}
+            {officer && <button type="button" className={linkBtn} onClick={() => askConfirm('Remove this evidence?').then(ok => ok && run(() => removeEvidence(e)))}>Remove</button>}
           </div>
         ))}
         {canEdit && (
@@ -203,7 +204,7 @@ export function InvestigationTab({ incident, user, actions, people, canEdit, off
                   </label>
                   {s.status !== 'signed' && <button type="button" className={linkBtn} onClick={() => run(() => updateStatement(s, { status: 'signed' }, null))}>Mark signed</button>}
                   {s.status === 'signed' && <button type="button" className={linkBtn} onClick={() => run(() => updateStatement(s, { status: 'received' }, null))}>Undo signed</button>}
-                  {officer && <button type="button" className={linkBtn} onClick={() => window.confirm('Remove this statement?') && run(() => removeStatement(s))}>Remove</button>}
+                  {officer && <button type="button" className={linkBtn} onClick={() => askConfirm('Remove this statement?').then(ok => ok && run(() => removeStatement(s)))}>Remove</button>}
                 </span>
               )}
             </div>

@@ -15,6 +15,7 @@ import type { WhsUser } from '../services/auth.ts';
 import { ErrorNote, Field, inputClass } from './Form.tsx';
 import { Pill } from './Pill.tsx';
 
+import { askConfirm } from './ConfirmHost.tsx';
 const card = 'bg-white border border-line rounded-xl';
 const btn = 'min-h-10 px-3.5 rounded-lg border border-[#D6D2CC] bg-white text-[13px] font-semibold cursor-pointer disabled:opacity-60';
 const btnPri = 'min-h-10 px-4 rounded-lg border-0 bg-ink text-white text-[13px] font-semibold cursor-pointer disabled:opacity-60';
@@ -161,7 +162,7 @@ export function ClaimFile({ claim: initial, incidentRef, incidentAt, user, onCha
                 <span className="text-muted">{c.doctor_name}</span>
                 {c.next_appointment_on && <span className="text-[13px] text-muted">Back to the doctor {formatDay(c.next_appointment_on)}</span>}
                 <FileLink path={c.file_path} name={c.file_name} />
-                <button type="button" className={`${linkBtn} ml-auto`} onClick={() => window.confirm('Delete this certificate?') && void run(() => removeCertificate(c))}>Delete</button>
+                <button type="button" className={`${linkBtn} ml-auto`} onClick={() => askConfirm('Delete this certificate?').then(ok => ok && run(() => removeCertificate(c)))}>Delete</button>
                 {c.restrictions && <span className="basis-full text-[13px] text-[#3A3A3F]">{c.restrictions}</span>}
               </li>
             );
@@ -177,7 +178,7 @@ export function ClaimFile({ claim: initial, incidentRef, incidentAt, user, onCha
           <ul className="list-none m-0 p-0 flex flex-col gap-2.5">
             {[...appts].sort((a, b) => (a.status === 'booked') === (b.status === 'booked') ? (a.status === 'booked' ? a.on_date.localeCompare(b.on_date) : b.on_date.localeCompare(a.on_date)) : a.status === 'booked' ? -1 : 1).map(a => (
               <AppointmentRow key={a.id} a={a} busy={busy} user={user}
-                onPatch={p => run(() => updateAppointment(a.id, p))} onRemove={() => window.confirm('Delete this appointment?') && void run(() => removeAppointment(a.id))} />
+                onPatch={p => run(() => updateAppointment(a.id, p))} onRemove={() => askConfirm('Delete this appointment?').then(ok => ok && run(() => removeAppointment(a.id)))} />
             ))}
           </ul>
         </Section>
@@ -207,7 +208,7 @@ export function ClaimFile({ claim: initial, incidentRef, incidentAt, user, onCha
           {log.map(l => (
             <li key={l.id} className="py-2.5 text-sm">
               <div className="flex flex-wrap items-center gap-x-3"><span className="text-muted">{formatDay(brisbaneDay(l.happened_at))}</span><Pill tone="grey">{logLabel(l.kind)}</Pill><span className="font-semibold">{l.with_whom}</span><FileLink path={l.file_path} name={l.file_name} />
-                <button type="button" className={`${linkBtn} ml-auto`} onClick={() => window.confirm('Delete this entry?') && void run(() => removeLog(l))}>Delete</button></div>
+                <button type="button" className={`${linkBtn} ml-auto`} onClick={() => askConfirm('Delete this entry?').then(ok => ok && run(() => removeLog(l)))}>Delete</button></div>
               {l.what && <p className="mt-1 mb-0 text-[#3A3A3F] whitespace-pre-line">{l.what}</p>}
             </li>
           ))}
@@ -226,7 +227,7 @@ export function ClaimFile({ claim: initial, incidentRef, incidentAt, user, onCha
               <ul className="list-none m-0 p-0 flex flex-col divide-y divide-line-soft">
                 {list.map(d => (
                   <li key={d.id} className="py-2 flex flex-wrap items-center gap-x-3 text-sm"><span className="font-medium">{d.title}</span><FileLink path={d.file_path} name={d.file_name} /><span className="text-muted text-xs">{formatWhen(d.created_at)} · {d.created_by_name}</span>
-                    <button type="button" className={`${linkBtn} ml-auto`} onClick={() => window.confirm('Delete this document?') && void run(() => removeClaimDoc(d))}>Delete</button></li>
+                    <button type="button" className={`${linkBtn} ml-auto`} onClick={() => askConfirm('Delete this document?').then(ok => ok && run(() => removeClaimDoc(d)))}>Delete</button></li>
                 ))}
               </ul>
             </div>

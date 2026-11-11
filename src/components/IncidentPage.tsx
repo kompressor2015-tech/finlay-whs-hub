@@ -6,13 +6,13 @@ import { hrefFor } from '../hooks/useRoute.ts';
 import { isOfficeAccess } from '../utils/access.ts';
 import { addDays, brisbaneDay, formatDate, formatDay, formatLongDate, formatTime, formatWhen } from '../utils/dates.ts';
 import {
-  FACTORS, NOTIFIABLE_REASONS, WHSQ_PHONE, WHSQ_TEL, canClose, incidentStatusFor, incidentSteps, incidentTypeLabel,
+  FACTORS, NOTIFIABLE_REASONS, WHSQ_PHONE, WHSQ_TEL, incidentStatusFor, incidentSteps, incidentTypeLabel,
   keepRecordUntil, notifiableSummary, type HistoryEntry, type Incident, type WhsAction,
 } from '../utils/records.ts';
 import { listClaims } from '../services/claims.ts';
 import { listIncidentPeople } from '../services/incidentFile.ts';
 import { claimAttention, type Claim } from '../utils/claims.ts';
-import { closeBlockers, incidentAttention, investigationProgress, needsFullInvestigation, type IncidentPerson } from '../utils/incidentFile.ts';
+import { closeBlockers, incidentAttention, investigationProgress, type IncidentPerson } from '../utils/incidentFile.ts';
 import { ActionsPanel } from './ActionsPanel.tsx';
 import { IncidentPeopleTab } from './IncidentPeopleTab.tsx';
 import { DocumentsTab, TimelineTab, useFileData } from './IncidentFileTabs.tsx';
@@ -21,6 +21,7 @@ import { InvestigationTab } from './InvestigationTab.tsx';
 import { ErrorNote, Field, inputClass } from './Form.tsx';
 import { Pill } from './Pill.tsx';
 
+import { askConfirm } from './ConfirmHost.tsx';
 const card = 'bg-white border border-line rounded-xl';
 type Tab = 'overview' | 'investigation' | 'people' | 'timeline' | 'documents' | 'actions';
 const smallButton = 'min-h-11 px-4 rounded-lg text-sm font-semibold cursor-pointer disabled:opacity-60 disabled:cursor-not-allowed';
@@ -96,9 +97,14 @@ export function IncidentPage({ id, user, embedded }: { id: string; user: WhsUser
 
   const status = incidentStatusFor(incident, actions);
   const steps = incidentSteps(incident, actions);
-  const closable = tabbed ? closeBlockers(incident, actions, officer ? claims : null).length === 0 : canClose(incident, actions);
-  const blockers = tabbed ? closeBlockers(incident, actions, officer ? claims : null) : [];
-  const full = needsFullInvestigation(incident);
+  const blockers = closeBlockers(incident, actions, officer ? claims : null);
+  async function closeClicked() {
+    if (blockers.length) {
+      await askConfirm({ title: `${incident!.ref} can't be closed yet`, body: 'Still to do:', items: blockers, infoOnly: true });
+      return;
+    }
+    if (await askConfirm({ title: `Close ${incident!.ref}?`, body: 'This marks the incident as finished. You can reopen it later if you need to.', confirmLabel: 'Close incident' })) void save({ status: 'closed' });
+  }
   const prog = investigationProgress(incident);
   const attention = [
     ...incidentAttention(incident, fileData.statements).map(a => ({ id: a.id, tone: a.tone, when: a.when, what: a.what })),
@@ -155,8 +161,8 @@ export function IncidentPage({ id, user, embedded }: { id: string; user: WhsUser
               officer && <button type="button" disabled={saving} className={`${smallButton} border border-[#D6D2CC] bg-white`} onClick={() => save({ status: 'actions' })}>Reopen</button>
             ) : (
               officer && (
-                <button type="button" disabled={saving || !closable} title={closable ? '' : blockers.length ? `Before closing: ${blockers.join('; ')}` : 'Finish all actions first'} className={`${smallButton} border-0 bg-finlay text-white`}
-                  onClick={() => { if (window.confirm(`Close ${incident.ref}?\n\nThis marks the incident as finished. You can reopen it later if you need to.`)) void save({ status: 'closed' }); }}>
+                <button type="button" disabled={saving} aria-describedby={blockers.length ? 'close-blockers' : undefined} className={`${smallButton} border-0 ${blockers.length ? 'bg-[#8A8A90]' : 'bg-finlay'} text-white`}
+                  onClick={() => void closeClicked()}>
                   Close incident
                 </button>
               )
@@ -176,8 +182,8 @@ export function IncidentPage({ id, user, embedded }: { id: string; user: WhsUser
         ))}
       </ol>
 
-      {tabbed && !closable && blockers.length > 0 && incident.status !== 'closed' && full && (
-        <p className="m-0 text-sm text-muted">To close: {blockers.join(' · ')}.</p>
+      {office && blockers.length > 0 && incident.status !== 'closed' && (
+        <p id="close-blockers" className="m-0 text-sm text-muted">Before this can be closed: {blockers.join(' · ')}.</p>
       )}
 
       {tabbed && (

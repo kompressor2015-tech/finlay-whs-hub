@@ -12,6 +12,7 @@ import { classToConfirm } from '../utils/stocktakes.ts';
 import { ErrorNote, Field, inputClass, textareaClass } from './Form.tsx';
 import { Pill } from './Pill.tsx';
 
+import { askConfirm } from './ConfirmHost.tsx';
 const CLASSES: DgClass[] = ['2.1', '2.2', '2.3', '3', '4.1', '4.2', '4.3', '5.1', '5.2', '6.1', '8', '9'];
 const card = 'bg-white border border-line rounded-xl';
 const small = 'min-h-10 rounded-lg border border-[#D6D2CC] bg-white px-2.5 text-sm';
@@ -251,7 +252,7 @@ function StockRow({ s, site, office, officer, onChanged, siteLocations, taken }:
     onChanged();
   }
   async function remove() {
-    if (!window.confirm(`Remove ${s.location} for this chemical? Its count history goes too.`)) return;
+    if (!(await askConfirm({ title: `Remove ${s.location}?`, body: 'This takes the line off this chemical. Its count history goes too.', confirmLabel: 'Remove', danger: true }))) return;
     const res = await deleteStock(s.id);
     if (res.error) return setError(res.error);
     onChanged();

@@ -16,6 +16,7 @@ export function rememberBack(incidentId: string, ref: string): void {
   try { sessionStorage.setItem('whsBack', JSON.stringify({ href: hrefFor({ name: 'incident', id: incidentId }), label: ref })); } catch { /* optional */ }
 }
 
+import { askConfirm } from './ConfirmHost.tsx';
 const card = 'bg-white border border-line rounded-xl';
 const btn = 'min-h-10 px-3.5 rounded-lg border border-[#D6D2CC] bg-white text-[13px] font-semibold cursor-pointer disabled:opacity-60';
 const btnPri = 'min-h-10 px-4 rounded-lg border-0 bg-ink text-white text-[13px] font-semibold cursor-pointer disabled:opacity-60';
@@ -80,7 +81,7 @@ export function IncidentPeopleTab({ incident, user, people, claims, certs, appoi
                 <div className="text-[13px] text-muted">{p.employer || 'Finlay'}{p.phone ? ` · ${p.phone}` : ''}</div>
               </div>
               {canEdit && <button type="button" className={linkBtn} onClick={() => setEditing(editing === p.id ? null : p.id)}>{editing === p.id ? 'Close' : 'Edit'}</button>}
-              {officer && <button type="button" className={linkBtn} onClick={() => window.confirm(`Remove ${p.name} from this incident?`) && run(() => removeIncidentPerson(p.id))}>Remove</button>}
+              {officer && <button type="button" className={linkBtn} onClick={() => askConfirm(`Remove ${p.name} from this incident?`).then(ok => ok && run(() => removeIncidentPerson(p.id)))}>Remove</button>}
             </div>
 
             {p.role === 'injured' && editing !== p.id && (
