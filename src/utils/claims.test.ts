@@ -103,3 +103,12 @@ test('appointments: doctor booked before the certificate ends, upcoming, overdue
   assert.deepEqual(fu.map(a => [a.id, a.tone]), [['fu-a1', 'red']]);
   assert.equal(claimAttention(base, [{ ...cert[0], to_date: '2026-11-30' }], inc, NOW, [appt({ status: 'cancelled' })]).length, 0);
 });
+
+test('a certificate marked "no further doctor visits" stops the certificate reminders', () => {
+  const inc = '2026-11-10T07:40:00+10:00';
+  const last = [{ from_date: '2026-11-10', to_date: '2026-11-12', capacity: 'fit' as const, next_appointment_on: null, no_further_visits: true }];
+  assert.equal(claimAttention(base, last, inc, NOW, []).length, 0);
+  const lapsed = [{ from_date: '2026-11-01', to_date: '2026-11-05', capacity: 'fit' as const, next_appointment_on: null, no_further_visits: true }];
+  assert.equal(claimAttention(base, lapsed, inc, NOW, []).length, 0);
+  assert.equal(claimAttention(base, [{ ...last[0], no_further_visits: false }], inc, NOW, []).length, 1);
+});

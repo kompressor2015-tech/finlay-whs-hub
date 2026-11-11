@@ -1,7 +1,7 @@
 import { useCallback, useEffect, useState, type ReactNode } from 'react';
 import {
   addAppointment, addCertificate, addClaimDoc, addContact, addLog, listAppointments, removeAppointment, updateAppointment, listCertificates, listClaimDocs, listClaimHistory, listContacts, listLog, listStages,
-  removeCertificate, removeClaimDoc, removeContact, removeLog, removeStage, saveStage, toggleStep, updateClaim, logAccess,
+  removeCertificate, updateCertificate, removeClaimDoc, removeContact, removeLog, removeStage, saveStage, toggleStep, updateClaim, logAccess,
 } from '../services/claims.ts';
 import { openFile } from '../services/files.ts';
 import { hrefFor } from '../hooks/useRoute.ts';
@@ -15,6 +15,7 @@ import type { WhsUser } from '../services/auth.ts';
 import { ErrorNote, Field, inputClass } from './Form.tsx';
 import { Pill } from './Pill.tsx';
 
+import { askConfirm } from './ConfirmHost.tsx';
 const card = 'bg-white border border-line rounded-xl';
 const btn = 'min-h-10 px-3.5 rounded-lg border border-[#D6D2CC] bg-white text-[13px] font-semibold cursor-pointer disabled:opacity-60';
 const btnPri = 'min-h-10 px-4 rounded-lg border-0 bg-ink text-white text-[13px] font-semibold cursor-pointer disabled:opacity-60';
@@ -159,9 +160,16 @@ export function ClaimFile({ claim: initial, incidentRef, incidentAt, user, onCha
                 <span className="font-semibold">{formatDay(c.from_date)} to {formatDay(c.to_date)}</span>
                 <Pill tone={cap.tone}>{cap.label}</Pill>
                 <span className="text-muted">{c.doctor_name}</span>
-                {c.next_appointment_on && <span className="text-[13px] text-muted">Back to the doctor {formatDay(c.next_appointment_on)}</span>}
+                {c.next_appointment_on && !c.no_further_visits && <span className="text-[13px] text-muted">Back to the doctor {formatDay(c.next_appointment_on)}</span>}
+                {c.no_further_visits && <Pill tone="green">Last certificate</Pill>}
+                {(c.no_further_visits || (cs.latest && cs.latest.from_date === c.from_date && cs.latest.to_date === c.to_date)) && (
+                  <label className="basis-full flex items-center gap-2 text-[13px] cursor-pointer min-h-9">
+                    <input type="checkbox" className="w-5 h-5 accent-[#1E6B3A]" checked={Boolean(c.no_further_visits)} disabled={busy} onChange={e => void run(() => updateCertificate(c.id, { no_further_visits: e.target.checked }))} />
+                    No further doctor visits needed (stops the reminders for the next certificate)
+                  </label>
+                )}
                 <FileLink path={c.file_path} name={c.file_name} />
-                <button type="button" className={`${linkBtn} ml-auto`} onClick={() => window.confirm('Delete this certificate?') && void run(() => removeCertificate(c))}>Delete</button>
+                <button type="button" className={`${linkBtn} ml-auto`} onClick={() => askConfirm('Delete this certificate?').then(ok => ok && run(() => removeCertificate(c)))}>Delete</button>
                 {c.restrictions && <span className="basis-full text-[13px] text-[#3A3A3F]">{c.restrictions}</span>}
               </li>
             );
@@ -177,7 +185,7 @@ export function ClaimFile({ claim: initial, incidentRef, incidentAt, user, onCha
           <ul className="list-none m-0 p-0 flex flex-col gap-2.5">
             {[...appts].sort((a, b) => (a.status === 'booked') === (b.status === 'booked') ? (a.status === 'booked' ? a.on_date.localeCompare(b.on_date) : b.on_date.localeCompare(a.on_date)) : a.status === 'booked' ? -1 : 1).map(a => (
               <AppointmentRow key={a.id} a={a} busy={busy} user={user}
-                onPatch={p => run(() => updateAppointment(a.id, p))} onRemove={() => window.confirm('Delete this appointment?') && void run(() => removeAppointment(a.id))} />
+                onPatch={p => run(() => updateAppointment(a.id, p))} onRemove={() => askConfirm('Delete this appointment?').then(ok => ok && run(() => removeAppointment(a.id)))} />
             ))}
           </ul>
         </Section>
@@ -207,7 +215,7 @@ export function ClaimFile({ claim: initial, incidentRef, incidentAt, user, onCha
           {log.map(l => (
             <li key={l.id} className="py-2.5 text-sm">
               <div className="flex flex-wrap items-center gap-x-3"><span className="text-muted">{formatDay(brisbaneDay(l.happened_at))}</span><Pill tone="grey">{logLabel(l.kind)}</Pill><span className="font-semibold">{l.with_whom}</span><FileLink path={l.file_path} name={l.file_name} />
-                <button type="button" className={`${linkBtn} ml-auto`} onClick={() => window.confirm('Delete this entry?') && void run(() => removeLog(l))}>Delete</button></div>
+                <button type="button" className={`${linkBtn} ml-auto`} onClick={() => askConfirm('Delete this entry?').then(ok => ok && run(() => removeLog(l)))}>Delete</button></div>
               {l.what && <p className="mt-1 mb-0 text-[#3A3A3F] whitespace-pre-line">{l.what}</p>}
             </li>
           ))}
@@ -226,7 +234,7 @@ export function ClaimFile({ claim: initial, incidentRef, incidentAt, user, onCha
               <ul className="list-none m-0 p-0 flex flex-col divide-y divide-line-soft">
                 {list.map(d => (
                   <li key={d.id} className="py-2 flex flex-wrap items-center gap-x-3 text-sm"><span className="font-medium">{d.title}</span><FileLink path={d.file_path} name={d.file_name} /><span className="text-muted text-xs">{formatWhen(d.created_at)} · {d.created_by_name}</span>
-                    <button type="button" className={`${linkBtn} ml-auto`} onClick={() => window.confirm('Delete this document?') && void run(() => removeClaimDoc(d))}>Delete</button></li>
+                    <button type="button" className={`${linkBtn} ml-auto`} onClick={() => askConfirm('Delete this document?').then(ok => ok && run(() => removeClaimDoc(d)))}>Delete</button></li>
                 ))}
               </ul>
             </div>
@@ -271,7 +279,7 @@ function ClaimDetails({ claim, busy, onSave }: { claim: Claim; busy: boolean; on
   );
 }
 
-function CertificateForm({ busy, defaultFrom, onAdd }: { busy: boolean; defaultFrom: string; onAdd: (i: { from_date: string; to_date: string; doctor_name: string; capacity: Capacity; restrictions: string; next_appointment_on: string | null }, f: File | null) => Promise<boolean> }) {
+function CertificateForm({ busy, defaultFrom, onAdd }: { busy: boolean; defaultFrom: string; onAdd: (i: { from_date: string; to_date: string; doctor_name: string; capacity: Capacity; restrictions: string; next_appointment_on: string | null; no_further_visits: boolean }, f: File | null) => Promise<boolean> }) {
   const [open, setOpen] = useState(false);
   const [from, setFrom] = useState(defaultFrom);
   const [to, setTo] = useState('');
@@ -279,6 +287,7 @@ function CertificateForm({ busy, defaultFrom, onAdd }: { busy: boolean; defaultF
   const [cap, setCap] = useState<Capacity>('unfit');
   const [rest, setRest] = useState('');
   const [nextAppt, setNextAppt] = useState('');
+  const [final, setFinal] = useState(false);
   const [file, setFile] = useState<File | null>(null);
   const [err, setErr] = useState<string | null>(null);
   if (!open) return <button type="button" className={`${btn} self-start`} onClick={() => { setFrom(defaultFrom); setOpen(true); }}>+ Add a certificate</button>;
@@ -289,6 +298,7 @@ function CertificateForm({ busy, defaultFrom, onAdd }: { busy: boolean; defaultF
       <Field label="Doctor" htmlFor="ce-doc" optional><input id="ce-doc" className={inputClass} value={doctor} onChange={e => setDoctor(e.target.value)} /></Field>
       <Field label="Capacity" htmlFor="ce-cap"><select id="ce-cap" className={inputClass} value={cap} onChange={e => setCap(e.target.value as Capacity)}>{CAPACITIES.map(c => <option key={c.id} value={c.id}>{c.label}</option>)}</select></Field>
       <Field label="Back to the doctor on" htmlFor="ce-next" optional hint="Gives you a prompt if there is no new certificate by then."><input id="ce-next" type="date" className={inputClass} value={nextAppt} onChange={e => setNextAppt(e.target.value)} /></Field>
+      <label className="col-span-2 flex items-center gap-2 text-sm cursor-pointer min-h-11"><input type="checkbox" className="w-5 h-5 accent-[#1E6B3A]" checked={final} onChange={e => setFinal(e.target.checked)} /> No further doctor visits needed (last certificate)</label>
       <div className="col-span-2 sm:col-span-4"><Field label="Restrictions" htmlFor="ce-res" optional><input id="ce-res" className={inputClass} value={rest} onChange={e => setRest(e.target.value)} placeholder="e.g. No lifting over 5 kg, no overhead work" /></Field></div>
       <div className="col-span-2 sm:col-span-4"><Field label="Scan or photo of the certificate" htmlFor="ce-file" optional><input id="ce-file" type="file" accept="image/*,.pdf" onChange={e => setFile(e.target.files?.[0] ?? null)} /></Field></div>
       <div className="col-span-2 sm:col-span-4"><ErrorNote message={err} /></div>
@@ -297,7 +307,7 @@ function CertificateForm({ busy, defaultFrom, onAdd }: { busy: boolean; defaultF
           if (!from || !to) return setErr('Enter both dates.');
           if (to < from) return setErr('The end date is before the start date.');
           setErr(null);
-          if (await onAdd({ from_date: from, to_date: to, doctor_name: doctor.trim(), capacity: cap, restrictions: rest.trim(), next_appointment_on: nextAppt || null }, file)) { setOpen(false); setTo(''); setRest(''); setNextAppt(''); setFile(null); }
+          if (await onAdd({ from_date: from, to_date: to, doctor_name: doctor.trim(), capacity: cap, restrictions: rest.trim(), next_appointment_on: final ? null : nextAppt || null, no_further_visits: final }, file)) { setOpen(false); setTo(''); setRest(''); setNextAppt(''); setFinal(false); setFile(null); }
         }}>Save certificate</button>
         <button type="button" className={btn} onClick={() => setOpen(false)}>Cancel</button>
       </div>

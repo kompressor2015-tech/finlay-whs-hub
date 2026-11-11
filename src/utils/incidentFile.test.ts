@@ -83,3 +83,9 @@ test('an injury marked "investigation not required" can close without the six pa
   assert.equal(canWaiveInvestigation({ notifiable_reasons: [] }), true);
   assert.equal(canWaiveInvestigation({ notifiable_reasons: ['x'] as never }), false);
 });
+
+test('an open claim is named in the close blockers', () => {
+  const inj = { status: 'investigating', type: 'injury', notifiable_reasons: [], parts_done: [], investigation_waived: true } as never;
+  assert.deepEqual(closeBlockers(inj, [], [{ status: 'lodged', label: "John Doe's WorkCover Queensland claim" }]), ["John Doe's WorkCover Queensland claim is still open (close or reject it in People and claims)"]);
+  assert.deepEqual(closeBlockers(inj, [], [{ status: 'lodged' }, { status: 'accepted' }]), ['2 claims are still open']);
+});

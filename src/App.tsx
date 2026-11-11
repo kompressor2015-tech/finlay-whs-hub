@@ -4,6 +4,7 @@ import { getCurrentUser, onSignedOut, signOut, type WhsUser } from './services/a
 import { loadHomeRaw } from './services/home.ts';
 import { emptyHomeData } from './utils/homeData.ts';
 import { buildHomeData, type HomeRaw } from './utils/homeBuild.ts';
+import { ConfirmHost } from './components/ConfirmHost.tsx';
 import { SiteScopeProvider, useSiteScope } from './hooks/useSiteScope.tsx';
 import { useIsPhone } from './hooks/useIsPhone.ts';
 import { useRoute } from './hooks/useRoute.ts';
@@ -15,6 +16,7 @@ export default function App() {
   return (
     <SiteScopeProvider>
       <AppInner />
+      <ConfirmHost />
     </SiteScopeProvider>
   );
 }
