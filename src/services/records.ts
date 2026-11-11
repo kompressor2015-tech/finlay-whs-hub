@@ -153,7 +153,7 @@ export async function updateHazard(id: string, patch: Partial<Hazard>): Promise<
 // Actions
 // ---------------------------------------------------------------------------------
 
-export type NewAction = Pick<WhsAction, 'title' | 'source_type' | 'source_id' | 'source_ref' | 'machine_id' | 'unit_no' | 'owner_id' | 'due'>;
+export type NewAction = Pick<WhsAction, 'title' | 'source_type' | 'source_id' | 'source_ref' | 'machine_id' | 'unit_no' | 'owner_id' | 'due'> & { control_level?: string };
 
 export async function listActions(source?: { type: string; id: string }): Promise<Result<WhsAction[]>> {
   let q = supabase.from('whs_actions').select('*');

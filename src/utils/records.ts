@@ -47,6 +47,15 @@ export interface Incident {
   investigation_due: string | null;
   why_chain: string[];
   factors: string[];
+  immediate_cause?: string;
+  root_cause?: string;
+  findings?: string;
+  parts_done?: string[];
+  investigation_signed_by_name?: string;
+  investigation_signed_at?: string | null;
+  reviewed_by_name?: string;
+  reviewed_at?: string | null;
+  crew_briefed_on?: string | null;
   closed_at: string | null;
   reported_by: string;
   reporter_name: string;
@@ -74,6 +83,7 @@ export interface Hazard {
 }
 
 export interface WhsAction {
+  control_level?: string;
   id: string;
   title: string;
   source_type: SourceType;

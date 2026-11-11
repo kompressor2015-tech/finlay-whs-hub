@@ -9,11 +9,19 @@ import {
   FACTORS, NOTIFIABLE_REASONS, WHSQ_PHONE, WHSQ_TEL, canClose, incidentStatus, incidentSteps, incidentTypeLabel,
   keepRecordUntil, notifiableSummary, type HistoryEntry, type Incident, type WhsAction,
 } from '../utils/records.ts';
+import { listClaims } from '../services/claims.ts';
+import { listIncidentPeople } from '../services/incidentFile.ts';
+import { claimAttention, type Claim } from '../utils/claims.ts';
+import { closeBlockers, incidentAttention, investigationProgress, needsFullInvestigation, type IncidentPerson } from '../utils/incidentFile.ts';
 import { ActionsPanel } from './ActionsPanel.tsx';
+import { IncidentPeopleTab } from './IncidentPeopleTab.tsx';
+import { DocumentsTab, TimelineTab, useFileData } from './IncidentFileTabs.tsx';
+import { InvestigationTab } from './InvestigationTab.tsx';
 import { ErrorNote, Field, inputClass } from './Form.tsx';
 import { Pill } from './Pill.tsx';
 
 const card = 'bg-white border border-line rounded-xl';
+type Tab = 'overview' | 'investigation' | 'people' | 'timeline' | 'documents' | 'actions';
 const smallButton = 'min-h-11 px-4 rounded-lg text-sm font-semibold cursor-pointer disabled:opacity-60 disabled:cursor-not-allowed';
 
 export function IncidentPage({ id, user, embedded }: { id: string; user: WhsUser; embedded?: boolean }) {
@@ -26,6 +34,12 @@ export function IncidentPage({ id, user, embedded }: { id: string; user: WhsUser
   const [photos, setPhotos] = useState<string[]>([]);
   const [error, setError] = useState<string | null>(null);
   const [saving, setSaving] = useState(false);
+  const [tab, setTab] = useState<Tab>('overview');
+  const [ipeople, setIpeople] = useState<IncidentPerson[]>([]);
+  const [claims, setClaims] = useState<Claim[]>([]);
+  const [version, setVersion] = useState(0);
+  const tabbed = office && !embedded;
+  const fileData = useFileData(id, claims, officer && tabbed, version);
   // Investigation draft
   const [lead, setLead] = useState('');
   const [due, setDue] = useState('');
@@ -46,11 +60,14 @@ export function IncidentPage({ id, user, embedded }: { id: string; user: WhsUser
     setFactors(inc.factors);
     setWhsqRef(inc.whsq_reference);
     setReleasedBy(inc.site_released_by);
-    const [acts, hist, links] = await Promise.all([listActions({ type: 'incident', id }), office ? listHistory('incident', id) : Promise.resolve([]), photoLinks(inc.photos)]);
+    const [acts, hist, links, ppl, cl] = await Promise.all([listActions({ type: 'incident', id }), office ? listHistory('incident', id) : Promise.resolve([]), photoLinks(inc.photos), office ? listIncidentPeople(id) : Promise.resolve({ data: [] as IncidentPerson[] }), officer ? listClaims({ incidentId: id }) : Promise.resolve({ data: [] as Claim[] })]);
+    setIpeople(ppl.data ?? []);
+    setClaims(cl.data ?? []);
+    setVersion(v => v + 1);
     setActions(acts.data ?? []);
     setHistory(hist);
     setPhotos(links);
-  }, [id, office]);
+  }, [id, office, officer]);
 
   useEffect(() => {
     load();
@@ -71,7 +88,27 @@ export function IncidentPage({ id, user, embedded }: { id: string; user: WhsUser
 
   const status = incidentStatus(incident.status);
   const steps = incidentSteps(incident, actions);
-  const closable = canClose(incident, actions);
+  const closable = tabbed ? closeBlockers(incident, actions, officer ? claims : null).length === 0 : canClose(incident, actions);
+  const blockers = tabbed ? closeBlockers(incident, actions, officer ? claims : null) : [];
+  const full = needsFullInvestigation(incident);
+  const prog = investigationProgress(incident);
+  const attention = [
+    ...incidentAttention(incident, fileData.statements).map(a => ({ id: a.id, tone: a.tone, when: a.when, what: a.what })),
+    ...(officer ? claims.flatMap(c => claimAttention(c, fileData.certs.filter(x => x.claim_id === c.id), incident.occurred_at).map(a => ({ id: `${c.id}-${a.id}`, tone: a.tone, when: a.when, what: a.what }))) : []),
+  ];
+  const toneBg: Record<string, string> = { red: 'bg-[#FDE8E8] text-[#9B1218]', amber: 'bg-[#FFF1D6] text-[#7A4B00]', green: 'bg-[#E3F4E6] text-[#1F6B2E]', blue: 'bg-[#E4EEFC] text-[#1C4A8F]', grey: 'bg-[#ECECEC] text-[#4A4A50]' };
+  const tabs: { id: Tab; label: string; badge?: string }[] = [
+    { id: 'overview', label: 'Overview' },
+    ...(incident.status !== 'new' ? [{ id: 'investigation' as Tab, label: 'Investigation', badge: `${prog.done}/${prog.total}` }] : []),
+    { id: 'people', label: officer ? 'People and claims' : 'People', badge: ipeople.length ? String(ipeople.length) : undefined },
+    { id: 'timeline', label: 'Timeline' },
+    { id: 'documents', label: 'Documents' },
+    { id: 'actions', label: 'Actions', badge: actions.length ? `${actions.filter(a => a.status === 'done').length}/${actions.length}` : undefined },
+  ];
+  const reload = async () => { await load(); };
+  const actionsPanel = (
+    <ActionsPanel source={{ type: 'incident', id: incident.id, ref: incident.ref }} access={user.access} me={user.id} unitNo={incident.unit_no} machineId={incident.machine_id} actions={actions} onChanged={load} />
+  );
 
   return (
     <div className="flex flex-col gap-5">
@@ -110,7 +147,7 @@ export function IncidentPage({ id, user, embedded }: { id: string; user: WhsUser
               officer && <button type="button" disabled={saving} className={`${smallButton} border border-[#D6D2CC] bg-white`} onClick={() => save({ status: 'actions' })}>Reopen</button>
             ) : (
               officer && (
-                <button type="button" disabled={saving || !closable} title={closable ? '' : 'Finish all actions first'} className={`${smallButton} border-0 bg-finlay text-white`}
+                <button type="button" disabled={saving || !closable} title={closable ? '' : blockers.length ? `Before closing: ${blockers.join('; ')}` : 'Finish all actions first'} className={`${smallButton} border-0 bg-finlay text-white`}
                   onClick={() => save({ status: 'closed' })}>
                   Close incident
                 </button>
@@ -131,8 +168,38 @@ export function IncidentPage({ id, user, embedded }: { id: string; user: WhsUser
         ))}
       </ol>
 
+      {tabbed && !closable && blockers.length > 0 && incident.status !== 'closed' && full && (
+        <p className="m-0 text-sm text-muted">To close: {blockers.join(' · ')}.</p>
+      )}
+
+      {tabbed && (
+        <div role="tablist" aria-label="Incident file" className="flex flex-wrap gap-1 border-b border-line">
+          {tabs.map(t => (
+            <button key={t.id} type="button" role="tab" aria-selected={tab === t.id} onClick={() => setTab(t.id)}
+              className={`min-h-11 px-4 -mb-px bg-transparent border-0 border-b-2 text-sm font-semibold cursor-pointer ${tab === t.id ? 'border-finlay text-ink' : 'border-transparent text-muted'}`}>
+              {t.label}{t.badge && <span className="ml-1.5 text-xs font-normal text-muted">{t.badge}</span>}
+            </button>
+          ))}
+        </div>
+      )}
+
+      {tabbed && tab === 'investigation' && <InvestigationTab incident={incident} user={user} actions={actions} people={ipeople} canEdit={incident.status !== 'closed'} officer={officer} reload={reload} />}
+      {tabbed && tab === 'people' && <IncidentPeopleTab incident={incident} people={ipeople} claims={claims} certs={fileData.certs} canEdit={incident.status !== 'closed'} officer={officer} reload={reload} />}
+      {tabbed && tab === 'timeline' && <TimelineTab history={history} data={fileData} officer={officer} />}
+      {tabbed && tab === 'documents' && <DocumentsTab data={fileData} photos={photos} officer={officer} />}
+      {tabbed && tab === 'actions' && actionsPanel}
+
+      {(!tabbed || tab === 'overview') && (
       <div className="flex flex-wrap gap-5 items-start">
         <div className="flex-[2_1_520px] min-w-0 flex flex-col gap-5">
+          {tabbed && attention.length > 0 && (
+            <section className={`${card} px-5 py-4`}>
+              <h2 className="mt-0 mb-2.5 text-[15px] font-semibold">Needs attention</h2>
+              <ul className="list-none m-0 p-0 flex flex-col gap-2">
+                {attention.map(a => <li key={a.id} className={`rounded-lg px-3.5 py-2 text-sm ${toneBg[a.tone]}`}><strong>{a.when}.</strong> {a.what}</li>)}
+              </ul>
+            </section>
+          )}
           <section className={`${card} px-5 py-4.5`}>
             <h2 className="mt-0 mb-3 text-[17px] font-semibold">What happened</h2>
             <p className="m-0 text-sm leading-relaxed whitespace-pre-line">{incident.description}</p>
@@ -149,7 +216,18 @@ export function IncidentPage({ id, user, embedded }: { id: string; user: WhsUser
             )}
           </section>
 
-          {office && incident.status !== 'new' && (
+          {tabbed && ipeople.length > 0 && (
+            <section className={`${card} px-5 py-4`}>
+              <h2 className="mt-0 mb-2.5 text-[15px] font-semibold">People</h2>
+              <ul className="list-none m-0 p-0 flex flex-wrap gap-x-5 gap-y-1 text-sm">
+                {ipeople.map(p => <li key={p.id}><strong>{p.name}</strong> <span className="text-muted">{p.role === 'injured' ? 'injured' : p.role.replace('_', ' ')}</span></li>)}
+              </ul>
+            </section>
+          )}
+
+          {tabbed && <TimelineTab history={history} data={fileData} officer={officer} limit={6} />}
+
+          {!tabbed && office && incident.status !== 'new' && (
             <section className={`${card} px-5 py-4.5 flex flex-col gap-4`}>
               <h2 className="m-0 text-[17px] font-semibold">Investigation</h2>
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
@@ -196,15 +274,7 @@ export function IncidentPage({ id, user, embedded }: { id: string; user: WhsUser
             </section>
           )}
 
-          <ActionsPanel
-            source={{ type: 'incident', id: incident.id, ref: incident.ref }}
-            access={user.access}
-            me={user.id}
-            unitNo={incident.unit_no}
-            machineId={incident.machine_id}
-            actions={actions}
-            onChanged={load}
-          />
+          {!tabbed && actionsPanel}
         </div>
 
         <div className="flex-[1_1_300px] min-w-0 flex flex-col gap-5">
@@ -281,7 +351,7 @@ export function IncidentPage({ id, user, embedded }: { id: string; user: WhsUser
             </section>
           )}
 
-          {office && (
+          {office && !tabbed && (
             <section className={`${card} px-4.5 py-4`}>
               <h2 className="mt-0 mb-2.5 text-[15px] font-semibold">History</h2>
               {history.length === 0 ? (
@@ -300,6 +370,7 @@ export function IncidentPage({ id, user, embedded }: { id: string; user: WhsUser
           )}
         </div>
       </div>
+      )}
     </div>
   );
 }
