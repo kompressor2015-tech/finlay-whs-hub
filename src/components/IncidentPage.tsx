@@ -191,7 +191,7 @@ export function IncidentPage({ id, user, embedded }: { id: string; user: WhsUser
       )}
 
       {tabbed && tab === 'investigation' && <InvestigationTab incident={incident} user={user} actions={actions} people={ipeople} canEdit={incident.status !== 'closed'} officer={officer} reload={reload} />}
-      {tabbed && tab === 'people' && <IncidentPeopleTab incident={incident} people={ipeople} claims={claims} certs={fileData.certs} canEdit={incident.status !== 'closed'} officer={officer} reload={reload} />}
+      {tabbed && tab === 'people' && <IncidentPeopleTab incident={incident} user={user} people={ipeople} claims={claims} certs={fileData.certs} canEdit={incident.status !== 'closed'} officer={officer} reload={reload} />}
       {tabbed && tab === 'timeline' && <TimelineTab history={history} data={fileData} officer={officer} />}
       {tabbed && tab === 'documents' && <DocumentsTab data={fileData} photos={photos} officer={officer} />}
       {tabbed && tab === 'actions' && actionsPanel}

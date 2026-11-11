@@ -20,16 +20,14 @@ const btnPri = 'min-h-10 px-4 rounded-lg border-0 bg-ink text-white text-[13px] 
 const linkBtn = 'bg-transparent border-0 p-0 text-[13px] font-semibold text-ink underline cursor-pointer min-h-8';
 const toneBg: Record<string, string> = { red: 'bg-[#FDE8E8] text-[#9B1218]', amber: 'bg-[#FFF1D6] text-[#7A4B00]', green: 'bg-[#E3F4E6] text-[#1F6B2E]', blue: 'bg-[#E4EEFC] text-[#1C4A8F]', grey: 'bg-[#ECECEC] text-[#4A4A50]' };
 
-function Section({ title, sub, count, children, open: initial = true }: { title: string; sub?: string; count?: string; children: ReactNode; open?: boolean }) {
-  const [open, setOpen] = useState(initial);
+function Section({ title, sub, count, children }: { title: string; sub?: string; count?: string; children: ReactNode; open?: boolean }) {
   return (
     <section className={`${card} overflow-hidden`}>
-      <button type="button" aria-expanded={open} onClick={() => setOpen(!open)} className="w-full flex items-center gap-3 px-4.5 py-3.5 bg-transparent border-0 text-left cursor-pointer">
+      <div className="flex items-center gap-3 px-4.5 py-3.5 border-b border-line-soft">
         <span className="flex-1 min-w-0"><span className="block text-[15px] font-semibold">{title}</span>{sub && <span className="block text-[13px] text-muted">{sub}</span>}</span>
         {count && <span className="text-[13px] text-muted">{count}</span>}
-        <span aria-hidden="true" className="text-muted">{open ? '−' : '+'}</span>
-      </button>
-      {open && <div className="border-t border-line-soft px-4.5 py-4 flex flex-col gap-3.5">{children}</div>}
+      </div>
+      <div className="px-4.5 py-4 flex flex-col gap-3.5">{children}</div>
     </section>
   );
 }
@@ -53,6 +51,15 @@ export function ClaimFile({ claim: initial, incidentRef, incidentAt, user, onCha
   const [error, setError] = useState<string | null>(null);
   const [busy, setBusy] = useState(false);
   const info = STATES[claim.state];
+  type CTab = 'overview' | 'certificates' | 'rtw' | 'correspondence' | 'documents' | 'history';
+  const tabKey = `whsClaimTab-${initial.id}`;
+  const [tab, setTabState] = useState<CTab>(() => {
+    try { return (sessionStorage.getItem(tabKey) as CTab | null) ?? 'overview'; } catch { return 'overview'; }
+  });
+  const setTab = (t: CTab) => {
+    setTabState(t);
+    try { sessionStorage.setItem(tabKey, t); } catch { /* optional */ }
+  };
 
   const loadAll = useCallback(async () => {
     const [c, s, k, l, d, h] = await Promise.all([listCertificates(initial.id), listStages(initial.id), listContacts(initial.id), listLog(initial.id), listClaimDocs(initial.id), listClaimHistory(initial.id)]);
@@ -89,12 +96,29 @@ export function ClaimFile({ claim: initial, incidentRef, incidentAt, user, onCha
         <span className="text-sm text-muted">Steps {steps.done}/{steps.total}</span>
       </div>
       <ErrorNote message={error} />
-      {att.length > 0 && (
+      {tab === 'overview' && att.length > 0 && (
         <ul className="list-none m-0 p-0 flex flex-col gap-2">
           {att.map(a => <li key={a.id} className={`rounded-lg px-3.5 py-2.5 text-sm ${toneBg[a.tone]}`}><strong>{a.when}.</strong> {a.what}</li>)}
         </ul>
       )}
 
+      <div role="tablist" aria-label="Claim file" className="flex flex-wrap gap-1 border-b border-line">
+        {([
+          ['overview', 'Overview', att.length ? String(att.length) : ''],
+          ['certificates', 'Certificates', String(certs.length)],
+          ['rtw', 'Return to work', ''],
+          ['correspondence', 'Correspondence', String(log.length + contacts.length)],
+          ['documents', 'Documents', String(docs.length)],
+          ['history', 'History', ''],
+        ] as [CTab, string, string][]).map(([id, label, badge]) => (
+          <button key={id} type="button" role="tab" aria-selected={tab === id} onClick={() => setTab(id)}
+            className={`min-h-11 px-4 -mb-px bg-transparent border-0 border-b-2 text-sm font-semibold cursor-pointer ${tab === id ? 'border-finlay text-ink' : 'border-transparent text-muted'}`}>
+            {label}{badge && <span className="ml-1.5 text-xs font-normal text-muted">{badge}</span>}
+          </button>
+        ))}
+      </div>
+
+      {tab === 'overview' && <>
       <Section title="Claim details" sub="Status, dates and the claim manager at the insurer">
         <ClaimDetails claim={claim} busy={busy} onSave={patch} />
       </Section>
@@ -120,8 +144,9 @@ export function ClaimFile({ claim: initial, incidentRef, incidentAt, user, onCha
           <p className="mt-1.5 mb-0 text-xs text-muted">A guide for the file, not legal advice. Check with the insurer for your exact obligations.</p>
         </details>
       </Section>
+      </>}
 
-      <Section title="Medical certificates" sub={cs.current ? `Current to ${formatDay(cs.current.to_date)}` : cs.lapsedSince ? `Ran out ${formatDay(cs.lapsedSince)}` : 'None on file'} count={`${certs.length}`}>
+      {tab === 'certificates' && <Section title="Medical certificates" sub={cs.current ? `Current to ${formatDay(cs.current.to_date)}` : cs.lapsedSince ? `Ran out ${formatDay(cs.lapsedSince)}` : 'None on file'} count={`${certs.length}`}>
         {cs.gaps.length > 0 && <p className={`m-0 rounded-lg px-3.5 py-2.5 text-sm ${toneBg.amber}`}>No certificate covering {cs.gaps.map(g => `${formatDay(g.from)} to ${formatDay(g.to)}`).join(', ')}.</p>}
         <ul className="list-none m-0 p-0 flex flex-col divide-y divide-line-soft">
           {certs.map(c => {
@@ -139,13 +164,14 @@ export function ClaimFile({ claim: initial, incidentRef, incidentAt, user, onCha
           })}
         </ul>
         <CertificateForm busy={busy} defaultFrom={cs.latest ? addDays(cs.latest.to_date, 1) : claim.off_work_from ?? brisbaneDay(new Date())} onAdd={(i, f) => run(() => addCertificate(claim.id, i, f))} />
-      </Section>
+      </Section>}
 
-      <Section title="Return to work" sub={`${rtwStatus(claim.rtw_status).label}${claim.rtw_coordinator ? ` · coordinator ${claim.rtw_coordinator}` : ''}`}>
+      {tab === 'rtw' && <Section title="Return to work" sub={`${rtwStatus(claim.rtw_status).label}${claim.rtw_coordinator ? ` · coordinator ${claim.rtw_coordinator}` : ''}`}>
         <RtwPlan claim={claim} stages={stages} busy={busy} onSave={patch} onStage={(s) => run(() => saveStage(claim.id, s))} onRemoveStage={id => run(() => removeStage(id))} />
-      </Section>
+      </Section>}
 
-      <Section title="Doctors, case manager and other contacts" count={`${contacts.length}`} open={contacts.length > 0}>
+      {tab === 'correspondence' && <>
+      <Section title="Doctors, case manager and other contacts" count={`${contacts.length}`}>
         <ul className="list-none m-0 p-0 flex flex-col divide-y divide-line-soft">
           {contacts.map(c => (
             <li key={c.id} className="py-2 flex flex-wrap items-center gap-x-3 text-sm">
@@ -170,8 +196,9 @@ export function ClaimFile({ claim: initial, incidentRef, incidentAt, user, onCha
           ))}
         </ul>
       </Section>
+      </>}
 
-      <Section title="Documents" sub="Forms, letters and reports, filed by kind" count={`${docs.length}`}>
+      {tab === 'documents' && <Section title="Documents" sub="Forms, letters and reports, filed by kind" count={`${docs.length}`}>
         <DocForm busy={busy} onAdd={(c, t, f) => run(() => addClaimDoc(claim.id, c, t, f))} />
         {DOC_CATEGORIES.map(cat => {
           const list = docs.filter(d => d.category === cat.id);
@@ -188,13 +215,13 @@ export function ClaimFile({ claim: initial, incidentRef, incidentAt, user, onCha
             </div>
           );
         })}
-      </Section>
+      </Section>}
 
-      <Section title="Changes to this claim" open={false} count={`${history.length}`}>
+      {tab === 'history' && <Section title="Changes to this claim" count={`${history.length}`}>
         {history.length === 0 ? <p className="m-0 text-sm text-muted">Nothing yet.</p> : (
           <ol className="list-none m-0 p-0 flex flex-col gap-2 text-[13px]">{history.map(h => <li key={h.id}><span className="text-muted">{formatWhen(h.occurred_at)} · {h.actor_name}</span><span className="block">{h.what}</span></li>)}</ol>
         )}
-      </Section>
+      </Section>}
     </div>
   );
 }
