@@ -88,7 +88,7 @@ export function DesktopApp({ user, data, route, onSignOut, onPhoneLayout }: Prop
             if (!items.length) return null;
             return (
               <div key={g.label} className="flex flex-col gap-0.5">
-                <div className="text-[11px] font-semibold tracking-wider uppercase text-muted px-3 pt-4 pb-1">{g.label}</div>
+                <div className="mt-4 mx-1 px-2 pt-3 pb-1.5 border-t border-[#D6D2CC] text-xs font-bold tracking-widest uppercase text-ink flex items-center gap-2"><span aria-hidden="true" className="w-1 h-3.5 rounded-sm bg-finlay" />{g.label}</div>
                 {items.map(m => (
                   <a key={m.id} href={hrefFor({ name: 'module', id: m.id })} className={navLink(activeId === m.id)} aria-current={activeId === m.id ? 'page' : undefined}>
                     {m.label}
