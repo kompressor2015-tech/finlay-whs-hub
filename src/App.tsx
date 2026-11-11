@@ -1,8 +1,10 @@
-import { useCallback, useEffect, useState } from 'react';
+import { useCallback, useEffect, useMemo, useState } from 'react';
 import { Loader2 } from 'lucide-react';
 import { getCurrentUser, onSignedOut, signOut, type WhsUser } from './services/auth.ts';
-import { loadHomeData } from './services/home.ts';
-import { emptyHomeData, type HomeData } from './utils/homeData.ts';
+import { loadHomeRaw } from './services/home.ts';
+import { emptyHomeData } from './utils/homeData.ts';
+import { buildHomeData, type HomeRaw } from './utils/homeBuild.ts';
+import { SiteScopeProvider, useSiteScope } from './hooks/useSiteScope.tsx';
 import { useIsPhone } from './hooks/useIsPhone.ts';
 import { useRoute } from './hooks/useRoute.ts';
 import { LoginScreen } from './components/LoginScreen.tsx';
@@ -10,9 +12,18 @@ import { DesktopApp } from './components/DesktopApp.tsx';
 import { PhoneApp } from './components/PhoneApp.tsx';
 
 export default function App() {
+  return (
+    <SiteScopeProvider>
+      <AppInner />
+    </SiteScopeProvider>
+  );
+}
+
+function AppInner() {
   const [user, setUser] = useState<WhsUser | null>(null);
   const [checking, setChecking] = useState(true);
-  const [data, setData] = useState<HomeData>(emptyHomeData);
+  const [raw, setRaw] = useState<HomeRaw | null>(null);
+  const { site } = useSiteScope();
   const { route } = useRoute();
   const { narrow, showPhone, setUseFull } = useIsPhone();
 
@@ -33,8 +44,11 @@ export default function App() {
   // Reload the home screen's numbers each time someone comes back to it.
   useEffect(() => {
     if (!user || route.name !== 'home') return;
-    loadHomeData(user.id).then(setData);
+    loadHomeRaw().then(setRaw);
   }, [user, route.name]);
+
+  // The numbers follow the site switcher without another trip to the server
+  const data = useMemo(() => (raw && user ? buildHomeData(raw, user.id, site) : emptyHomeData()), [raw, user, site]);
 
   const handleSignOut = useCallback(async () => {
     await signOut();

@@ -1,7 +1,8 @@
-import { useEffect, useMemo, useState } from 'react';
+import { useMemo, useState } from 'react';
 import { ChevronDown, ChevronRight } from 'lucide-react';
 import type { WhsUser } from '../services/auth.ts';
-import { rememberSite, rememberedSite, useRegister } from '../hooks/useRegister.ts';
+import { useRegister } from '../hooks/useRegister.ts';
+import { useSiteScope } from '../hooks/useSiteScope.tsx';
 import { hrefFor } from '../hooks/useRoute.ts';
 import { ChemicalPage } from './ChemicalPage.tsx';
 import { SidePanel, linkOpens, rowOpens, useListPanel } from './SidePanel.tsx';
@@ -26,7 +27,9 @@ const td = 'px-2 py-2.5 border-b border-line-soft align-top';
 export function ChemicalsPage({ user }: { user: WhsUser }) {
   const office = isOfficeAccess(user.access);
   const reg = useRegister();
-  const [siteId, setSiteId] = useState<string>(() => rememberedSite() ?? 'all');
+  const scope = useSiteScope();
+  const siteId = scope.site?.id ?? 'all';
+  const setSiteId = scope.setSiteId;
   const [filter, setFilter] = useState<Filter>('all');
   const [q, setQ] = useState('');
   const [open, setOpen] = useState<string[]>(() => {
@@ -39,10 +42,6 @@ export function ChemicalsPage({ user }: { user: WhsUser }) {
   });
   const [pairA, setPairA] = useState('');
   const [pairB, setPairB] = useState('');
-
-  useEffect(() => {
-    if (reg.loaded && siteId !== 'all' && !reg.sites.some(s => s.id === siteId)) setSiteId('all');
-  }, [reg.loaded, reg.sites, siteId]);
 
   const site = reg.sites.find(s => s.id === siteId) ?? null;
   const siteStock = useMemo(() => (site ? reg.stock.filter(s => s.site_id === site.id) : reg.stock), [reg.stock, site]);
@@ -70,7 +69,6 @@ export function ChemicalsPage({ user }: { user: WhsUser }) {
 
   const pick = (id: string) => {
     setSiteId(id);
-    rememberSite(id);
   };
 
   function exportCsv() {

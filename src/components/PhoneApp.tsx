@@ -5,6 +5,7 @@ import type { HomeData, PhoneTask } from '../utils/homeData.ts';
 import { accessLabel } from '../utils/access.ts';
 import { formatDate } from '../utils/dates.ts';
 import { hrefFor, type Route } from '../hooks/useRoute.ts';
+import { SiteSwitcher } from './SiteSwitcher.tsx';
 import { Pill } from './Pill.tsx';
 import { Screen } from './Screen.tsx';
 
@@ -176,6 +177,10 @@ function MePanel({ user, onSignOut, onFullVersion }: {
       <div className="bg-white border border-line rounded-xl p-4">
         <div className="font-semibold text-[17px]">{user.name}</div>
         <div className="text-sm text-muted mt-0.5">{accessLabel(user.access)} · {user.email}</div>
+      </div>
+      <div className="bg-white border border-line rounded-xl p-4 flex items-center justify-between gap-3">
+        <span className="text-[15px]">Site</span>
+        <SiteSwitcher />
       </div>
       <div className="bg-white border border-line rounded-xl overflow-hidden">
         <button type="button" onClick={onFullVersion} className={row}>Use the full version</button>

@@ -1,5 +1,8 @@
 import { useCallback, useEffect, useMemo, useState } from 'react';
-import { listActions } from '../services/records.ts';
+import { listActions, listHazards, listIncidents } from '../services/records.ts';
+import { listChecks } from '../services/checks.ts';
+import { useSiteScope } from '../hooks/useSiteScope.tsx';
+import { actionsInScope } from '../utils/siteScope.ts';
 import type { WhsUser } from '../services/auth.ts';
 import { hrefFor } from '../hooks/useRoute.ts';
 import { isOfficeAccess } from '../utils/access.ts';
@@ -27,7 +30,10 @@ function sourceHref(a: WhsAction): string | null {
 /** Every corrective action, from every module, in one list. */
 export function ActionsPage({ user }: { user: WhsUser }) {
   const office = isOfficeAccess(user.access);
-  const [actions, setActions] = useState<WhsAction[]>([]);
+  const { site } = useSiteScope();
+  const [allActions, setActions] = useState<WhsAction[]>([]);
+  const [sources, setSources] = useState<{ id: string; site_id: string | null; site_name: string }[]>([]);
+  const actions = useMemo(() => actionsInScope(site, allActions, sources), [allActions, sources, site]);
   const [error, setError] = useState<string | null>(null);
   const [loaded, setLoaded] = useState(false);
   const [view, setView] = useState<View>('open');
@@ -40,6 +46,9 @@ export function ActionsPage({ user }: { user: WhsUser }) {
     const res = await listActions();
     setError(res.error ?? null);
     setActions(res.data ?? []);
+    // Which site an action belongs to comes from what it was raised against
+    const [i, h, c] = await Promise.all([listIncidents(), listHazards(), listChecks(365)]);
+    setSources([...(i.data ?? []), ...(h.data ?? []), ...(c.data ?? [])].map(s => ({ id: s.id, site_id: s.site_id, site_name: s.site_name })));
     setLoaded(true);
   }, []);
 
@@ -77,7 +86,7 @@ export function ActionsPage({ user }: { user: WhsUser }) {
       <div className="flex flex-wrap justify-between items-end gap-3">
         <div>
           <h1 className="m-0 text-[26px] font-bold">Actions</h1>
-          <p className="mt-1.5 mb-0 text-muted text-[15px]">Every fix from incidents, hazards and inspections, in one list.</p>
+          <p className="mt-1.5 mb-0 text-muted text-[15px]">{site ? `Fixes from ${site.name} incidents, hazards and inspections. Actions added by hand show under All sites.` : 'Every fix from incidents, hazards and inspections, in one list.'}</p>
         </div>
         <button type="button" className="min-h-11 px-3.5 rounded-lg border border-[#D6D2CC] bg-white text-sm font-semibold cursor-pointer"
           onClick={() => downloadCsv('actions.csv', csvFor(['Action', 'Unit', 'Came from', 'Owner', 'Due', 'Status', 'Done note'],

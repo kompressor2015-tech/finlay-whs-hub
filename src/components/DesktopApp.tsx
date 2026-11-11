@@ -10,6 +10,7 @@ import { hrefFor, moduleOf, type Route } from '../hooks/useRoute.ts';
 import { HomeCharts } from './HomeCharts.tsx';
 import { Pill } from './Pill.tsx';
 import { Screen } from './Screen.tsx';
+import { SiteSwitcher } from './SiteSwitcher.tsx';
 
 interface Props {
   user: WhsUser;
@@ -61,6 +62,7 @@ export function DesktopApp({ user, data, route, onSignOut, onPhoneLayout }: Prop
           />
         </div>
         <div className="ml-auto flex items-center gap-3">
+          <SiteSwitcher />
           <details className="relative">
             <summary className="list-none h-10 px-4 rounded-lg bg-finlay hover:bg-finlay-dark text-white font-semibold text-sm flex items-center gap-1.5 cursor-pointer select-none [&::-webkit-details-marker]:hidden">
               <Plus className="w-4 h-4" aria-hidden="true" /> New <ChevronDown className="w-3.5 h-3.5" aria-hidden="true" />
