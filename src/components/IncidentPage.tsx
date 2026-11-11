@@ -107,7 +107,7 @@ export function IncidentPage({ id, user, embedded }: { id: string; user: WhsUser
   const toneBg: Record<string, string> = { red: 'bg-[#FDE8E8] text-[#9B1218]', amber: 'bg-[#FFF1D6] text-[#7A4B00]', green: 'bg-[#E3F4E6] text-[#1F6B2E]', blue: 'bg-[#E4EEFC] text-[#1C4A8F]', grey: 'bg-[#ECECEC] text-[#4A4A50]' };
   const tabs: { id: Tab; label: string; badge?: string }[] = [
     { id: 'overview', label: 'Overview' },
-    ...(incident.status !== 'new' ? [{ id: 'investigation' as Tab, label: 'Investigation', badge: `${prog.done}/${prog.total}` }] : []),
+    ...(incident.status !== 'new' ? [{ id: 'investigation' as Tab, label: 'Investigation', badge: incident.investigation_waived ? 'Not required' : `${prog.done}/${prog.total}` }] : []),
     { id: 'people', label: officer ? 'People and claims' : 'People', badge: ipeople.length ? String(ipeople.length) : undefined },
     { id: 'timeline', label: 'Timeline' },
     { id: 'documents', label: 'Documents' },
@@ -156,7 +156,7 @@ export function IncidentPage({ id, user, embedded }: { id: string; user: WhsUser
             ) : (
               officer && (
                 <button type="button" disabled={saving || !closable} title={closable ? '' : blockers.length ? `Before closing: ${blockers.join('; ')}` : 'Finish all actions first'} className={`${smallButton} border-0 bg-finlay text-white`}
-                  onClick={() => save({ status: 'closed' })}>
+                  onClick={() => { if (window.confirm(`Close ${incident.ref}?\n\nThis marks the incident as finished. You can reopen it later if you need to.`)) void save({ status: 'closed' }); }}>
                   Close incident
                 </button>
               )
