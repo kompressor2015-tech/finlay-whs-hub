@@ -6,6 +6,10 @@
 export interface ScopeSite {
   id: string;
   name: string;
+  /** Other names the site goes by (e.g. the fleet app's "Brisbane Yard" for Burpengary Yard) */
+  aliases?: string[];
+  /** The fleet app's depot id for this site, when linked */
+  depotSiteId?: string | null;
 }
 
 export const ALL_SITES = 'all';
@@ -22,9 +26,13 @@ export function pickSite(sites: ScopeSite[], id: string | null | undefined): Sco
 /** True when the record belongs to the chosen site. With no site chosen, everything is in. */
 export function inScope(site: ScopeSite | null, rec: { site_id?: string | null; site_name?: string | null }): boolean {
   if (!site) return true;
-  if (rec.site_id && (rec.site_id === site.id)) return true;
-  const key = siteKey(site.name);
-  return !!key && (rec.site_name ?? '').toLowerCase().includes(key);
+  if (rec.site_id && (rec.site_id === site.id || rec.site_id === site.depotSiteId)) return true;
+  const name = (rec.site_name ?? '').toLowerCase();
+  if (!name) return false;
+  return [site.name, ...(site.aliases ?? [])].some(n => {
+    const key = siteKey(n);
+    return !!key && name.includes(key);
+  });
 }
 
 /**

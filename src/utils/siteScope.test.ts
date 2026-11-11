@@ -33,3 +33,11 @@ test('actions follow the site of what they came from', async () => {
   assert.equal(actionsInScope(bur, acts, sources).length, 1);
   assert.equal(actionsInScope(null, acts, sources).length, 3);
 });
+
+test('also-known-as names and the linked fleet depot place records under the site', () => {
+  const b = { ...bur, aliases: ['Brisbane Yard'], depotSiteId: 'depot-7' };
+  assert.equal(inScope(b, { site_id: null, site_name: 'Brisbane Yard' }), true);
+  assert.equal(inScope(b, { site_id: 'depot-7', site_name: '' }), true);
+  assert.equal(inScope(b, { site_id: null, site_name: 'Somerton Workshop' }), false);
+  assert.equal(inScope(bur, { site_id: null, site_name: 'Brisbane Yard' }), false);
+});

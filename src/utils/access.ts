@@ -52,7 +52,7 @@ export function isOfficeAccess(access: WhsAccess): boolean {
 const OFFICE_ONLY = new Set(['reports', 'risk', 'contractors']);
 
 /** Injury management (claims, certificates, doctors) is for the WHS officer and admins only. */
-const OFFICER_ONLY = new Set(['people']);
+const OFFICER_ONLY = new Set(['people', 'sites']);
 
 export function isOfficerAccess(access: WhsAccess): boolean {
   return access === 'admin' || access === 'whs_officer';

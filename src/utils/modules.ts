@@ -22,6 +22,7 @@ export const MODULES: readonly WhsModule[] = [
   { id: 'chemicals', built: true, label: 'Chemicals & SDS', about: 'The chemical register by site, safety data sheets and their review dates.', step: 4 },
   { id: 'documents', built: true, label: 'Documents', about: 'The management system, work instructions, SWMS, machine risk assessments, policies and forms, with versions and review dates.', step: 5 },
   { id: 'people', built: true, label: 'People & claims', about: 'Each worker\'s incidents, workers compensation claim, medical certificates, return to work plan and correspondence, in one file.', step: 2 },
+  { id: 'sites', built: true, label: 'Sites', about: 'The sites, the other names each goes by, and how often stocktakes are due.', step: 2 },
   { id: 'plant', built: true, label: 'Plant safety', about: 'The safety view of the fleet register: flags from pre-starts, inspections and defects.', step: 3 },
   { id: 'risk', label: 'Risk & SWMS', about: 'Risk register, risk assessments, SWMS and JSAs, with approval.', step: 6 },
   { id: 'contractors', label: 'Contractors', about: 'Contractor insurance, licences, inductions and SWMS sign-off.', step: 6 },
