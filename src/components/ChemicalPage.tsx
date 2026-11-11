@@ -182,32 +182,19 @@ function StockPanel({ chem, stock, sites, allStock, office, officer, onChanged }
   }
 
   return (
-    <section className={`${card} overflow-x-auto`}>
+    <section className={`${card} overflow-hidden`}>
       <div className="px-4.5 py-3.5 border-b border-[#EEEBE6] flex justify-between items-center gap-3">
         <h2 className="m-0 text-[17px] font-semibold">Where it's kept</h2>
         {office && !adding && <button type="button" onClick={() => setAdding(true)} className="bg-transparent border-0 text-sm font-semibold text-finlay cursor-pointer min-h-10">+ Add a location</button>}
       </div>
-      <p className="m-0 px-4.5 pt-3 text-xs text-muted">Quantity = number of containers × container size. For gas cylinders, enter the cylinder's water capacity in litres (stamped on the cylinder or from the supplier).</p>
-      <table className="w-full border-collapse text-sm min-w-[720px]">
-        <thead>
-          <tr className="text-muted text-xs text-left">
-            <th scope="col" className="px-4.5 py-2.5 font-semibold border-b border-[#EEEBE6]">Site</th>
-            <th scope="col" className="px-2 py-2.5 font-semibold border-b border-[#EEEBE6]">Location</th>
-            <th scope="col" className="px-2 py-2.5 font-semibold border-b border-[#EEEBE6]">Container</th>
-            <th scope="col" className="px-2 py-2.5 font-semibold border-b border-[#EEEBE6]">Count</th>
-            <th scope="col" className="px-2 py-2.5 font-semibold border-b border-[#EEEBE6]">Quantity</th>
-            <th scope="col" className="px-2 py-2.5 font-semibold border-b border-[#EEEBE6]">Max</th>
-            <th scope="col" className="px-4.5 py-2.5 font-semibold border-b border-[#EEEBE6]">Last counted</th>
-          </tr>
-        </thead>
-        <tbody>
-          {stock.map(s => (
-            <StockRow key={s.id} s={s} site={sites.find(x => x.id === s.site_id)} office={office} officer={officer} onChanged={onChanged}
-              siteLocations={Array.from(new Set(allStock.filter(x => x.site_id === s.site_id).map(x => x.location))).sort()}
-              taken={stock.filter(x => x.site_id === s.site_id && x.id !== s.id).map(x => `${x.location.toLowerCase()}|${x.container_size ?? ''}`)} />
-          ))}
-        </tbody>
-      </table>
+      <p className="m-0 px-4.5 py-3 text-xs text-muted border-b border-line-soft">Quantity = number of containers × container size. For gas cylinders, enter the cylinder's water capacity in litres (stamped on the cylinder or from the supplier).</p>
+      <ul className="m-0 p-0 list-none">
+        {stock.map(s => (
+          <StockRow key={s.id} s={s} site={sites.find(x => x.id === s.site_id)} office={office} officer={officer} onChanged={onChanged}
+            siteLocations={Array.from(new Set(allStock.filter(x => x.site_id === s.site_id).map(x => x.location))).sort()}
+            taken={stock.filter(x => x.site_id === s.site_id && x.id !== s.id).map(x => `${x.location.toLowerCase()}|${x.container_size ?? ''}`)} />
+        ))}
+      </ul>
       {stock.length === 0 && <p className="m-0 px-4.5 py-4 text-sm text-muted">Not stored at any site yet.</p>}
       {adding && (
         <form onSubmit={add} className="px-4.5 py-4 border-t border-line-soft bg-[#FAFAF9] grid grid-cols-2 lg:grid-cols-3 gap-3">
@@ -253,7 +240,6 @@ function StockRow({ s, site, office, officer, onChanged, siteLocations, taken }:
   const [unit, setUnit] = useState(s.unit);
   const [max, setMax] = useState(s.max_count === null ? '' : String(s.max_count));
   const [error, setError] = useState<string | null>(null);
-  const cell = 'px-2 py-2.5 border-b border-line-soft align-top';
 
   async function save() {
     const loc = location.trim();
@@ -271,53 +257,81 @@ function StockRow({ s, site, office, officer, onChanged, siteLocations, taken }:
     onChanged();
   }
 
+  const lbl = 'block text-muted text-xs mb-0.5';
+  const sizeMissing = !s.container_size;
   return (
-    <tr>
-      <td className={`${cell} pl-4.5`}>{site?.name ?? s.site_id} <span className="text-xs text-muted">{site?.state}</span></td>
-      <td className={`${cell} text-muted`}>
-        {edit ? (
-          <>
-            <input aria-label="Storage location" list={`locs-${s.id}`} className={`${small} w-full min-w-[140px]`} value={location} onChange={e => setLocation(e.target.value)} />
-            <datalist id={`locs-${s.id}`}>{siteLocations.map(l => <option key={l} value={l} />)}</datalist>
-          </>
-        ) : s.location}
-      </td>
-      <td className={cell}>
-        {edit ? (
-          <span className="flex flex-col gap-1.5">
-            <input aria-label="Container" className={small} value={container} onChange={e => setContainer(e.target.value)} placeholder="e.g. 205 L drum" />
-            <span className="flex gap-1.5">
-              <input aria-label="Container size" inputMode="decimal" className={`${small} w-20`} value={size} onChange={e => setSize(e.target.value.replace(/[^0-9.]/g, ''))} placeholder="Size" />
-              <select aria-label="Unit" className={small} value={unit} onChange={e => setUnit(e.target.value as 'L' | 'kg')}><option>L</option><option>kg</option></select>
-            </span>
-          </span>
-        ) : (
-          <>{s.container || '—'}{s.container_size ? <span className="text-muted"> ({s.container_size} {s.unit})</span> : <span className="text-[#7A4A00]"> (size needed)</span>}</>
-        )}
-      </td>
-      <td className={cell}>{s.count ?? '—'}</td>
-      <td className={`${cell} font-semibold whitespace-nowrap`}>{formatAmount(amountOf(s), s.unit)}</td>
-      <td className={cell}>
-        {edit ? <input aria-label="Most containers kept" inputMode="numeric" className={`${small} w-20`} value={max} onChange={e => setMax(e.target.value.replace(/[^0-9.]/g, ''))} /> : s.max_count ?? '—'}
-      </td>
-      <td className={`${cell} pr-4.5 text-muted`}>
-        {s.last_counted_at ? `${formatWhen(s.last_counted_at)} · ${s.last_counted_by_name}` : 'Not counted'}
+    <li className="px-4.5 py-4 border-b border-line-soft last:border-b-0 flex flex-col gap-3">
+      <div className="flex flex-wrap justify-between items-start gap-x-4 gap-y-1">
+        <div className="min-w-0">
+          {edit ? (
+            <>
+              <label className={lbl} htmlFor={`loc-${s.id}`}>Storage location</label>
+              <input id={`loc-${s.id}`} list={`locs-${s.id}`} className={`${small} w-full min-w-[220px]`} value={location} onChange={e => setLocation(e.target.value)} />
+              <datalist id={`locs-${s.id}`}>{siteLocations.map(l => <option key={l} value={l} />)}</datalist>
+            </>
+          ) : (
+            <>
+              <div className="font-semibold text-[15px]">{s.location}</div>
+              <div className="text-[13px] text-muted">{site?.name ?? s.site_id} {site?.state}</div>
+            </>
+          )}
+        </div>
         {office && (
-          <span className="flex gap-3 mt-1">
+          <span className="flex gap-3 items-center">
             {edit ? (
               <>
-                <button type="button" onClick={save} className="bg-transparent border-0 p-0 text-[13px] font-semibold text-finlay cursor-pointer min-h-8">Save</button>
-                <button type="button" onClick={() => { setEdit(false); setLocation(s.location); setError(null); }} className="bg-transparent border-0 p-0 text-[13px] cursor-pointer min-h-8">Cancel</button>
+                <button type="button" onClick={save} className="min-h-9 px-3.5 rounded-lg border-0 bg-finlay text-white text-[13px] font-semibold cursor-pointer">Save</button>
+                <button type="button" onClick={() => { setEdit(false); setLocation(s.location); setContainer(s.container); setSize(s.container_size === null ? '' : String(s.container_size)); setUnit(s.unit); setMax(s.max_count === null ? '' : String(s.max_count)); setError(null); }} className="bg-transparent border-0 p-0 text-[13px] cursor-pointer min-h-9">Cancel</button>
               </>
             ) : (
-              <button type="button" onClick={() => setEdit(true)} className="bg-transparent border-0 p-0 text-[13px] font-semibold text-ink underline cursor-pointer min-h-8">Edit</button>
+              <>
+                <button type="button" onClick={() => setEdit(true)} className="bg-transparent border-0 p-0 text-[13px] font-semibold text-ink underline cursor-pointer min-h-9">Edit</button>
+                {officer && <button type="button" onClick={remove} className="bg-transparent border-0 p-0 text-[13px] text-finlay underline cursor-pointer min-h-9">Remove</button>}
+              </>
             )}
-            {officer && !edit && <button type="button" onClick={remove} className="bg-transparent border-0 p-0 text-[13px] text-finlay underline cursor-pointer min-h-8">Remove</button>}
           </span>
         )}
-        {error && <span className="block text-[#8E0F15] text-xs mt-1">{error}</span>}
-      </td>
-    </tr>
+      </div>
+
+      {edit ? (
+        <div className="grid grid-cols-2 gap-3">
+          <div className="col-span-2">
+            <label className={lbl} htmlFor={`cont-${s.id}`}>Container</label>
+            <input id={`cont-${s.id}`} className={`${small} w-full`} value={container} onChange={e => setContainer(e.target.value)} placeholder="e.g. 205 L drum" />
+          </div>
+          <div>
+            <label className={lbl} htmlFor={`size-${s.id}`}>Container size</label>
+            <span className="flex gap-1.5">
+              <input id={`size-${s.id}`} autoFocus={sizeMissing} inputMode="decimal" className={`${small} w-full`} value={size} onChange={e => setSize(e.target.value.replace(/[^0-9.]/g, ''))} placeholder="Size" />
+              <select aria-label="Unit" className={small} value={unit} onChange={e => setUnit(e.target.value as 'L' | 'kg')}><option>L</option><option>kg</option></select>
+            </span>
+          </div>
+          <div>
+            <label className={lbl} htmlFor={`max-${s.id}`}>Most containers kept here</label>
+            <input id={`max-${s.id}`} inputMode="numeric" className={`${small} w-full`} value={max} onChange={e => setMax(e.target.value.replace(/[^0-9.]/g, ''))} />
+          </div>
+        </div>
+      ) : (
+        <dl className="m-0 grid grid-cols-2 sm:grid-cols-4 gap-x-4 gap-y-2.5 text-sm">
+          <div className="col-span-2">
+            <dt className="text-muted text-xs">Container</dt>
+            <dd className="m-0 font-medium">
+              {s.container || '—'}{' '}
+              {sizeMissing
+                ? (office
+                  ? <button type="button" onClick={() => setEdit(true)} className="ml-1 min-h-8 px-2.5 rounded-lg border border-[#E0A030] bg-[#FFF1D6] text-[#7A4A00] text-[13px] font-semibold cursor-pointer">Add size</button>
+                  : <span className="text-[#7A4A00]">(size needed)</span>)
+                : <span className="text-muted font-normal">({s.container_size} {s.unit})</span>}
+            </dd>
+          </div>
+          <div><dt className="text-muted text-xs">Count</dt><dd className="m-0 font-medium">{s.count ?? '—'}</dd></div>
+          <div><dt className="text-muted text-xs">Quantity</dt><dd className="m-0 font-semibold whitespace-nowrap">{formatAmount(amountOf(s), s.unit)}</dd></div>
+          <div><dt className="text-muted text-xs">Most kept here</dt><dd className="m-0 font-medium">{s.max_count ?? '—'}</dd></div>
+          <div className="col-span-2 sm:col-span-3"><dt className="text-muted text-xs">Last counted</dt><dd className="m-0 text-muted">{s.last_counted_at ? `${formatWhen(s.last_counted_at)} · ${s.last_counted_by_name}` : 'Not counted'}</dd></div>
+        </dl>
+      )}
+      {error && <span className="block text-[#8E0F15] text-xs">{error}</span>}
+    </li>
   );
 }
 
