@@ -2,7 +2,7 @@ import { ChevronDown, LogOut, Plus, Smartphone } from 'lucide-react';
 import type { WhsUser } from '../services/auth.ts';
 import type { HomeData } from '../utils/homeData.ts';
 import { summaryValue } from '../utils/homeData.ts';
-import { accessLabel, canOpenModule } from '../utils/access.ts';
+import { accessLabel, canOpenModule, isOfficerAccess } from '../utils/access.ts';
 import { pillFor, sortAttention } from '../utils/attention.ts';
 import { formatDate, formatLongDate, formatWhen, greeting } from '../utils/dates.ts';
 import { MODULES } from '../utils/modules.ts';
@@ -52,7 +52,7 @@ export function DesktopApp({ user, data, route, onSignOut, onPhoneLayout }: Prop
           <img src="/finlay-logo.jpg" alt="Finlay" className="h-7 w-auto block" />
           <span className="border-l border-line pl-3 font-bold text-[17px] text-finlay tracking-wide">WHS</span>
         </a>
-        <GlobalSearch />
+        <GlobalSearch canSeePeople={isOfficerAccess(user.access)} />
         <div className="ml-auto flex items-center gap-3">
           <SiteSwitcher />
           <details className="relative">

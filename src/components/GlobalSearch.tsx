@@ -4,13 +4,16 @@ import { loadHomeRaw } from '../services/home.ts';
 import type { HomeRaw } from '../utils/homeBuild.ts';
 import { SEARCH_GROUPS, searchAll } from '../utils/globalSearch.ts';
 import { useSiteScope } from '../hooks/useSiteScope.tsx';
+import { listPeople } from '../services/incidentFile.ts';
+import type { Person } from '../utils/incidentFile.ts';
 
 /** The top bar search. Press / to jump to it, arrow keys to choose, Enter to open, Esc to close. */
-export function GlobalSearch() {
+export function GlobalSearch({ canSeePeople = false }: { canSeePeople?: boolean }) {
   const { site } = useSiteScope();
   const [q, setQ] = useState('');
   const [raw, setRaw] = useState<HomeRaw | null>(null);
   const [loading, setLoading] = useState(false);
+  const [people, setPeople] = useState<Person[]>([]);
   const [open, setOpen] = useState(false);
   const [active, setActive] = useState(0);
   const input = useRef<HTMLInputElement>(null);
@@ -21,6 +24,7 @@ export function GlobalSearch() {
   function ensureLoaded() {
     if (loading || (raw && Date.now() - loadedAt.current < 120_000)) return;
     setLoading(true);
+    if (canSeePeople) void listPeople().then(res => setPeople(res.data ?? []));
     loadHomeRaw().then(r => {
       setRaw(r);
       loadedAt.current = Date.now();
@@ -28,7 +32,7 @@ export function GlobalSearch() {
     });
   }
 
-  const hits = useMemo(() => (raw ? searchAll(raw, q, site) : []), [raw, q, site]);
+  const hits = useMemo(() => (raw ? searchAll(raw, q, site, canSeePeople ? people : []) : []), [raw, q, site, people, canSeePeople]);
   useEffect(() => setActive(0), [q]);
 
   useEffect(() => {

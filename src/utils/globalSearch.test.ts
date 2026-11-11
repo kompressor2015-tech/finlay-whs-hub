@@ -39,3 +39,10 @@ test('documents are found by number, title or machine model', () => {
   assert.equal(searchAll(withDocs, 'j1480', null)[0].group, 'Documents');
   assert.deepEqual(searchAll(withDocs, 'j-1480', { id: 'burpengary', name: 'Burpengary Yard' }).filter(h => h.group === 'Documents'), []);
 });
+
+test('people are found by name or position, and only when the caller passes them', () => {
+  const people = [{ id: 'p1', name: 'John Doe', position: 'Fitter' }];
+  assert.deepEqual(searchAll(raw, 'doe', null, people).map(h => h.href), ['#/people/p1']);
+  assert.deepEqual(searchAll(raw, 'fitter', null, people).map(h => h.group), ['People']);
+  assert.equal(searchAll(raw, 'doe', null).some(h => h.group === 'People'), false);
+});
