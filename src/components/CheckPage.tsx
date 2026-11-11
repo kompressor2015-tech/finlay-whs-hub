@@ -14,7 +14,7 @@ const card = 'bg-white border border-line rounded-xl';
 const TITLES = { prestart: 'Pre-start', take5: 'Take 5', site: 'Site inspection' } as const;
 
 /** A completed pre-start, Take 5 or site inspection. Checks are records: they can't be edited. */
-export function CheckPage({ id, user }: { id: string; user: WhsUser }) {
+export function CheckPage({ id, user, embedded = false }: { id: string; user: WhsUser; embedded?: boolean }) {
   const [check, setCheck] = useState<Check | null>(null);
   const [links, setLinks] = useState<Record<string, string>>({});
   const [actions, setActions] = useState<WhsAction[]>([]);
@@ -48,8 +48,8 @@ export function CheckPage({ id, user }: { id: string; user: WhsUser }) {
     ) : null;
 
   return (
-    <div className="flex flex-col gap-5 max-w-[960px]">
-      <a href={hrefFor({ name: 'module', id: 'inspections' })} className="text-sm no-underline text-muted">← Inspections &amp; checks</a>
+    <div className={`flex flex-col gap-5 ${embedded ? '' : 'max-w-[960px]'}`}>
+      {!embedded && <a href={hrefFor({ name: 'module', id: 'inspections' })} className="text-sm no-underline text-muted">← Inspections &amp; checks</a>}
 
       <div>
         <div className="flex flex-wrap gap-2 items-center">

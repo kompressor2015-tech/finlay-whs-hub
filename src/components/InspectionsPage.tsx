@@ -10,6 +10,8 @@ import { csvFor, downloadCsv } from '../utils/csv.ts';
 import { resultPill, siteInspectionsDue, type Check, type Checklist } from '../utils/checks.ts';
 import { ErrorNote } from './Form.tsx';
 import { Pill } from './Pill.tsx';
+import { CheckPage } from './CheckPage.tsx';
+import { SidePanel, linkOpens, rowOpens, useListPanel } from './SidePanel.tsx';
 
 type Tab = 'prestart' | 'take5' | 'site';
 const th = 'px-2 py-3 font-semibold border-b border-[#EEEBE6] text-left';
@@ -51,6 +53,10 @@ export function InspectionsPage({ user }: { user: WhsUser }) {
     [checks, tab, q]
   );
 
+  const panel = useListPanel(() => shown.map(c => c.id));
+  // A panel opened on one tab does not follow you to the next
+  useEffect(() => panel.setOpenId(null), [tab]); // eslint-disable-line react-hooks/exhaustive-deps
+
   async function newSiteChecklist() {
     const res = await createChecklist({ kind: 'site', name: 'Site inspection: new site', site_name: '', frequency_days: 30, items: [] });
     if (res.error || !res.data) return setError(res.error ?? 'Could not create it.');
@@ -70,7 +76,8 @@ export function InspectionsPage({ user }: { user: WhsUser }) {
   ];
 
   return (
-    <div className="flex flex-col gap-4.5">
+    <div className="flex gap-5 items-start">
+    <div className="flex-1 min-w-0 flex flex-col gap-4.5">
       <div className="flex flex-wrap justify-between items-end gap-3">
         <div>
           <h1 className="m-0 text-[26px] font-bold">Inspections &amp; checks</h1>
@@ -122,8 +129,8 @@ export function InspectionsPage({ user }: { user: WhsUser }) {
                 {shown.map(c => {
                   const p = resultPill(c.kind, c.result, c.issue_count);
                   return (
-                    <tr key={c.id}>
-                      <td className={`${td} pl-4 whitespace-nowrap text-muted`}><a href={hrefFor({ name: 'check', id: c.id })}>{formatWhen(c.done_at)}</a></td>
+                    <tr key={c.id} onClick={e => rowOpens(e, () => panel.setOpenId(c.id))} aria-selected={panel.openId === c.id} className={`cursor-pointer ${panel.openId === c.id ? 'bg-finlay-soft' : 'hover:bg-[#FAFAF9]'}`}>
+                      <td className={`${td} pl-4 whitespace-nowrap text-muted`}><a href={hrefFor({ name: 'check', id: c.id })} onClick={e => linkOpens(e, () => panel.setOpenId(c.id))}>{formatWhen(c.done_at)}</a></td>
                       <td className={td}>
                         {c.kind === 'prestart' ? <span className="text-finlay font-bold">{c.unit_no}</span> : c.kind === 'take5' ? c.task : c.checklist_name}
                         {c.kind === 'take5' && c.unit_no && <span className="text-finlay font-bold"> {c.unit_no}</span>}
@@ -176,6 +183,12 @@ export function InspectionsPage({ user }: { user: WhsUser }) {
           )}
         </div>
       </div>
+    </div>
+    {panel.openId && (
+      <SidePanel label="Check" fullHref={hrefFor({ name: 'check', id: panel.openId })} onClose={panel.close}>
+        <CheckPage key={panel.openId} id={panel.openId} user={user} embedded />
+      </SidePanel>
+    )}
     </div>
   );
 }
