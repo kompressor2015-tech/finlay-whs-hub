@@ -57,6 +57,8 @@ export interface Certificate {
   doctor_name: string;
   capacity: Capacity;
   restrictions: string;
+  /** When they next see the doctor, if known */
+  next_appointment_on?: string | null;
   file_path: string;
   file_name: string;
   created_by_name: string;
@@ -71,6 +73,47 @@ export interface RtwStage {
   hours: string;
   starts_on: string | null;
   status: 'planned' | 'current' | 'done';
+}
+
+export type AppointmentKind = 'doctor' | 'specialist' | 'physio' | 'psychologist' | 'assessment' | 'other';
+export type AppointmentStatus = 'booked' | 'attended' | 'missed' | 'cancelled';
+
+export interface Appointment {
+  id: string;
+  claim_id: string;
+  kind: AppointmentKind;
+  with_whom: string;
+  on_date: string;
+  at_time: string;
+  place: string;
+  status: AppointmentStatus;
+  outcome: string;
+  follow_up_on: string | null;
+  follow_up_note: string;
+  followed_up_at: string | null;
+  followed_up_by_name: string;
+  created_by_name: string;
+  created_at: string;
+}
+
+export const APPOINTMENT_KINDS: { id: AppointmentKind; label: string }[] = [
+  { id: 'doctor', label: 'Doctor (GP)' },
+  { id: 'specialist', label: 'Specialist' },
+  { id: 'physio', label: 'Physio' },
+  { id: 'psychologist', label: 'Psychologist' },
+  { id: 'assessment', label: 'Assessment or scan' },
+  { id: 'other', label: 'Other' },
+];
+
+export const APPOINTMENT_STATUSES: { id: AppointmentStatus; label: string; tone: Tone }[] = [
+  { id: 'booked', label: 'Booked', tone: 'blue' },
+  { id: 'attended', label: 'Attended', tone: 'green' },
+  { id: 'missed', label: 'Missed', tone: 'red' },
+  { id: 'cancelled', label: 'Cancelled', tone: 'grey' },
+];
+
+export function appointmentKindLabel(kind: AppointmentKind): string {
+  return APPOINTMENT_KINDS.find(k => k.id === kind)?.label ?? kind;
 }
 
 export interface ClaimContact {
@@ -338,25 +381,33 @@ export interface ClaimAttention {
   tone: Tone;
   when: string;
   what: string;
-  action: 'certificate' | 'plan' | 'step' | 'review';
+  action: 'certificate' | 'plan' | 'step' | 'review' | 'appointment';
 }
 
 export function claimAttention(
   claim: Pick<Claim, 'state' | 'status' | 'steps' | 'off_work_from' | 'returned_on' | 'rtw_next_review' | 'rtw_status' | 'insurer_notified_at'>,
-  certs: Pick<Certificate, 'from_date' | 'to_date' | 'capacity'>[],
+  certs: Pick<Certificate, 'from_date' | 'to_date' | 'capacity' | 'next_appointment_on'>[],
   incidentAt: string,
-  now: Date = new Date()
+  now: Date = new Date(),
+  appointments: Pick<Appointment, 'id' | 'kind' | 'with_whom' | 'on_date' | 'status' | 'follow_up_on' | 'followed_up_at'>[] = []
 ): ClaimAttention[] {
   if (!isOpen(claim)) return [];
   const out: ClaimAttention[] = [];
   const cs = certificateStatus(certs, now);
+  const today = brisbaneDay(now);
   const label = STATES[claim.state].certificate.toLowerCase();
   if (isOffWork(claim)) {
     if (cs.current && cs.endsInDays !== null && cs.endsInDays <= 7) {
       out.push({
         id: 'cert-ends', action: 'certificate', tone: cs.endsInDays <= 3 ? 'red' : 'amber',
         when: cs.endsInDays === 0 ? 'Today' : `In ${cs.endsInDays} ${cs.endsInDays === 1 ? 'day' : 'days'}`,
-        what: `The ${label} ends ${formatDay(cs.current.to_date)}. Ask for the next one.`,
+        what: `The ${label} ends ${formatDay(cs.current.to_date)}. ${(() => {
+          const booked = appointments.find(a => a.status === 'booked' && a.kind === 'doctor' && a.on_date >= today && a.on_date <= cs.current!.to_date);
+          const next = cs.current!.next_appointment_on;
+          if (booked) return `Doctor appointment booked for ${formatDay(booked.on_date)}, so the next one is due then.`;
+          if (next && next >= today) return `Back to the doctor on ${formatDay(next)}, so the next one is due then.`;
+          return 'No doctor appointment is recorded. Ask when they see the doctor next.';
+        })()}`,
       });
     } else if (!cs.current) {
       out.push({
@@ -369,6 +420,24 @@ export function claimAttention(
     const d = daysUntil(claim.rtw_next_review, now);
     if (d < 0) out.push({ id: 'rtw-late', action: 'plan', tone: 'red', when: 'Overdue', what: `Return to work review was due ${formatDay(claim.rtw_next_review)}.` });
     else if (d <= 7) out.push({ id: 'rtw-due', action: 'plan', tone: 'amber', when: d === 0 ? 'Today' : `In ${d} ${d === 1 ? 'day' : 'days'}`, what: `Return to work review is due ${formatDay(claim.rtw_next_review)}.` });
+  }
+  const past = certs.find(c => c.next_appointment_on && c.next_appointment_on < today && !certs.some(o => o.from_date >= (c.next_appointment_on as string)));
+  if (past && isOffWork(claim)) {
+    out.push({ id: 'cert-appt-past', action: 'certificate', tone: 'amber', when: 'Overdue', what: `Doctor appointment was on ${formatDay(past.next_appointment_on)}. Ask for the new certificate.` });
+  }
+  for (const a of appointments) {
+    if (a.status === 'cancelled') continue;
+    const who = `${appointmentKindLabel(a.kind).toLowerCase()}${a.with_whom ? ` with ${a.with_whom}` : ''}`;
+    if (a.status === 'booked') {
+      const d = daysUntil(a.on_date, now);
+      if (d < 0) out.push({ id: `appt-${a.id}`, action: 'appointment', tone: 'amber', when: 'Overdue', what: `The ${who} was on ${formatDay(a.on_date)}. Did they go? Record the outcome.` });
+      else if (d <= 2) out.push({ id: `appt-${a.id}`, action: 'appointment', tone: 'amber', when: d === 0 ? 'Today' : d === 1 ? 'Tomorrow' : 'In 2 days', what: `${who[0].toUpperCase()}${who.slice(1)} appointment on ${formatDay(a.on_date)}.` });
+      else if (d <= 7) out.push({ id: `appt-${a.id}`, action: 'appointment', tone: 'grey', when: `In ${d} days`, what: `${who[0].toUpperCase()}${who.slice(1)} appointment on ${formatDay(a.on_date)}.` });
+    }
+    if (a.status === 'missed' && !a.followed_up_at) out.push({ id: `missed-${a.id}`, action: 'appointment', tone: 'red', when: 'Missed', what: `They missed the ${who} on ${formatDay(a.on_date)}. Follow up.` });
+    if (a.follow_up_on && !a.followed_up_at && a.follow_up_on <= today) {
+      out.push({ id: `fu-${a.id}`, action: 'appointment', tone: daysUntil(a.follow_up_on, now) < 0 ? 'red' : 'amber', when: daysUntil(a.follow_up_on, now) < 0 ? 'Overdue' : 'Today', what: `Follow up after the ${who} (${formatDay(a.on_date)}).` });
+    }
   }
   const deadline = notifyDeadline(claim.state, incidentAt);
   if (deadline && !claim.steps?.notified) {

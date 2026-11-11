@@ -84,3 +84,22 @@ test('claim attention: certificate ending, none on file, return to work review, 
   // closed claims need nothing
   assert.equal(claimAttention({ ...base, status: 'closed' }, [], '2026-11-10T07:40:00+10:00', NOW).length, 0);
 });
+
+test('appointments: doctor booked before the certificate ends, upcoming, overdue and follow-ups', () => {
+  const cert = [{ from_date: '2026-11-10', to_date: '2026-11-14', capacity: 'unfit' as const, next_appointment_on: null }];
+  const inc = '2026-11-10T07:40:00+10:00';
+  const noAppt = claimAttention(base, cert, inc, NOW, []);
+  assert.match(noAppt[0].what, /No doctor appointment is recorded/);
+  const withNext = claimAttention(base, [{ ...cert[0], next_appointment_on: '2026-11-13' }], inc, NOW, []);
+  assert.match(withNext[0].what, /Back to the doctor on 13\/11\/2026/);
+  const appt = (o: object) => ({ id: 'a1', kind: 'physio' as const, with_whom: 'Sam', on_date: '2026-11-13', status: 'booked' as const, follow_up_on: null, followed_up_at: null, ...o });
+  const booked = claimAttention(base, cert, inc, NOW, [appt({ kind: 'doctor' })]);
+  assert.match(booked[0].what, /Doctor appointment booked for 13\/11\/2026/);
+  assert.deepEqual(claimAttention(base, [{ ...cert[0], to_date: '2026-11-30' }], inc, NOW, [appt({ on_date: '2026-11-13' })]).map(a => [a.id, a.tone, a.when]), [['appt-a1', 'amber', 'Tomorrow']]);
+  assert.deepEqual(claimAttention(base, [{ ...cert[0], to_date: '2026-11-30' }], inc, NOW, [appt({ on_date: '2026-11-16' })]).map(a => [a.tone, a.when]), [['grey', 'In 4 days']]);
+  const overdue = claimAttention(base, [{ ...cert[0], to_date: '2026-11-30' }], inc, NOW, [appt({ on_date: '2026-11-10' })]);
+  assert.deepEqual(overdue.map(a => [a.tone, a.when]), [['amber', 'Overdue']]);
+  const fu = claimAttention(base, [{ ...cert[0], to_date: '2026-11-30' }], inc, NOW, [appt({ on_date: '2026-11-10', status: 'attended', follow_up_on: '2026-11-11' })]);
+  assert.deepEqual(fu.map(a => [a.id, a.tone]), [['fu-a1', 'red']]);
+  assert.equal(claimAttention(base, [{ ...cert[0], to_date: '2026-11-30' }], inc, NOW, [appt({ status: 'cancelled' })]).length, 0);
+});

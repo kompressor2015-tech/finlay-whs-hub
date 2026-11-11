@@ -1,12 +1,13 @@
 import { useCallback, useEffect, useState, type ReactNode } from 'react';
 import {
-  addCertificate, addClaimDoc, addContact, addLog, listCertificates, listClaimDocs, listClaimHistory, listContacts, listLog, listStages,
+  addAppointment, addCertificate, addClaimDoc, addContact, addLog, listAppointments, removeAppointment, updateAppointment, listCertificates, listClaimDocs, listClaimHistory, listContacts, listLog, listStages,
   removeCertificate, removeClaimDoc, removeContact, removeLog, removeStage, saveStage, toggleStep, updateClaim, logAccess,
 } from '../services/claims.ts';
 import { openFile } from '../services/files.ts';
 import { hrefFor } from '../hooks/useRoute.ts';
 import { addDays, brisbaneDay, formatDay, formatWhen } from '../utils/dates.ts';
 import {
+  APPOINTMENT_KINDS, APPOINTMENT_STATUSES, appointmentKindLabel, type Appointment, type AppointmentKind, type AppointmentStatus,
   CAPACITIES, CLAIM_STATUSES, DOC_CATEGORIES, LOG_KINDS, RTW_STATUSES, STATES, capacityLabel, certificateStatus, claimAttention, claimStatus, daysOffWork, isOpen,
   logLabel, rtwStatus, stepsDone, type Capacity, type Certificate, type Claim, type ClaimContact, type ClaimDoc, type ClaimStatus, type DocCategory, type LogEntry, type LogKind, type RtwStage, type RtwStatus,
 } from '../utils/claims.ts';
@@ -20,16 +21,14 @@ const btnPri = 'min-h-10 px-4 rounded-lg border-0 bg-ink text-white text-[13px] 
 const linkBtn = 'bg-transparent border-0 p-0 text-[13px] font-semibold text-ink underline cursor-pointer min-h-8';
 const toneBg: Record<string, string> = { red: 'bg-[#FDE8E8] text-[#9B1218]', amber: 'bg-[#FFF1D6] text-[#7A4B00]', green: 'bg-[#E3F4E6] text-[#1F6B2E]', blue: 'bg-[#E4EEFC] text-[#1C4A8F]', grey: 'bg-[#ECECEC] text-[#4A4A50]' };
 
-function Section({ title, sub, count, children, open: initial = true }: { title: string; sub?: string; count?: string; children: ReactNode; open?: boolean }) {
-  const [open, setOpen] = useState(initial);
+function Section({ title, sub, count, children }: { title: string; sub?: string; count?: string; children: ReactNode; open?: boolean }) {
   return (
     <section className={`${card} overflow-hidden`}>
-      <button type="button" aria-expanded={open} onClick={() => setOpen(!open)} className="w-full flex items-center gap-3 px-4.5 py-3.5 bg-transparent border-0 text-left cursor-pointer">
+      <div className="flex items-center gap-3 px-4.5 py-3.5 border-b border-line-soft">
         <span className="flex-1 min-w-0"><span className="block text-[15px] font-semibold">{title}</span>{sub && <span className="block text-[13px] text-muted">{sub}</span>}</span>
         {count && <span className="text-[13px] text-muted">{count}</span>}
-        <span aria-hidden="true" className="text-muted">{open ? '−' : '+'}</span>
-      </button>
-      {open && <div className="border-t border-line-soft px-4.5 py-4 flex flex-col gap-3.5">{children}</div>}
+      </div>
+      <div className="px-4.5 py-4 flex flex-col gap-3.5">{children}</div>
     </section>
   );
 }
@@ -49,15 +48,25 @@ export function ClaimFile({ claim: initial, incidentRef, incidentAt, user, onCha
   const [contacts, setContacts] = useState<ClaimContact[]>([]);
   const [log, setLog] = useState<LogEntry[]>([]);
   const [docs, setDocs] = useState<ClaimDoc[]>([]);
+  const [appts, setAppts] = useState<Appointment[]>([]);
   const [history, setHistory] = useState<{ id: number; occurred_at: string; actor_name: string; what: string }[]>([]);
   const [error, setError] = useState<string | null>(null);
   const [busy, setBusy] = useState(false);
   const info = STATES[claim.state];
+  type CTab = 'overview' | 'certificates' | 'appointments' | 'rtw' | 'correspondence' | 'documents' | 'history';
+  const tabKey = `whsClaimTab-${initial.id}`;
+  const [tab, setTabState] = useState<CTab>(() => {
+    try { return (sessionStorage.getItem(tabKey) as CTab | null) ?? 'overview'; } catch { return 'overview'; }
+  });
+  const setTab = (t: CTab) => {
+    setTabState(t);
+    try { sessionStorage.setItem(tabKey, t); } catch { /* optional */ }
+  };
 
   const loadAll = useCallback(async () => {
-    const [c, s, k, l, d, h] = await Promise.all([listCertificates(initial.id), listStages(initial.id), listContacts(initial.id), listLog(initial.id), listClaimDocs(initial.id), listClaimHistory(initial.id)]);
+    const [c, s, k, l, d, h, ap] = await Promise.all([listCertificates(initial.id), listStages(initial.id), listContacts(initial.id), listLog(initial.id), listClaimDocs(initial.id), listClaimHistory(initial.id), listAppointments(initial.id)]);
     setError(c.error ?? s.error ?? k.error ?? l.error ?? d.error ?? null);
-    setCerts(c.data ?? []); setStages(s.data ?? []); setContacts(k.data ?? []); setLog(l.data ?? []); setDocs(d.data ?? []); setHistory(h);
+    setCerts(c.data ?? []); setStages(s.data ?? []); setContacts(k.data ?? []); setLog(l.data ?? []); setDocs(d.data ?? []); setHistory(h); setAppts(ap.data ?? []);
   }, [initial.id]);
   useEffect(() => { void loadAll(); }, [loadAll]);
   useEffect(() => { void logAccess(initial.person_id, initial.id, `Opened the ${initial.state} claim file for ${incidentRef}`); }, [initial.id, initial.person_id, initial.state, incidentRef]);
@@ -75,7 +84,7 @@ export function ClaimFile({ claim: initial, incidentRef, incidentAt, user, onCha
 
   const st = claimStatus(claim.status);
   const cs = certificateStatus(certs);
-  const att = claimAttention(claim, certs, incidentAt);
+  const att = claimAttention(claim, certs, incidentAt, new Date(), appts);
   const steps = stepsDone(claim);
   const off = daysOffWork(claim);
 
@@ -89,12 +98,30 @@ export function ClaimFile({ claim: initial, incidentRef, incidentAt, user, onCha
         <span className="text-sm text-muted">Steps {steps.done}/{steps.total}</span>
       </div>
       <ErrorNote message={error} />
-      {att.length > 0 && (
+      {tab === 'overview' && att.length > 0 && (
         <ul className="list-none m-0 p-0 flex flex-col gap-2">
           {att.map(a => <li key={a.id} className={`rounded-lg px-3.5 py-2.5 text-sm ${toneBg[a.tone]}`}><strong>{a.when}.</strong> {a.what}</li>)}
         </ul>
       )}
 
+      <div role="tablist" aria-label="Claim file" className="flex flex-wrap gap-1 border-b border-line">
+        {([
+          ['overview', 'Overview', att.length ? String(att.length) : ''],
+          ['certificates', 'Certificates', String(certs.length)],
+          ['appointments', 'Appointments', appts.filter(a => a.status === 'booked').length ? String(appts.filter(a => a.status === 'booked').length) : ''],
+          ['rtw', 'Return to work', ''],
+          ['correspondence', 'Correspondence', String(log.length + contacts.length)],
+          ['documents', 'Documents', String(docs.length)],
+          ['history', 'History', ''],
+        ] as [CTab, string, string][]).map(([id, label, badge]) => (
+          <button key={id} type="button" role="tab" aria-selected={tab === id} onClick={() => setTab(id)}
+            className={`min-h-11 px-4 -mb-px bg-transparent border-0 border-b-2 text-sm font-semibold cursor-pointer ${tab === id ? 'border-finlay text-ink' : 'border-transparent text-muted'}`}>
+            {label}{badge && <span className="ml-1.5 text-xs font-normal text-muted">{badge}</span>}
+          </button>
+        ))}
+      </div>
+
+      {tab === 'overview' && <>
       <Section title="Claim details" sub="Status, dates and the claim manager at the insurer">
         <ClaimDetails claim={claim} busy={busy} onSave={patch} />
       </Section>
@@ -120,8 +147,9 @@ export function ClaimFile({ claim: initial, incidentRef, incidentAt, user, onCha
           <p className="mt-1.5 mb-0 text-xs text-muted">A guide for the file, not legal advice. Check with the insurer for your exact obligations.</p>
         </details>
       </Section>
+      </>}
 
-      <Section title="Medical certificates" sub={cs.current ? `Current to ${formatDay(cs.current.to_date)}` : cs.lapsedSince ? `Ran out ${formatDay(cs.lapsedSince)}` : 'None on file'} count={`${certs.length}`}>
+      {tab === 'certificates' && <Section title="Medical certificates" sub={cs.current ? `Current to ${formatDay(cs.current.to_date)}` : cs.lapsedSince ? `Ran out ${formatDay(cs.lapsedSince)}` : 'None on file'} count={`${certs.length}`}>
         {cs.gaps.length > 0 && <p className={`m-0 rounded-lg px-3.5 py-2.5 text-sm ${toneBg.amber}`}>No certificate covering {cs.gaps.map(g => `${formatDay(g.from)} to ${formatDay(g.to)}`).join(', ')}.</p>}
         <ul className="list-none m-0 p-0 flex flex-col divide-y divide-line-soft">
           {certs.map(c => {
@@ -131,6 +159,7 @@ export function ClaimFile({ claim: initial, incidentRef, incidentAt, user, onCha
                 <span className="font-semibold">{formatDay(c.from_date)} to {formatDay(c.to_date)}</span>
                 <Pill tone={cap.tone}>{cap.label}</Pill>
                 <span className="text-muted">{c.doctor_name}</span>
+                {c.next_appointment_on && <span className="text-[13px] text-muted">Back to the doctor {formatDay(c.next_appointment_on)}</span>}
                 <FileLink path={c.file_path} name={c.file_name} />
                 <button type="button" className={`${linkBtn} ml-auto`} onClick={() => window.confirm('Delete this certificate?') && void run(() => removeCertificate(c))}>Delete</button>
                 {c.restrictions && <span className="basis-full text-[13px] text-[#3A3A3F]">{c.restrictions}</span>}
@@ -139,13 +168,27 @@ export function ClaimFile({ claim: initial, incidentRef, incidentAt, user, onCha
           })}
         </ul>
         <CertificateForm busy={busy} defaultFrom={cs.latest ? addDays(cs.latest.to_date, 1) : claim.off_work_from ?? brisbaneDay(new Date())} onAdd={(i, f) => run(() => addCertificate(claim.id, i, f))} />
-      </Section>
+      </Section>}
 
-      <Section title="Return to work" sub={`${rtwStatus(claim.rtw_status).label}${claim.rtw_coordinator ? ` · coordinator ${claim.rtw_coordinator}` : ''}`}>
+      {tab === 'appointments' && (
+        <Section title="Appointments" sub="Doctor, specialist, physio and other visits, with follow-ups" count={`${appts.length}`}>
+          <AppointmentForm busy={busy} onAdd={i => run(() => addAppointment(claim.id, i))} />
+          {appts.length === 0 && <p className="m-0 text-sm text-muted">No appointments recorded yet.</p>}
+          <ul className="list-none m-0 p-0 flex flex-col gap-2.5">
+            {[...appts].sort((a, b) => (a.status === 'booked') === (b.status === 'booked') ? (a.status === 'booked' ? a.on_date.localeCompare(b.on_date) : b.on_date.localeCompare(a.on_date)) : a.status === 'booked' ? -1 : 1).map(a => (
+              <AppointmentRow key={a.id} a={a} busy={busy} user={user}
+                onPatch={p => run(() => updateAppointment(a.id, p))} onRemove={() => window.confirm('Delete this appointment?') && void run(() => removeAppointment(a.id))} />
+            ))}
+          </ul>
+        </Section>
+      )}
+
+      {tab === 'rtw' && <Section title="Return to work" sub={`${rtwStatus(claim.rtw_status).label}${claim.rtw_coordinator ? ` · coordinator ${claim.rtw_coordinator}` : ''}`}>
         <RtwPlan claim={claim} stages={stages} busy={busy} onSave={patch} onStage={(s) => run(() => saveStage(claim.id, s))} onRemoveStage={id => run(() => removeStage(id))} />
-      </Section>
+      </Section>}
 
-      <Section title="Doctors, case manager and other contacts" count={`${contacts.length}`} open={contacts.length > 0}>
+      {tab === 'correspondence' && <>
+      <Section title="Doctors, case manager and other contacts" count={`${contacts.length}`}>
         <ul className="list-none m-0 p-0 flex flex-col divide-y divide-line-soft">
           {contacts.map(c => (
             <li key={c.id} className="py-2 flex flex-wrap items-center gap-x-3 text-sm">
@@ -170,8 +213,9 @@ export function ClaimFile({ claim: initial, incidentRef, incidentAt, user, onCha
           ))}
         </ul>
       </Section>
+      </>}
 
-      <Section title="Documents" sub="Forms, letters and reports, filed by kind" count={`${docs.length}`}>
+      {tab === 'documents' && <Section title="Documents" sub="Forms, letters and reports, filed by kind" count={`${docs.length}`}>
         <DocForm busy={busy} onAdd={(c, t, f) => run(() => addClaimDoc(claim.id, c, t, f))} />
         {DOC_CATEGORIES.map(cat => {
           const list = docs.filter(d => d.category === cat.id);
@@ -188,13 +232,13 @@ export function ClaimFile({ claim: initial, incidentRef, incidentAt, user, onCha
             </div>
           );
         })}
-      </Section>
+      </Section>}
 
-      <Section title="Changes to this claim" open={false} count={`${history.length}`}>
+      {tab === 'history' && <Section title="Changes to this claim" count={`${history.length}`}>
         {history.length === 0 ? <p className="m-0 text-sm text-muted">Nothing yet.</p> : (
           <ol className="list-none m-0 p-0 flex flex-col gap-2 text-[13px]">{history.map(h => <li key={h.id}><span className="text-muted">{formatWhen(h.occurred_at)} · {h.actor_name}</span><span className="block">{h.what}</span></li>)}</ol>
         )}
-      </Section>
+      </Section>}
     </div>
   );
 }
@@ -227,13 +271,14 @@ function ClaimDetails({ claim, busy, onSave }: { claim: Claim; busy: boolean; on
   );
 }
 
-function CertificateForm({ busy, defaultFrom, onAdd }: { busy: boolean; defaultFrom: string; onAdd: (i: { from_date: string; to_date: string; doctor_name: string; capacity: Capacity; restrictions: string }, f: File | null) => Promise<boolean> }) {
+function CertificateForm({ busy, defaultFrom, onAdd }: { busy: boolean; defaultFrom: string; onAdd: (i: { from_date: string; to_date: string; doctor_name: string; capacity: Capacity; restrictions: string; next_appointment_on: string | null }, f: File | null) => Promise<boolean> }) {
   const [open, setOpen] = useState(false);
   const [from, setFrom] = useState(defaultFrom);
   const [to, setTo] = useState('');
   const [doctor, setDoctor] = useState('');
   const [cap, setCap] = useState<Capacity>('unfit');
   const [rest, setRest] = useState('');
+  const [nextAppt, setNextAppt] = useState('');
   const [file, setFile] = useState<File | null>(null);
   const [err, setErr] = useState<string | null>(null);
   if (!open) return <button type="button" className={`${btn} self-start`} onClick={() => { setFrom(defaultFrom); setOpen(true); }}>+ Add a certificate</button>;
@@ -243,6 +288,7 @@ function CertificateForm({ busy, defaultFrom, onAdd }: { busy: boolean; defaultF
       <Field label="To" htmlFor="ce-to"><input id="ce-to" type="date" className={inputClass} value={to} onChange={e => setTo(e.target.value)} /></Field>
       <Field label="Doctor" htmlFor="ce-doc" optional><input id="ce-doc" className={inputClass} value={doctor} onChange={e => setDoctor(e.target.value)} /></Field>
       <Field label="Capacity" htmlFor="ce-cap"><select id="ce-cap" className={inputClass} value={cap} onChange={e => setCap(e.target.value as Capacity)}>{CAPACITIES.map(c => <option key={c.id} value={c.id}>{c.label}</option>)}</select></Field>
+      <Field label="Back to the doctor on" htmlFor="ce-next" optional hint="Gives you a prompt if there is no new certificate by then."><input id="ce-next" type="date" className={inputClass} value={nextAppt} onChange={e => setNextAppt(e.target.value)} /></Field>
       <div className="col-span-2 sm:col-span-4"><Field label="Restrictions" htmlFor="ce-res" optional><input id="ce-res" className={inputClass} value={rest} onChange={e => setRest(e.target.value)} placeholder="e.g. No lifting over 5 kg, no overhead work" /></Field></div>
       <div className="col-span-2 sm:col-span-4"><Field label="Scan or photo of the certificate" htmlFor="ce-file" optional><input id="ce-file" type="file" accept="image/*,.pdf" onChange={e => setFile(e.target.files?.[0] ?? null)} /></Field></div>
       <div className="col-span-2 sm:col-span-4"><ErrorNote message={err} /></div>
@@ -251,7 +297,7 @@ function CertificateForm({ busy, defaultFrom, onAdd }: { busy: boolean; defaultF
           if (!from || !to) return setErr('Enter both dates.');
           if (to < from) return setErr('The end date is before the start date.');
           setErr(null);
-          if (await onAdd({ from_date: from, to_date: to, doctor_name: doctor.trim(), capacity: cap, restrictions: rest.trim() }, file)) { setOpen(false); setTo(''); setRest(''); setFile(null); }
+          if (await onAdd({ from_date: from, to_date: to, doctor_name: doctor.trim(), capacity: cap, restrictions: rest.trim(), next_appointment_on: nextAppt || null }, file)) { setOpen(false); setTo(''); setRest(''); setNextAppt(''); setFile(null); }
         }}>Save certificate</button>
         <button type="button" className={btn} onClick={() => setOpen(false)}>Cancel</button>
       </div>
@@ -365,5 +411,61 @@ function DocForm({ busy, onAdd }: { busy: boolean; onAdd: (c: DocCategory, t: st
         <button type="button" className={btn} onClick={() => setOpen(false)}>Cancel</button>
       </div>
     </div>
+  );
+}
+
+function AppointmentForm({ busy, onAdd }: { busy: boolean; onAdd: (i: { kind: AppointmentKind; with_whom: string; on_date: string; at_time: string; place: string }) => Promise<boolean> }) {
+  const [open, setOpen] = useState(false);
+  const [kind, setKind] = useState<AppointmentKind>('doctor');
+  const [who, setWho] = useState('');
+  const [day, setDay] = useState('');
+  const [time, setTime] = useState('');
+  const [place, setPlace] = useState('');
+  if (!open) return <button type="button" className={`${btn} self-start`} onClick={() => setOpen(true)}>+ Add an appointment</button>;
+  return (
+    <div className="grid grid-cols-2 sm:grid-cols-3 gap-3 bg-[#FAFAF9] rounded-lg p-3.5">
+      <Field label="Who are they seeing" htmlFor="ap-k"><select id="ap-k" className={inputClass} value={kind} onChange={e => setKind(e.target.value as AppointmentKind)}>{APPOINTMENT_KINDS.map(k => <option key={k.id} value={k.id}>{k.label}</option>)}</select></Field>
+      <Field label="Name or practice" htmlFor="ap-w" optional><input id="ap-w" className={inputClass} value={who} onChange={e => setWho(e.target.value)} /></Field>
+      <Field label="Date" htmlFor="ap-d"><input id="ap-d" type="date" className={inputClass} value={day} onChange={e => setDay(e.target.value)} /></Field>
+      <Field label="Time" htmlFor="ap-t" optional><input id="ap-t" className={inputClass} value={time} onChange={e => setTime(e.target.value)} placeholder="e.g. 10:30am" /></Field>
+      <div className="col-span-2"><Field label="Where" htmlFor="ap-p" optional><input id="ap-p" className={inputClass} value={place} onChange={e => setPlace(e.target.value)} /></Field></div>
+      <div className="col-span-2 sm:col-span-3 flex gap-2">
+        <button type="button" disabled={busy || !day} className={btnPri} onClick={async () => { if (await onAdd({ kind, with_whom: who.trim(), on_date: day, at_time: time.trim(), place: place.trim() })) { setOpen(false); setWho(''); setDay(''); setTime(''); setPlace(''); } }}>Save appointment</button>
+        <button type="button" className={btn} onClick={() => setOpen(false)}>Cancel</button>
+      </div>
+    </div>
+  );
+}
+
+function AppointmentRow({ a, busy, user, onPatch, onRemove }: { a: Appointment; busy: boolean; user: WhsUser; onPatch: (p: Parameters<typeof updateAppointment>[1]) => Promise<boolean>; onRemove: () => void }) {
+  const [outcome, setOutcome] = useState(a.outcome);
+  const [fu, setFu] = useState(a.follow_up_on ?? '');
+  const [note, setNote] = useState(a.follow_up_note);
+  const st = APPOINTMENT_STATUSES.find(s => s.id === a.status)!;
+  const dirty = outcome !== a.outcome || fu !== (a.follow_up_on ?? '') || note !== a.follow_up_note;
+  return (
+    <li className="rounded-lg border border-line-soft px-3.5 py-3 text-sm flex flex-col gap-2.5">
+      <div className="flex flex-wrap items-center gap-x-3 gap-y-1">
+        <span className="font-semibold">{formatDay(a.on_date)}{a.at_time ? `, ${a.at_time}` : ''}</span>
+        <span>{appointmentKindLabel(a.kind)}{a.with_whom ? `, ${a.with_whom}` : ''}</span>
+        {a.place && <span className="text-muted">{a.place}</span>}
+        <Pill tone={st.tone}>{st.label}</Pill>
+        <select aria-label="Appointment status" className="ml-auto min-h-9 rounded-md border border-[#D6D2CC] px-2 text-[13px]" value={a.status} onChange={e => void onPatch({ status: e.target.value as AppointmentStatus })}>
+          {APPOINTMENT_STATUSES.map(s => <option key={s.id} value={s.id}>{s.label}</option>)}
+        </select>
+        <button type="button" className={linkBtn} onClick={onRemove}>Delete</button>
+      </div>
+      <div className="grid grid-cols-1 sm:grid-cols-[2fr_1fr_2fr] gap-2.5 items-end">
+        <Field label="What came out of it" htmlFor={`ao-${a.id}`} optional><input id={`ao-${a.id}`} className={inputClass} value={outcome} onChange={e => setOutcome(e.target.value)} placeholder="e.g. Cleared for light duties, review in 2 weeks" /></Field>
+        <Field label="Follow up on" htmlFor={`af-${a.id}`} optional><input id={`af-${a.id}`} type="date" className={inputClass} value={fu} onChange={e => setFu(e.target.value)} /></Field>
+        <Field label="Follow up about" htmlFor={`an-${a.id}`} optional><input id={`an-${a.id}`} className={inputClass} value={note} onChange={e => setNote(e.target.value)} placeholder="e.g. Ask for the new certificate" /></Field>
+      </div>
+      <div className="flex flex-wrap items-center gap-3">
+        {dirty && <button type="button" disabled={busy} className={btnPri} onClick={() => void onPatch({ outcome: outcome.trim(), follow_up_on: fu || null, follow_up_note: note.trim() })}>Save</button>}
+        {a.follow_up_on && (a.followed_up_at
+          ? <span className="text-[13px] text-[#1F6B2E]">Followed up {formatWhen(a.followed_up_at)} by {a.followed_up_by_name}</span>
+          : <button type="button" disabled={busy} className={btn} onClick={() => void onPatch({ followed_up_at: new Date().toISOString(), followed_up_by_name: user.name })}>Mark followed up</button>)}
+      </div>
+    </li>
   );
 }

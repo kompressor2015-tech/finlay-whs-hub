@@ -25,6 +25,9 @@ export function PersonPage({ id, user }: { id: string; user: WhsUser }) {
   const [picked, setPicked] = useState<string | null>(null);
   const [editing, setEditing] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [back] = useState<{ href: string; label: string } | null>(() => {
+    try { return JSON.parse(sessionStorage.getItem('whsBack') ?? 'null'); } catch { return null; }
+  });
 
   const load = useCallback(async () => {
     const [p, ip, cl, ac] = await Promise.all([getPerson(id), listPersonIncidents(id), listClaims({ personId: id }), listAccess(id)]);
@@ -47,7 +50,10 @@ export function PersonPage({ id, user }: { id: string; user: WhsUser }) {
 
   return (
     <div className="flex flex-col gap-5">
-      <a href={hrefFor({ name: 'module', id: 'people' })} className="text-sm no-underline text-muted">← People &amp; claims</a>
+      <div className="flex flex-wrap gap-x-5 gap-y-1 text-sm">
+        {back && <a href={back.href} onClick={() => { try { sessionStorage.removeItem('whsBack'); } catch { /* optional */ } }} className="no-underline font-semibold text-finlay">← Back to {back.label}</a>}
+        <a href={hrefFor({ name: 'module', id: 'people' })} onClick={() => { try { sessionStorage.removeItem('whsBack'); } catch { /* optional */ } }} className="no-underline text-muted">{back ? 'All people & claims' : '← People & claims'}</a>
+      </div>
       <div className="flex flex-wrap items-start justify-between gap-4">
         <div>
           <h1 className="m-0 text-2xl font-bold">{person.name}</h1>

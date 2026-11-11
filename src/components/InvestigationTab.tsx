@@ -6,7 +6,7 @@ import type { WhsUser } from '../services/auth.ts';
 import { useLookups } from '../hooks/useLookups.ts';
 import { formatDay, formatWhen, fromInputs, nowForInputs } from '../utils/dates.ts';
 import {
-  CONTRIBUTING, CONTROL_LEVELS, EVIDENCE_KINDS, PARTS, STATEMENT_STATUS, investigationProgress, needsFullInvestigation, partsDone, requiredParts, togglePart,
+  CONTRIBUTING, CONTROL_LEVELS, canWaiveInvestigation, EVIDENCE_KINDS, PARTS, STATEMENT_STATUS, investigationProgress, needsFullInvestigation, partsDone, requiredParts, togglePart,
   type ControlLevel, type Evidence, type EvidenceKind, type IncidentPerson, type PartId, type Statement, type TimelineEntry,
 } from '../utils/incidentFile.ts';
 import type { Incident, WhsAction } from '../utils/records.ts';
@@ -107,6 +107,9 @@ export function InvestigationTab({ incident, user, actions, people, canEdit, off
   // Sign-off
   const [briefed, setBriefed] = useState(incident.crew_briefed_on ?? '');
 
+  const waived = Boolean(incident.investigation_waived);
+  const [waiving, setWaiving] = useState(false);
+  const [reason, setReason] = useState('');
   const progress = investigationProgress(incident);
   const full = needsFullInvestigation(incident);
   const myActions = actions;
@@ -116,7 +119,30 @@ export function InvestigationTab({ incident, user, actions, people, canEdit, off
     <div className="flex flex-col gap-4">
       <ErrorNote message={error} />
 
-      <section className={`${card} px-4.5 py-4 flex flex-wrap gap-4 items-end`}>
+      {waived && (
+        <section className={`${card} px-4.5 py-4 flex flex-wrap items-center gap-3`}>
+          <div className="min-w-0 flex-1">
+            <div className="text-sm font-semibold">Investigation not required</div>
+            <div className="text-sm text-muted">{incident.investigation_waived_reason}</div>
+          </div>
+          {canEdit && <button type="button" disabled={busy} className={btn} onClick={() => run(() => updateIncident(incident.id, { investigation_waived: false, investigation_waived_reason: '' }))}>Investigate it after all</button>}
+        </section>
+      )}
+      {!waived && canEdit && canWaiveInvestigation(incident) && (
+        <div className="text-sm">
+          {!waiving ? <button type="button" className="bg-transparent border-0 p-0 text-[13px] font-semibold underline cursor-pointer min-h-8" onClick={() => setWaiving(true)}>This incident doesn&apos;t need an investigation</button> : (
+            <section className={`${card} px-4.5 py-4 flex flex-wrap items-end gap-3`}>
+              <div className="min-w-[260px] flex-1"><Field label="Why isn't an investigation needed?" htmlFor="inv-waive" hint="This is kept on the incident.">
+                <input id="inv-waive" className={inputClass} value={reason} onChange={e => setReason(e.target.value)} placeholder="e.g. Minor cut, first aid only, cause obvious and already fixed" />
+              </Field></div>
+              <button type="button" disabled={busy || !reason.trim()} className={btnPri} onClick={async () => { if (await run(() => updateIncident(incident.id, { investigation_waived: true, investigation_waived_reason: reason.trim() }))) setWaiving(false); }}>Not required</button>
+              <button type="button" className={btn} onClick={() => setWaiving(false)}>Cancel</button>
+            </section>
+          )}
+        </div>
+      )}
+
+      {!waived && <section className={`${card} px-4.5 py-4 flex flex-wrap gap-4 items-end`}>
         <div className="min-w-[220px] flex-1">
           <div className="text-sm font-semibold">Investigation <span className="font-normal text-muted">· {progress.done} of {progress.total} parts done{full ? '' : ' (lighter investigation for this kind of incident)'}</span></div>
           <div className="h-2 rounded bg-[#ECE8E2] mt-2 overflow-hidden"><div className="h-full bg-finlay" style={{ width: `${progress.total ? (progress.done / progress.total) * 100 : 0}%` }} /></div>
@@ -131,8 +157,9 @@ export function InvestigationTab({ incident, user, actions, people, canEdit, off
         {canEdit && (lead !== (incident.investigation_lead ?? '') || due !== (incident.investigation_due ?? '')) && (
           <button type="button" disabled={busy} className={btnPri} onClick={() => run(() => updateIncident(incident.id, { investigation_lead: lead || null, investigation_due: due || null }))}>Save</button>
         )}
-      </section>
+      </section>}
 
+      {!waived && (<>
       {/* 1 Evidence */}
       <Part id="evidence" n={1} incident={incident} canEdit={canEdit} busy={busy} onToggle={() => togglePartFor('evidence')} count={`${evidence.length} ${evidence.length === 1 ? 'item' : 'items'}`}>
         {evidence.length === 0 && <p className="m-0 px-4.5 py-3 text-sm text-muted">Nothing added yet.</p>}
@@ -314,6 +341,7 @@ export function InvestigationTab({ incident, user, actions, people, canEdit, off
           </div>
         </div>
       </Part>
+      </>)}
     </div>
   );
 }

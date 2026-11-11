@@ -3,11 +3,18 @@ import { createClaim } from '../services/claims.ts';
 import { addIncidentPerson, createPerson, listPeople, removeIncidentPerson, updateIncidentPerson } from '../services/incidentFile.ts';
 import { hrefFor } from '../hooks/useRoute.ts';
 import { brisbaneDay, formatDay } from '../utils/dates.ts';
-import { claimAttention, claimStatus, certificateStatus, daysOffWork, isOpen, STATE_LIST, STATES, type Certificate, type Claim, type State } from '../utils/claims.ts';
+import { claimAttention, claimStatus, certificateStatus, daysOffWork, isOpen, STATE_LIST, STATES, type Appointment, type Certificate, type Claim, type State } from '../utils/claims.ts';
 import { PERSON_ROLES, TREATMENTS, roleLabel, type IncidentPerson, type Person, type PersonRole, type Treatment } from '../utils/incidentFile.ts';
 import type { Incident } from '../utils/records.ts';
+import type { WhsUser } from '../services/auth.ts';
+import { ClaimFile } from './ClaimFile.tsx';
 import { ErrorNote, Field, inputClass } from './Form.tsx';
 import { Pill } from './Pill.tsx';
+
+/** So the person's file can offer a way straight back to this incident. */
+export function rememberBack(incidentId: string, ref: string): void {
+  try { sessionStorage.setItem('whsBack', JSON.stringify({ href: hrefFor({ name: 'incident', id: incidentId }), label: ref })); } catch { /* optional */ }
+}
 
 const card = 'bg-white border border-line rounded-xl';
 const btn = 'min-h-10 px-3.5 rounded-lg border border-[#D6D2CC] bg-white text-[13px] font-semibold cursor-pointer disabled:opacity-60';
@@ -17,14 +24,22 @@ const linkBtn = 'bg-transparent border-0 p-0 text-[13px] font-semibold text-ink 
 const toneBg: Record<string, string> = { red: 'bg-[#FDE8E8] text-[#9B1218]', amber: 'bg-[#FFF1D6] text-[#7A4B00]', green: 'bg-[#E3F4E6] text-[#1F6B2E]', blue: 'bg-[#E4EEFC] text-[#1C4A8F]', grey: 'bg-[#ECECEC] text-[#4A4A50]' };
 
 /** Who was on this incident, their injury details, and (for the WHS officer and admins) each person's claim. */
-export function IncidentPeopleTab({ incident, people, claims, certs, canEdit, officer, reload }: {
-  incident: Incident; people: IncidentPerson[]; claims: Claim[]; certs: Certificate[]; canEdit: boolean; officer: boolean; reload: () => Promise<void> | void;
+export function IncidentPeopleTab({ incident, user, people, claims, certs, appointments, canEdit, officer, reload }: {
+  incident: Incident; user: WhsUser; people: IncidentPerson[]; claims: Claim[]; certs: Certificate[]; appointments: Appointment[]; canEdit: boolean; officer: boolean; reload: () => Promise<void> | void;
 }) {
   const [staff, setStaff] = useState<Person[]>([]);
   const [error, setError] = useState<string | null>(null);
   const [busy, setBusy] = useState(false);
   const [adding, setAdding] = useState(false);
   const [editing, setEditing] = useState<string | null>(null);
+  const [openClaim, setOpenClaim] = useState<string | null>(() => {
+    try { return sessionStorage.getItem(`whsOpenClaim-${incident.id}`); } catch { return null; }
+  });
+  const toggleClaim = (id: string) => {
+    const next = openClaim === id ? null : id;
+    setOpenClaim(next);
+    try { if (next) sessionStorage.setItem(`whsOpenClaim-${incident.id}`, next); else sessionStorage.removeItem(`whsOpenClaim-${incident.id}`); } catch { /* optional */ }
+  };
 
   const loadStaff = useCallback(async () => {
     const res = await listPeople();
@@ -52,7 +67,7 @@ export function IncidentPeopleTab({ incident, people, claims, certs, canEdit, of
       {people.map(p => {
         const claim = claims.find(c => c.person_id === p.person_id);
         const myCerts = claim ? certs.filter(c => c.claim_id === claim.id) : [];
-        const att = claim ? claimAttention(claim, myCerts, incident.occurred_at) : [];
+        const att = claim ? claimAttention(claim, myCerts, incident.occurred_at, new Date(), appointments.filter(x => x.claim_id === claim.id)) : [];
         const st = claim ? claimStatus(claim.status) : null;
         const off = claim ? daysOffWork(claim) : null;
         const cs = claim ? certificateStatus(myCerts) : null;
@@ -61,7 +76,7 @@ export function IncidentPeopleTab({ incident, people, claims, certs, canEdit, of
             <div className="flex flex-wrap items-center gap-3 px-4.5 py-3.5">
               <span className="w-10 h-10 rounded-full bg-[#E9E4DD] flex items-center justify-center text-sm font-bold shrink-0">{p.name.split(' ').map(w => w[0]).slice(0, 2).join('').toUpperCase()}</span>
               <div className="min-w-0 flex-1">
-                <div className="font-semibold">{p.person_id && officer ? <a href={hrefFor({ name: 'person', id: p.person_id })}>{p.name}</a> : p.name} <Pill tone={p.role === 'injured' ? 'red' : 'grey'}>{roleLabel(p.role)}</Pill></div>
+                <div className="font-semibold">{p.person_id && officer ? <a href={hrefFor({ name: 'person', id: p.person_id })} onClick={() => rememberBack(incident.id, incident.ref)}>{p.name}</a> : p.name} <Pill tone={p.role === 'injured' ? 'red' : 'grey'}>{roleLabel(p.role)}</Pill></div>
                 <div className="text-[13px] text-muted">{p.employer || 'Finlay'}{p.phone ? ` · ${p.phone}` : ''}</div>
               </div>
               {canEdit && <button type="button" className={linkBtn} onClick={() => setEditing(editing === p.id ? null : p.id)}>{editing === p.id ? 'Close' : 'Edit'}</button>}
@@ -87,11 +102,19 @@ export function IncidentPeopleTab({ incident, people, claims, certs, canEdit, of
                     {isOpen(claim) && off !== null && <span className="text-muted">{off} {off === 1 ? 'day' : 'days'} off work</span>}
                     {cs?.current && isOpen(claim) && <span className="text-muted">Certificate to {formatDay(cs.current.to_date)}</span>}
                     {att.map(a => <span key={a.id} className={`px-2.5 py-0.5 rounded-full text-xs font-semibold ${toneBg[a.tone]}`}>{a.what}</span>)}
-                    <a href={hrefFor({ name: 'person', id: claim.person_id })} className="ml-auto font-semibold">Open the full file</a>
+                    <span className="ml-auto flex items-center gap-4">
+                      <button type="button" aria-expanded={openClaim === claim.id} className="bg-transparent border-0 p-0 text-[13px] font-semibold text-ink underline cursor-pointer min-h-8" onClick={() => toggleClaim(claim.id)}>{openClaim === claim.id ? 'Close the claim file' : 'Open the claim file'}</button>
+                      <a href={hrefFor({ name: 'person', id: claim.person_id })} onClick={() => rememberBack(incident.id, incident.ref)} className="text-[13px] font-semibold">Full page</a>
+                    </span>
                   </div>
                 ) : p.person_id ? (
                   <StartClaim incident={incident} person={p} busy={busy} onStart={(state, off) => run(() => createClaim({ incident_id: incident.id, person_id: p.person_id!, state, injury_date: brisbaneDay(incident.occurred_at), off_work_from: off || null }))} />
                 ) : <span className="text-muted">Link this person to a worker record to start a claim.</span>}
+              </div>
+            )}
+            {officer && claim && openClaim === claim.id && (
+              <div className="border-t border-line-soft bg-[#FAFAF9] px-4.5 py-4">
+                <ClaimFile key={claim.id} claim={claim} incidentRef={incident.ref} incidentAt={incident.occurred_at} user={user} onChanged={() => void reload()} />
               </div>
             )}
           </section>

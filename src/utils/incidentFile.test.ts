@@ -75,3 +75,11 @@ test('days open', () => {
   assert.equal(daysOpen({ created_at: '2026-11-10T00:00:00+10:00', closed_at: null }, new Date('2026-11-12T10:00:00+10:00')), 2);
   assert.equal(daysOpen({ created_at: '2026-11-10T00:00:00+10:00', closed_at: '2026-11-11T09:00:00+10:00' }, new Date('2026-11-30T10:00:00+10:00')), 1);
 });
+
+test('an injury marked "investigation not required" can close without the six parts, but a notifiable one cannot be waived', async () => {
+  const { canWaiveInvestigation } = await import('./incidentFile.ts');
+  const inj = { status: 'investigating', type: 'injury', notifiable_reasons: [], parts_done: [], investigation_waived: true } as never;
+  assert.deepEqual(closeBlockers(inj, [], []), []);
+  assert.equal(canWaiveInvestigation({ notifiable_reasons: [] }), true);
+  assert.equal(canWaiveInvestigation({ notifiable_reasons: ['x'] as never }), false);
+});

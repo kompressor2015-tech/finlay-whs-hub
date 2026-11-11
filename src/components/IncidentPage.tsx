@@ -6,7 +6,7 @@ import { hrefFor } from '../hooks/useRoute.ts';
 import { isOfficeAccess } from '../utils/access.ts';
 import { addDays, brisbaneDay, formatDate, formatDay, formatLongDate, formatTime, formatWhen } from '../utils/dates.ts';
 import {
-  FACTORS, NOTIFIABLE_REASONS, WHSQ_PHONE, WHSQ_TEL, canClose, incidentStatus, incidentSteps, incidentTypeLabel,
+  FACTORS, NOTIFIABLE_REASONS, WHSQ_PHONE, WHSQ_TEL, canClose, incidentStatusFor, incidentSteps, incidentTypeLabel,
   keepRecordUntil, notifiableSummary, type HistoryEntry, type Incident, type WhsAction,
 } from '../utils/records.ts';
 import { listClaims } from '../services/claims.ts';
@@ -16,6 +16,7 @@ import { closeBlockers, incidentAttention, investigationProgress, needsFullInves
 import { ActionsPanel } from './ActionsPanel.tsx';
 import { IncidentPeopleTab } from './IncidentPeopleTab.tsx';
 import { DocumentsTab, TimelineTab, useFileData } from './IncidentFileTabs.tsx';
+import { IncidentSummary } from './IncidentSummary.tsx';
 import { InvestigationTab } from './InvestigationTab.tsx';
 import { ErrorNote, Field, inputClass } from './Form.tsx';
 import { Pill } from './Pill.tsx';
@@ -34,12 +35,19 @@ export function IncidentPage({ id, user, embedded }: { id: string; user: WhsUser
   const [photos, setPhotos] = useState<string[]>([]);
   const [error, setError] = useState<string | null>(null);
   const [saving, setSaving] = useState(false);
-  const [tab, setTab] = useState<Tab>('overview');
+  const tabKey = `whsIncTab-${id}`;
+  const [tab, setTabState] = useState<Tab>(() => {
+    try { return (sessionStorage.getItem(tabKey) as Tab | null) ?? 'overview'; } catch { return 'overview'; }
+  });
+  const setTab = (t: Tab) => {
+    setTabState(t);
+    try { sessionStorage.setItem(tabKey, t); } catch { /* remembering the tab is optional */ }
+  };
   const [ipeople, setIpeople] = useState<IncidentPerson[]>([]);
   const [claims, setClaims] = useState<Claim[]>([]);
   const [version, setVersion] = useState(0);
   const tabbed = office && !embedded;
-  const fileData = useFileData(id, claims, officer && tabbed, version);
+  const fileData = useFileData(id, claims, officer && office, version);
   // Investigation draft
   const [lead, setLead] = useState('');
   const [due, setDue] = useState('');
@@ -86,7 +94,7 @@ export function IncidentPage({ id, user, embedded }: { id: string; user: WhsUser
     return error ? <ErrorNote message={error} /> : <p className="text-muted text-sm">Loading…</p>;
   }
 
-  const status = incidentStatus(incident.status);
+  const status = incidentStatusFor(incident, actions);
   const steps = incidentSteps(incident, actions);
   const closable = tabbed ? closeBlockers(incident, actions, officer ? claims : null).length === 0 : canClose(incident, actions);
   const blockers = tabbed ? closeBlockers(incident, actions, officer ? claims : null) : [];
@@ -94,12 +102,12 @@ export function IncidentPage({ id, user, embedded }: { id: string; user: WhsUser
   const prog = investigationProgress(incident);
   const attention = [
     ...incidentAttention(incident, fileData.statements).map(a => ({ id: a.id, tone: a.tone, when: a.when, what: a.what })),
-    ...(officer ? claims.flatMap(c => claimAttention(c, fileData.certs.filter(x => x.claim_id === c.id), incident.occurred_at).map(a => ({ id: `${c.id}-${a.id}`, tone: a.tone, when: a.when, what: a.what }))) : []),
+    ...(officer ? claims.flatMap(c => claimAttention(c, fileData.certs.filter(x => x.claim_id === c.id), incident.occurred_at, new Date(), fileData.appointments.filter(x => x.claim_id === c.id)).map(a => ({ id: `${c.id}-${a.id}`, tone: a.tone, when: a.when, what: a.what }))) : []),
   ];
   const toneBg: Record<string, string> = { red: 'bg-[#FDE8E8] text-[#9B1218]', amber: 'bg-[#FFF1D6] text-[#7A4B00]', green: 'bg-[#E3F4E6] text-[#1F6B2E]', blue: 'bg-[#E4EEFC] text-[#1C4A8F]', grey: 'bg-[#ECECEC] text-[#4A4A50]' };
   const tabs: { id: Tab; label: string; badge?: string }[] = [
     { id: 'overview', label: 'Overview' },
-    ...(incident.status !== 'new' ? [{ id: 'investigation' as Tab, label: 'Investigation', badge: `${prog.done}/${prog.total}` }] : []),
+    ...(incident.status !== 'new' ? [{ id: 'investigation' as Tab, label: 'Investigation', badge: incident.investigation_waived ? 'Not required' : `${prog.done}/${prog.total}` }] : []),
     { id: 'people', label: officer ? 'People and claims' : 'People', badge: ipeople.length ? String(ipeople.length) : undefined },
     { id: 'timeline', label: 'Timeline' },
     { id: 'documents', label: 'Documents' },
@@ -148,7 +156,7 @@ export function IncidentPage({ id, user, embedded }: { id: string; user: WhsUser
             ) : (
               officer && (
                 <button type="button" disabled={saving || !closable} title={closable ? '' : blockers.length ? `Before closing: ${blockers.join('; ')}` : 'Finish all actions first'} className={`${smallButton} border-0 bg-finlay text-white`}
-                  onClick={() => save({ status: 'closed' })}>
+                  onClick={() => { if (window.confirm(`Close ${incident.ref}?\n\nThis marks the incident as finished. You can reopen it later if you need to.`)) void save({ status: 'closed' }); }}>
                   Close incident
                 </button>
               )
@@ -184,12 +192,16 @@ export function IncidentPage({ id, user, embedded }: { id: string; user: WhsUser
       )}
 
       {tabbed && tab === 'investigation' && <InvestigationTab incident={incident} user={user} actions={actions} people={ipeople} canEdit={incident.status !== 'closed'} officer={officer} reload={reload} />}
-      {tabbed && tab === 'people' && <IncidentPeopleTab incident={incident} people={ipeople} claims={claims} certs={fileData.certs} canEdit={incident.status !== 'closed'} officer={officer} reload={reload} />}
+      {tabbed && tab === 'people' && <IncidentPeopleTab incident={incident} user={user} people={ipeople} claims={claims} certs={fileData.certs} appointments={fileData.appointments} canEdit={incident.status !== 'closed'} officer={officer} reload={reload} />}
       {tabbed && tab === 'timeline' && <TimelineTab history={history} data={fileData} officer={officer} />}
       {tabbed && tab === 'documents' && <DocumentsTab data={fileData} photos={photos} officer={officer} />}
       {tabbed && tab === 'actions' && actionsPanel}
 
-      {(!tabbed || tab === 'overview') && (
+      {embedded && office && (
+        <IncidentSummary incident={incident} actions={actions} people={ipeople} claims={officer ? claims : []} data={fileData} history={history} officer={officer} photos={photos} attention={attention} leadName={people.find(p => p.id === incident.investigation_lead)?.name ?? ''} />
+      )}
+
+      {!(embedded && office) && (!tabbed || tab === 'overview') && (
       <div className="flex flex-wrap gap-5 items-start">
         <div className="flex-[2_1_520px] min-w-0 flex flex-col gap-5">
           {tabbed && attention.length > 0 && (

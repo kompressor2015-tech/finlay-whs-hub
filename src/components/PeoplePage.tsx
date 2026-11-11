@@ -1,6 +1,6 @@
 import { useCallback, useEffect, useMemo, useState } from 'react';
 import type { WhsUser } from '../services/auth.ts';
-import { listCertificates, listClaims } from '../services/claims.ts';
+import { listAppointmentsFor, listCertificates, listClaims } from '../services/claims.ts';
 import { createPerson, listPeople } from '../services/incidentFile.ts';
 import { go, hrefFor } from '../hooks/useRoute.ts';
 import { claimAttention, claimStatus, daysOffWork, isOpen, isOffWork, STATES, type Certificate, type Claim, type ClaimAttention } from '../utils/claims.ts';
@@ -29,9 +29,10 @@ export function PeoplePage({ user: _user }: { user: WhsUser }) {
     setPeople(p.data ?? []);
     const list = c.data ?? [];
     setClaims(list);
+    const appts = (await listAppointmentsFor(list.filter(isOpen).map(x => x.id))).data ?? [];
     const certs = await Promise.all(list.filter(isOpen).map(async x => [x, (await listCertificates(x.id)).data ?? []] as [Claim, Certificate[]]));
     const next: Record<string, ClaimAttention[]> = {};
-    for (const [x, cs] of certs) next[x.id] = claimAttention(x, cs, x.injury_date ? `${x.injury_date}T12:00:00+10:00` : x.created_at);
+    for (const [x, cs] of certs) next[x.id] = claimAttention(x, cs, x.injury_date ? `${x.injury_date}T12:00:00+10:00` : x.created_at, new Date(), appts.filter(a => a.claim_id === x.id));
     setAtt(next);
   }, []);
   useEffect(() => { void load(); }, [load]);

@@ -51,6 +51,8 @@ export interface Incident {
   root_cause?: string;
   findings?: string;
   parts_done?: string[];
+  investigation_waived?: boolean;
+  investigation_waived_reason?: string;
   investigation_signed_by_name?: string;
   investigation_signed_at?: string | null;
   reviewed_by_name?: string;
@@ -199,6 +201,12 @@ export function hazardFixBy(hazard: Pick<Hazard, 'severity' | 'created_at'>): st
 // ---------------------------------------------------------------------------------
 // Status labels
 // ---------------------------------------------------------------------------------
+
+/** The status to show: once every action is done an incident in the actions stage is ready to close. */
+export function incidentStatusFor(incident: Pick<Incident, 'status'>, actions: Pick<WhsAction, 'status'>[]): { label: string; tone: Tone } {
+  if (incident.status === 'actions' && actions.every(a => a.status === 'done')) return { label: 'Ready to close', tone: 'green' };
+  return incidentStatus(incident.status);
+}
 
 export function incidentStatus(status: IncidentStatus): { label: string; tone: Tone } {
   switch (status) {
