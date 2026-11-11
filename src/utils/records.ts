@@ -200,6 +200,12 @@ export function hazardFixBy(hazard: Pick<Hazard, 'severity' | 'created_at'>): st
 // Status labels
 // ---------------------------------------------------------------------------------
 
+/** The status to show: once every action is done an incident in the actions stage is ready to close. */
+export function incidentStatusFor(incident: Pick<Incident, 'status'>, actions: Pick<WhsAction, 'status'>[]): { label: string; tone: Tone } {
+  if (incident.status === 'actions' && actions.every(a => a.status === 'done')) return { label: 'Ready to close', tone: 'green' };
+  return incidentStatus(incident.status);
+}
+
 export function incidentStatus(status: IncidentStatus): { label: string; tone: Tone } {
   switch (status) {
     case 'new':

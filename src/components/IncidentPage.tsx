@@ -6,7 +6,7 @@ import { hrefFor } from '../hooks/useRoute.ts';
 import { isOfficeAccess } from '../utils/access.ts';
 import { addDays, brisbaneDay, formatDate, formatDay, formatLongDate, formatTime, formatWhen } from '../utils/dates.ts';
 import {
-  FACTORS, NOTIFIABLE_REASONS, WHSQ_PHONE, WHSQ_TEL, canClose, incidentStatus, incidentSteps, incidentTypeLabel,
+  FACTORS, NOTIFIABLE_REASONS, WHSQ_PHONE, WHSQ_TEL, canClose, incidentStatusFor, incidentSteps, incidentTypeLabel,
   keepRecordUntil, notifiableSummary, type HistoryEntry, type Incident, type WhsAction,
 } from '../utils/records.ts';
 import { listClaims } from '../services/claims.ts';
@@ -16,6 +16,7 @@ import { closeBlockers, incidentAttention, investigationProgress, needsFullInves
 import { ActionsPanel } from './ActionsPanel.tsx';
 import { IncidentPeopleTab } from './IncidentPeopleTab.tsx';
 import { DocumentsTab, TimelineTab, useFileData } from './IncidentFileTabs.tsx';
+import { IncidentSummary } from './IncidentSummary.tsx';
 import { InvestigationTab } from './InvestigationTab.tsx';
 import { ErrorNote, Field, inputClass } from './Form.tsx';
 import { Pill } from './Pill.tsx';
@@ -46,7 +47,7 @@ export function IncidentPage({ id, user, embedded }: { id: string; user: WhsUser
   const [claims, setClaims] = useState<Claim[]>([]);
   const [version, setVersion] = useState(0);
   const tabbed = office && !embedded;
-  const fileData = useFileData(id, claims, officer && tabbed, version);
+  const fileData = useFileData(id, claims, officer && office, version);
   // Investigation draft
   const [lead, setLead] = useState('');
   const [due, setDue] = useState('');
@@ -93,7 +94,7 @@ export function IncidentPage({ id, user, embedded }: { id: string; user: WhsUser
     return error ? <ErrorNote message={error} /> : <p className="text-muted text-sm">Loading…</p>;
   }
 
-  const status = incidentStatus(incident.status);
+  const status = incidentStatusFor(incident, actions);
   const steps = incidentSteps(incident, actions);
   const closable = tabbed ? closeBlockers(incident, actions, officer ? claims : null).length === 0 : canClose(incident, actions);
   const blockers = tabbed ? closeBlockers(incident, actions, officer ? claims : null) : [];
@@ -196,7 +197,11 @@ export function IncidentPage({ id, user, embedded }: { id: string; user: WhsUser
       {tabbed && tab === 'documents' && <DocumentsTab data={fileData} photos={photos} officer={officer} />}
       {tabbed && tab === 'actions' && actionsPanel}
 
-      {(!tabbed || tab === 'overview') && (
+      {embedded && office && (
+        <IncidentSummary incident={incident} actions={actions} people={ipeople} claims={officer ? claims : []} data={fileData} history={history} officer={officer} photos={photos} attention={attention} leadName={people.find(p => p.id === incident.investigation_lead)?.name ?? ''} />
+      )}
+
+      {!(embedded && office) && (!tabbed || tab === 'overview') && (
       <div className="flex flex-wrap gap-5 items-start">
         <div className="flex-[2_1_520px] min-w-0 flex flex-col gap-5">
           {tabbed && attention.length > 0 && (

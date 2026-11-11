@@ -4,7 +4,7 @@ import { hrefFor } from '../hooks/useRoute.ts';
 import { formatDate, formatDay } from '../utils/dates.ts';
 import { looseMatch } from '../utils/search.ts';
 import { csvFor, downloadCsv } from '../utils/csv.ts';
-import { hazardFixBy, hazardStatus, incidentStatus, incidentTypeLabel, riskFor, type Hazard, type Incident, type WhsAction } from '../utils/records.ts';
+import { hazardFixBy, hazardStatus, incidentStatus, incidentStatusFor, incidentTypeLabel, riskFor, type Hazard, type Incident, type WhsAction } from '../utils/records.ts';
 import type { WhsUser } from '../services/auth.ts';
 import { ErrorNote } from './Form.tsx';
 import { HazardPage } from './HazardPage.tsx';
@@ -83,7 +83,7 @@ export function RegisterPage({ tab, user }: { tab: Tab; user: WhsUser }) {
     if (tab === 'incidents') {
       downloadCsv('incidents.csv', csvFor(
         ['Ref', 'Date', 'Type', 'Site', 'Unit', 'What happened', 'Notifiable', 'WHSQ reference', 'Status', 'Reported by'],
-        shownIncidents.map(i => [i.ref, formatDate(i.occurred_at), incidentTypeLabel(i.type), i.site_name, i.unit_no, i.description, i.notifiable ? 'Yes' : 'No', i.whsq_reference, incidentStatus(i.status).label, i.reporter_name])
+        shownIncidents.map(i => [i.ref, formatDate(i.occurred_at), incidentTypeLabel(i.type), i.site_name, i.unit_no, i.description, i.notifiable ? 'Yes' : 'No', i.whsq_reference, incidentStatusFor(i, actions.filter(a => a.source_id === i.id)).label, i.reporter_name])
       ));
     } else {
       downloadCsv('hazards.csv', csvFor(
@@ -150,7 +150,7 @@ export function RegisterPage({ tab, user }: { tab: Tab; user: WhsUser }) {
             </thead>
             <tbody>
               {shownIncidents.map(i => {
-                const s = incidentStatus(i.status);
+                const s = incidentStatusFor(i, actions.filter(a => a.source_id === i.id));
                 return (
                   <tr key={i.id} onClick={e => rowOpens(e, () => panel.setOpenId(i.id))} aria-selected={panel.openId === i.id} className={rowCls(i.id)}>
                     <td className={`${td} pl-4 whitespace-nowrap`}><a href={hrefFor({ name: 'incident', id: i.id })} onClick={e => linkOpens(e, () => panel.setOpenId(i.id))} className="font-semibold">{i.ref}</a></td>

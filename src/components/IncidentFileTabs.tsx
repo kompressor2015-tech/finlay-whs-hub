@@ -50,13 +50,13 @@ export function buildFeed(history: HistoryEntry[], d: FileData): FeedItem[] {
 
 const KIND_LABEL: Record<FeedItem['kind'], string> = { history: 'Change', evidence: 'Evidence', statement: 'Statement', timeline: 'Event', certificate: 'Certificate', log: 'Correspondence', claim: 'Claim', document: 'Document' };
 
-export function TimelineTab({ history, data, officer, limit }: { history: HistoryEntry[]; data: FileData; officer: boolean; limit?: number }) {
+export function TimelineTab({ history, data, officer, limit, bare }: { history: HistoryEntry[]; data: FileData; officer: boolean; limit?: number; bare?: boolean }) {
   const [filter, setFilter] = useState<'all' | 'investigation' | 'claim' | 'files'>('all');
   const filters = FEED_FILTERS.filter(f => officer || f.id !== 'claim');
   const feed = buildFeed(history, data).filter(i => feedMatches(i, filter));
   const shown = limit ? feed.slice(0, limit) : feed;
   return (
-    <section className={`${card} px-4.5 py-4 flex flex-col gap-3`}>
+    <section className={`${bare ? '' : `${card} px-4.5 py-4`} flex flex-col gap-3`}>
       {!limit && (
         <div role="group" aria-label="Filter" className="flex flex-wrap gap-2">
           {filters.map(f => (
