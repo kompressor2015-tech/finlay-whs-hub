@@ -9,6 +9,8 @@ import { withChecks } from './homeChecks.ts';
 import { withChemicals } from './homeChemicals.ts';
 import { buildCharts } from './homeCharts.ts';
 import { buildBoard } from './homeBoard.ts';
+import { documentsComing, withDocuments } from './homeDocuments.ts';
+import type { WhsDocument } from './documents.ts';
 import { actionsInScope, inScope, type ScopeSite } from './siteScope.ts';
 import type { Check, Checklist, PlantFlag } from './checks.ts';
 import type { Chemical, Sds, Site, Stock } from './chemicals.ts';
@@ -23,6 +25,8 @@ export interface HomeRaw {
   /** null when the chemical tables are not there yet */
   register: { sites: Site[]; chemicals: Chemical[]; stock: Stock[]; sds: Sds[] } | null;
   stocktakes: Pick<Stocktake, 'id' | 'site_id' | 'done_at' | 'authorised_at'>[];
+  /** null when the documents table is not there yet */
+  documents?: WhsDocument[] | null;
 }
 
 export function buildHomeData(raw: HomeRaw, me: string, site: ScopeSite | null, now: Date = new Date()): HomeData {
@@ -49,7 +53,11 @@ export function buildHomeData(raw: HomeRaw, me: string, site: ScopeSite | null, 
 
   const charts = buildCharts(incidents, hazards, actions, chemicals, sds, now);
   const board = buildBoard(sites, chemicals, stock, sds, checklists, checks, now);
-  if (!reg) return { ...withStep3, charts, board };
   const stocktakes = raw.stocktakes.filter(t => !site || t.site_id === site.id);
-  return { ...withChemicals(withStep3, sites, chemicals, stock, sds, now, stocktakes), charts, board };
+  const withStep4 = reg ? withChemicals(withStep3, sites, chemicals, stock, sds, now, stocktakes) : withStep3;
+  // A document applies to every site unless it was set to one site
+  const docs = (raw.documents ?? []).filter(d => !site || !d.site_id || d.site_id === site.id);
+  const withStep5 = raw.documents ? withDocuments(withStep4, docs, now) : withStep4;
+  const coming = [...board.coming, ...documentsComing(docs, now)].sort((a, b) => a.day.localeCompare(b.day)).slice(0, 5);
+  return { ...withStep5, charts, board: { ...board, coming } };
 }

@@ -29,3 +29,13 @@ test('the site switcher narrows the results', () => {
   const som = { id: 'somerton', name: 'Somerton Workshop' };
   assert.deepEqual(searchAll(raw, 'inc', som).map(h => h.id), ['i2']);
 });
+
+test('documents are found by number, title or machine model', () => {
+  const withDocs = { ...raw, documents: [
+    { id: 'd1', doc_no: 'SWI-032', title: 'Cone Change C-1550', doc_type: 'swi', machine_model: '', site_id: null, active: true },
+    { id: 'd2', doc_no: '', title: 'J-1480 Risk Assessment', doc_type: 'risk_assessment', machine_model: 'J-1480', site_id: 'somerton', active: true },
+  ] } as unknown as HomeRaw;
+  assert.equal(searchAll(withDocs, 'swi 32', null)[0].href, '#/documents/d1');
+  assert.equal(searchAll(withDocs, 'j1480', null)[0].group, 'Documents');
+  assert.deepEqual(searchAll(withDocs, 'j-1480', { id: 'burpengary', name: 'Burpengary Yard' }).filter(h => h.group === 'Documents'), []);
+});

@@ -20,7 +20,7 @@ export const MODULES: readonly WhsModule[] = [
   { id: 'actions', built: true, label: 'Actions', about: 'Every corrective action from every module, with an owner and a due date.', step: 2 },
   { id: 'inspections', built: true, label: 'Inspections & checks', about: 'Pre-starts by unit number, Take 5s, and yard and workshop checklists.', step: 3 },
   { id: 'chemicals', built: true, label: 'Chemicals & SDS', about: 'The chemical register by site, safety data sheets and their review dates.', step: 4 },
-  { id: 'documents', label: 'Documents', about: 'Policies and safe work procedures, versions, review dates and read-and-sign.', step: 5 },
+  { id: 'documents', built: true, label: 'Documents', about: 'The management system, work instructions, SWMS, machine risk assessments, policies and forms, with versions and review dates.', step: 5 },
   { id: 'plant', built: true, label: 'Plant safety', about: 'The safety view of the fleet register: flags from pre-starts, inspections and defects.', step: 3 },
   { id: 'risk', label: 'Risk & SWMS', about: 'Risk register, risk assessments, SWMS and JSAs, with approval.', step: 6 },
   { id: 'contractors', label: 'Contractors', about: 'Contractor insurance, licences, inductions and SWMS sign-off.', step: 6 },
