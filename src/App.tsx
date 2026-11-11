@@ -1,30 +1,18 @@
-import { useCallback, useEffect, useMemo, useState } from 'react';
+import { useCallback, useEffect, useState } from 'react';
 import { Loader2 } from 'lucide-react';
 import { getCurrentUser, onSignedOut, signOut, type WhsUser } from './services/auth.ts';
 import { loadHomeData } from './services/home.ts';
 import { emptyHomeData, type HomeData } from './utils/homeData.ts';
-import { sampleHomeData } from './data/sampleHome.ts';
 import { useIsPhone } from './hooks/useIsPhone.ts';
 import { useRoute } from './hooks/useRoute.ts';
 import { LoginScreen } from './components/LoginScreen.tsx';
 import { DesktopApp } from './components/DesktopApp.tsx';
 import { PhoneApp } from './components/PhoneApp.tsx';
 
-const SAMPLE_KEY = 'whsSampleData';
-
-function readSample(): boolean {
-  try {
-    return sessionStorage.getItem(SAMPLE_KEY) === '1' || new URLSearchParams(window.location.search).has('sample');
-  } catch {
-    return false;
-  }
-}
-
 export default function App() {
   const [user, setUser] = useState<WhsUser | null>(null);
   const [checking, setChecking] = useState(true);
-  const [realData, setRealData] = useState<HomeData>(emptyHomeData);
-  const [sample, setSample] = useState(readSample);
+  const [data, setData] = useState<HomeData>(emptyHomeData);
   const { route } = useRoute();
   const { narrow, showPhone, setUseFull } = useIsPhone();
 
@@ -45,20 +33,8 @@ export default function App() {
   // Reload the home screen's numbers each time someone comes back to it.
   useEffect(() => {
     if (!user || route.name !== 'home') return;
-    loadHomeData(user.id).then(setRealData);
+    loadHomeData(user.id).then(setData);
   }, [user, route.name]);
-
-  const changeSample = useCallback((on: boolean) => {
-    setSample(on);
-    try {
-      if (on) sessionStorage.setItem(SAMPLE_KEY, '1');
-      else sessionStorage.removeItem(SAMPLE_KEY);
-    } catch {
-      // storage unavailable
-    }
-  }, []);
-
-  const data = useMemo(() => (sample ? sampleHomeData() : realData), [sample, realData]);
 
   const handleSignOut = useCallback(async () => {
     await signOut();
@@ -82,8 +58,6 @@ export default function App() {
         user={user}
         data={data}
         route={route}
-        sample={sample}
-        onSampleChange={changeSample}
         onSignOut={handleSignOut}
         onFullVersion={() => setUseFull(true)}
       />
@@ -95,8 +69,6 @@ export default function App() {
       user={user}
       data={data}
       route={route}
-      sample={sample}
-      onSampleChange={changeSample}
       onSignOut={handleSignOut}
       onPhoneLayout={narrow ? () => setUseFull(false) : undefined}
     />
