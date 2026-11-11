@@ -1,4 +1,4 @@
-import { ChevronDown, LogOut, Plus, Search, Smartphone } from 'lucide-react';
+import { ChevronDown, LogOut, Plus, Smartphone } from 'lucide-react';
 import type { WhsUser } from '../services/auth.ts';
 import type { HomeData } from '../utils/homeData.ts';
 import { summaryValue } from '../utils/homeData.ts';
@@ -11,6 +11,7 @@ import { HomeCharts } from './HomeCharts.tsx';
 import { Pill } from './Pill.tsx';
 import { Screen } from './Screen.tsx';
 import { SiteSwitcher } from './SiteSwitcher.tsx';
+import { GlobalSearch } from './GlobalSearch.tsx';
 
 interface Props {
   user: WhsUser;
@@ -50,17 +51,7 @@ export function DesktopApp({ user, data, route, onSignOut, onPhoneLayout }: Prop
           <img src="/finlay-logo.jpg" alt="Finlay" className="h-7 w-auto block" />
           <span className="border-l border-line pl-3 font-bold text-[17px] text-finlay tracking-wide">WHS</span>
         </a>
-        <div className="relative flex-[1_1_280px] max-w-[520px]">
-          <label htmlFor="search" className="sr-only">Search</label>
-          <Search className="w-4 h-4 text-muted absolute left-3.5 top-1/2 -translate-y-1/2" aria-hidden="true" />
-          <input
-            id="search"
-            type="search"
-            disabled
-            placeholder="Search incidents, units, people, documents (coming soon)"
-            className="w-full h-10 rounded-lg border border-[#D6D2CC] bg-[#FAFAF9] pl-10 pr-3.5 text-sm disabled:cursor-not-allowed"
-          />
-        </div>
+        <GlobalSearch />
         <div className="ml-auto flex items-center gap-3">
           <SiteSwitcher />
           <details className="relative">
