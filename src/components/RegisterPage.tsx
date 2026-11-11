@@ -119,7 +119,7 @@ export function RegisterPage({ tab, user }: { tab: Tab; user: WhsUser }) {
         {(['incidents', 'hazards'] as Tab[]).map(t => (
           <a key={t} role="tab" aria-selected={tab === t} href={hrefFor({ name: 'module', id: t })}
             className={`no-underline px-3.5 py-2.5 text-[15px] border-b-2 ${tab === t ? 'border-finlay font-semibold text-ink' : 'border-transparent text-muted'}`}>
-            {t === 'incidents' ? 'Incidents' : 'Hazards'} <span className="text-muted font-medium">{t === 'incidents' ? incidents.length : hazards.length}</span>
+            {t === 'incidents' ? 'Incidents' : 'Hazards'} {(() => { const n = t === 'incidents' ? incidents.filter(i => i.status !== 'closed').length : hazards.filter(h => h.status !== 'closed').length; return n > 0 ? <span className="text-muted font-medium" title="Open">{n}</span> : null; })()}
           </a>
         ))}
       </div>
