@@ -36,19 +36,31 @@ function MonthlyChart({ months }: { months: Charts['months'] }) {
         <>
           <div className="flex items-end gap-3 h-[132px] mt-4 border-b border-line">
             {months.map(m => (
-              <a
+              <div
                 key={m.key}
-                href={hrefFor({ name: 'module', id: 'hazards' })}
                 onMouseEnter={() => setHot(m.key)}
                 onMouseLeave={() => setHot(null)}
-                onFocus={() => setHot(m.key)}
-                onBlur={() => setHot(null)}
-                aria-label={`${m.label}: ${m.hazards} hazards, ${m.incidents} incidents`}
-                className={`flex-1 h-full flex items-end justify-center gap-1 no-underline rounded-t ${hot === m.key ? 'bg-[#FAF8F6]' : ''}`}
+                className={`flex-1 h-full flex items-end justify-center gap-1 rounded-t ${hot === m.key ? 'bg-[#FAF8F6]' : ''}`}
               >
-                <span className="w-[38%] max-w-[22px] bg-finlay rounded-t" style={{ height: `${(m.hazards / max) * 100}%`, minHeight: m.hazards ? 3 : 0 }} />
-                <span className="w-[38%] max-w-[22px] bg-ink rounded-t" style={{ height: `${(m.incidents / max) * 100}%`, minHeight: m.incidents ? 3 : 0 }} />
-              </a>
+                <a
+                  href={hrefFor({ name: 'module', id: 'hazards' })}
+                  onFocus={() => setHot(m.key)}
+                  onBlur={() => setHot(null)}
+                  aria-label={`${m.label}: ${m.hazards} ${m.hazards === 1 ? 'hazard' : 'hazards'}. Open hazards`}
+                  className="w-[38%] max-w-[22px] h-full flex items-end no-underline"
+                >
+                  <span className="w-full bg-finlay rounded-t" style={{ height: `${(m.hazards / max) * 100}%`, minHeight: m.hazards ? 3 : 0 }} />
+                </a>
+                <a
+                  href={hrefFor({ name: 'module', id: 'incidents' })}
+                  onFocus={() => setHot(m.key)}
+                  onBlur={() => setHot(null)}
+                  aria-label={`${m.label}: ${m.incidents} ${m.incidents === 1 ? 'incident' : 'incidents'}. Open incidents`}
+                  className="w-[38%] max-w-[22px] h-full flex items-end no-underline"
+                >
+                  <span className="w-full bg-ink rounded-t" style={{ height: `${(m.incidents / max) * 100}%`, minHeight: m.incidents ? 3 : 0 }} />
+                </a>
+              </div>
             ))}
           </div>
           <div className="flex gap-3 mt-1.5">
