@@ -11,7 +11,7 @@ import {
 } from '../utils/records.ts';
 import { listClaims } from '../services/claims.ts';
 import { listIncidentPeople } from '../services/incidentFile.ts';
-import { claimAttention, type Claim } from '../utils/claims.ts';
+import { claimAttention, STATES, type Claim } from '../utils/claims.ts';
 import { closeBlockers, incidentAttention, investigationProgress, type IncidentPerson } from '../utils/incidentFile.ts';
 import { ActionsPanel } from './ActionsPanel.tsx';
 import { IncidentPeopleTab } from './IncidentPeopleTab.tsx';
@@ -97,7 +97,7 @@ export function IncidentPage({ id, user, embedded }: { id: string; user: WhsUser
 
   const status = incidentStatusFor(incident, actions);
   const steps = incidentSteps(incident, actions);
-  const blockers = closeBlockers(incident, actions, officer ? claims : null);
+  const blockers = closeBlockers(incident, actions, officer ? claims.map(c => ({ status: c.status, label: `${ipeople.find(p => p.person_id === c.person_id)?.name ?? 'A worker'}'s ${STATES[c.state].scheme} claim` })) : null);
   async function closeClicked() {
     if (blockers.length) {
       await askConfirm({ title: `${incident!.ref} can't be closed yet`, body: 'Still to do:', items: blockers, infoOnly: true });
@@ -183,7 +183,7 @@ export function IncidentPage({ id, user, embedded }: { id: string; user: WhsUser
       </ol>
 
       {office && blockers.length > 0 && incident.status !== 'closed' && (
-        <p id="close-blockers" className="m-0 text-sm text-muted">Before this can be closed: {blockers.join(' · ')}.</p>
+        <p id="close-blockers" className="m-0 text-sm text-muted">Before this can be closed: {blockers.join(' · ')}.{tabbed && claims.some(c => c.status !== 'closed' && c.status !== 'rejected') && <> <button type="button" onClick={() => setTab('people')} className="bg-transparent border-0 p-0 text-sm font-semibold text-ink underline cursor-pointer">Go to People and claims</button></>}</p>
       )}
 
       {tabbed && (

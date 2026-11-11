@@ -196,7 +196,7 @@ export function statementCounts(list: Pick<Statement, 'status'>[]): { signed: nu
 export function closeBlockers(
   incident: Pick<Incident, 'status' | 'type' | 'notifiable_reasons' | 'parts_done' | 'investigation_waived'>,
   actions: Pick<WhsAction, 'status'>[],
-  claims: { status: string }[] | null
+  claims: { status: string; label?: string }[] | null
 ): string[] {
   if (incident.status === 'closed') return [];
   const out: string[] = [];
@@ -205,8 +205,9 @@ export function closeBlockers(
   if (needsFullInvestigation(incident)) {
     const p = investigationProgress(incident);
     if (!incident.investigation_waived && p.remaining.length) out.push(`Investigation: ${p.remaining.length} of ${p.total} ${p.remaining.length === 1 ? 'part' : 'parts'} not done`);
-    const openClaims = (claims ?? []).filter(c => c.status !== 'closed' && c.status !== 'rejected').length;
-    if (openClaims) out.push(`${openClaims} ${openClaims === 1 ? 'claim is' : 'claims are'} still open`);
+    const openClaims = (claims ?? []).filter(c => c.status !== 'closed' && c.status !== 'rejected');
+    if (openClaims.length === 1 && openClaims[0].label) out.push(`${openClaims[0].label} is still open (close or reject it in People and claims)`);
+    else if (openClaims.length) out.push(`${openClaims.length} ${openClaims.length === 1 ? 'claim is' : 'claims are'} still open`);
   }
   return out;
 }
