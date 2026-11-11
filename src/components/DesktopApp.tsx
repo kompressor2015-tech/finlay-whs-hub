@@ -7,6 +7,7 @@ import { pillFor, sortAttention } from '../utils/attention.ts';
 import { formatDate, formatLongDate, formatWhen, greeting } from '../utils/dates.ts';
 import { MODULES } from '../utils/modules.ts';
 import { hrefFor, moduleOf, type Route } from '../hooks/useRoute.ts';
+import { HomeCharts } from './HomeCharts.tsx';
 import { Pill } from './Pill.tsx';
 import { Screen } from './Screen.tsx';
 import { SampleToggle } from './SampleToggle.tsx';
@@ -72,8 +73,8 @@ export function DesktopApp({ user, data, route, sample, onSampleChange, onSignOu
         </div>
       </header>
 
-      <div className="flex flex-wrap items-start">
-        <nav aria-label="Modules" className="flex-[1_1_220px] max-w-[240px] px-3 py-5 flex flex-col gap-0.5 print:hidden">
+      <div className="flex items-start">
+        <nav aria-label="Modules" className="w-[236px] flex-none sticky top-0 px-3 py-5 flex flex-col gap-0.5 print:hidden">
           <a href={hrefFor({ name: 'home' })} className={navLink(activeId === 'home')} aria-current={activeId === 'home' ? 'page' : undefined}>Home</a>
           {navItems.map(m => (
             <a key={m.id} href={hrefFor({ name: 'module', id: m.id })} className={navLink(activeId === m.id)} aria-current={activeId === m.id ? 'page' : undefined}>
@@ -83,7 +84,7 @@ export function DesktopApp({ user, data, route, sample, onSampleChange, onSignOu
           ))}
         </nav>
 
-        <main className="flex-[999_1_640px] min-w-0 max-w-[1200px] px-7 pt-7 pb-12">
+        <main className="flex-1 min-w-0 px-7 pt-7 pb-12">
           <Screen route={route} user={user} home={() => <DesktopHome data={data} />} />
         </main>
       </div>
@@ -124,6 +125,8 @@ function DesktopHome({ data }: { data: HomeData }) {
           </div>
         ))}
       </section>
+
+      {data.charts && <HomeCharts charts={data.charts} />}
 
       <div className="flex flex-wrap gap-5 items-start">
         <section className="flex-[2_1_480px] min-w-0 bg-white border border-line rounded-xl overflow-hidden">

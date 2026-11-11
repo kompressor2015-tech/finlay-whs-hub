@@ -4,6 +4,7 @@
  */
 
 import type { AttentionItem, Tone } from './attention.ts';
+import type { HomeCharts } from './homeCharts.ts';
 
 export interface SummaryCard {
   id: string;
@@ -41,6 +42,8 @@ export interface HomeData {
   navCounts: Record<string, number>;
   phoneToday: PhoneTask[];
   phoneToSign: PhoneTask[];
+  /** Health charts on the desktop home screen; absent until there is data to draw */
+  charts?: HomeCharts;
 }
 
 export function emptyHomeData(): HomeData {
