@@ -5,11 +5,12 @@ import { hrefFor } from '../hooks/useRoute.ts';
 const card = 'bg-white border border-line rounded-xl p-4.5';
 
 /** Health of the WHS system at a glance: trends, action status, and the chemical register against its targets. */
-export function HomeCharts({ charts }: { charts: Charts }) {
+export function HomeCharts({ charts, inspections }: { charts: Charts; inspections?: { ok: number; total: number } }) {
   return (
-    <section aria-label="How things are going" className="grid grid-cols-1 xl:grid-cols-[minmax(0,1.5fr)_minmax(0,1fr)_minmax(0,1.2fr)] gap-3">
+    <section aria-label="How things are going" className="grid grid-cols-1 md:grid-cols-2 2xl:grid-cols-[minmax(0,1.5fr)_minmax(0,1fr)_minmax(0,1fr)_minmax(0,1.2fr)] gap-3">
       <MonthlyChart months={charts.months} />
       <ActionsDonut split={charts.actions} />
+      {inspections && <InspectionsDial ok={inspections.ok} total={inspections.total} />}
       <HealthBars health={charts.health} />
     </section>
   );
@@ -124,6 +125,25 @@ function HealthBars({ health }: { health: Charts['health'] }) {
             );
           })}
         </div>
+      )}
+    </div>
+  );
+}
+
+function InspectionsDial({ ok, total }: { ok: number; total: number }) {
+  const share = total ? ok / total : 0;
+  return (
+    <div className={card}>
+      <h2 className="m-0 text-[15px] font-semibold">Site inspections up to date</h2>
+      {total === 0 ? (
+        <p className="m-0 mt-6 mb-4 text-sm text-muted">No scheduled inspections yet.</p>
+      ) : (
+        <a href={hrefFor({ name: 'module', id: 'inspections' })} className="no-underline text-ink flex items-center gap-5 mt-4">
+          <span className="relative w-[104px] h-[104px] rounded-full flex-none" style={{ background: `conic-gradient(${share >= 1 ? '#1F6B2E' : '#B9151C'} ${share * 100}%, #ECE8E2 0)` }} role="img" aria-label={`${ok} of ${total} up to date`}>
+            <span className="absolute inset-[18px] rounded-full bg-white flex items-center justify-center text-lg font-bold">{Math.round(share * 100)}%</span>
+          </span>
+          <span className="text-[13px] text-muted leading-relaxed">{ok} of {total} not overdue. Target 100%.</span>
+        </a>
       )}
     </div>
   );

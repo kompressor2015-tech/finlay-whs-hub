@@ -11,6 +11,7 @@ import { withChecks } from '../utils/homeChecks.ts';
 import { listStocktakes, loadRegister } from './chemicals.ts';
 import { withChemicals } from '../utils/homeChemicals.ts';
 import { buildCharts } from '../utils/homeCharts.ts';
+import { buildBoard } from '../utils/homeBoard.ts';
 
 export async function loadHomeData(me: string): Promise<HomeData> {
   const [incidents, hazards, actions, flags, checklists, checks, register, stocktakes] = await Promise.all([
@@ -24,7 +25,10 @@ export async function loadHomeData(me: string): Promise<HomeData> {
   const now = new Date();
   const chemicals = !register.error && register.data ? register.data : null;
   const charts = buildCharts(incidents.data ?? [], hazards.data ?? [], actions.data ?? [], chemicals?.chemicals ?? [], chemicals?.sds ?? [], now);
-  if (!chemicals) return { ...withStep3, charts };
+  const board = buildBoard(
+    chemicals?.sites ?? [], chemicals?.chemicals ?? [], chemicals?.stock ?? [], chemicals?.sds ?? [], checklists.data ?? [], checks.data ?? [], now,
+  );
+  if (!chemicals) return { ...withStep3, charts, board };
   const r = chemicals;
-  return { ...withChemicals(withStep3, r.sites, r.chemicals, r.stock, r.sds, now, stocktakes.data ?? []), charts };
+  return { ...withChemicals(withStep3, r.sites, r.chemicals, r.stock, r.sds, now, stocktakes.data ?? []), charts, board };
 }

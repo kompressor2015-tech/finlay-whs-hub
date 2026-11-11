@@ -1,4 +1,4 @@
-import { LogOut, Search, Smartphone } from 'lucide-react';
+import { ChevronDown, LogOut, Plus, Search, Smartphone } from 'lucide-react';
 import type { WhsUser } from '../services/auth.ts';
 import type { HomeData } from '../utils/homeData.ts';
 import { summaryValue } from '../utils/homeData.ts';
@@ -23,11 +23,18 @@ interface Props {
   onPhoneLayout?: () => void;
 }
 
-const QUICK = [
-  { href: hrefFor({ name: 'hazard', id: 'new' }), title: 'Report a hazard', sub: 'Something unsafe you have seen' },
-  { href: hrefFor({ name: 'check', id: 'new-prestart' }), title: 'Pre-start check', sub: 'Daily plant check by unit number' },
-  { href: hrefFor({ name: 'check', id: 'new-take5' }), title: 'Take 5', sub: 'Quick check before a task' },
-  { href: hrefFor({ name: 'module', id: 'inspections' }), title: 'Site inspection', sub: 'Yard or workshop checklist' },
+const NEW_MENU = [
+  { href: hrefFor({ name: 'incident', id: 'new' }), title: 'Report an incident' },
+  { href: hrefFor({ name: 'hazard', id: 'new' }), title: 'Report a hazard' },
+  { href: hrefFor({ name: 'check', id: 'new-prestart' }), title: 'Pre-start check' },
+  { href: hrefFor({ name: 'check', id: 'new-take5' }), title: 'Take 5' },
+  { href: hrefFor({ name: 'module', id: 'inspections' }), title: 'Site inspection' },
+];
+
+/** Menu groups, in order; anything not listed falls under More. */
+const GROUPS: { label: string; ids: string[] }[] = [
+  { label: 'Do', ids: ['incidents', 'hazards', 'actions', 'inspections'] },
+  { label: 'Registers', ids: ['chemicals', 'plant', 'documents'] },
 ];
 
 export function DesktopApp({ user, data, route, sample, onSampleChange, onSignOut, onPhoneLayout }: Props) {
@@ -58,6 +65,16 @@ export function DesktopApp({ user, data, route, sample, onSampleChange, onSignOu
         </div>
         <div className="ml-auto flex items-center gap-3">
           <SampleToggle on={sample} onChange={onSampleChange} />
+          <details className="relative">
+            <summary className="list-none h-10 px-4 rounded-lg bg-finlay hover:bg-finlay-dark text-white font-semibold text-sm flex items-center gap-1.5 cursor-pointer select-none [&::-webkit-details-marker]:hidden">
+              <Plus className="w-4 h-4" aria-hidden="true" /> New <ChevronDown className="w-3.5 h-3.5" aria-hidden="true" />
+            </summary>
+            <div className="absolute right-0 mt-1.5 w-56 bg-white border border-line rounded-xl shadow-lg py-1.5 z-20">
+              {NEW_MENU.map(n => (
+                <a key={n.title} href={n.href} onClick={e => e.currentTarget.closest('details')?.removeAttribute('open')} className="block no-underline text-ink text-sm px-4 py-2.5 hover:bg-[#FAF8F6]">{n.title}</a>
+              ))}
+            </div>
+          </details>
           {onPhoneLayout && (
             <button type="button" onClick={onPhoneLayout} className="h-10 px-3 rounded-lg border border-line bg-white text-sm flex items-center gap-1.5 cursor-pointer">
               <Smartphone className="w-4 h-4" aria-hidden="true" /> Phone layout
@@ -76,12 +93,21 @@ export function DesktopApp({ user, data, route, sample, onSampleChange, onSignOu
       <div className="flex items-start">
         <nav aria-label="Modules" className="w-[236px] flex-none sticky top-0 px-3 py-5 flex flex-col gap-0.5 print:hidden">
           <a href={hrefFor({ name: 'home' })} className={navLink(activeId === 'home')} aria-current={activeId === 'home' ? 'page' : undefined}>Home</a>
-          {navItems.map(m => (
-            <a key={m.id} href={hrefFor({ name: 'module', id: m.id })} className={navLink(activeId === m.id)} aria-current={activeId === m.id ? 'page' : undefined}>
-              {m.label}
-              {data.navCounts[m.id] ? <span className="text-xs text-muted">{data.navCounts[m.id]}</span> : null}
-            </a>
-          ))}
+          {[...GROUPS, { label: 'More', ids: navItems.map(m => m.id).filter(id => !GROUPS.some(g => g.ids.includes(id))) }].map(g => {
+            const items = g.ids.map(id => navItems.find(m => m.id === id)).filter((m): m is (typeof navItems)[number] => !!m);
+            if (!items.length) return null;
+            return (
+              <div key={g.label} className="flex flex-col gap-0.5">
+                <div className="text-[11px] font-semibold tracking-wider uppercase text-muted px-3 pt-4 pb-1">{g.label}</div>
+                {items.map(m => (
+                  <a key={m.id} href={hrefFor({ name: 'module', id: m.id })} className={navLink(activeId === m.id)} aria-current={activeId === m.id ? 'page' : undefined}>
+                    {m.label}
+                    {data.navCounts[m.id] ? <span className={`text-xs ${m.id === 'actions' || m.id === 'chemicals' ? 'bg-finlay text-white rounded-full px-2 py-0.5 font-semibold' : 'text-muted'}`}>{data.navCounts[m.id]}</span> : null}
+                  </a>
+                ))}
+              </div>
+            );
+          })}
         </nav>
 
         <main className="flex-1 min-w-0 px-7 pt-7 pb-12">
@@ -95,49 +121,48 @@ export function DesktopApp({ user, data, route, sample, onSampleChange, onSignOu
 function DesktopHome({ data }: { data: HomeData }) {
   const now = new Date();
   const attention = sortAttention(data.attention);
+  const summary = (id: string) => data.summary.find(s => s.id === id);
+  const board = data.board;
+  const tiles: { label: string; value: string; note: string; bad: boolean; href: string }[] = [
+    { label: 'Open incidents', value: summaryValue(summary('incidents') ?? { id: '', label: '', value: null, sub: '' }), note: summary('incidents')?.sub ?? '', bad: (summary('incidents')?.value ?? 0) > 0, href: hrefFor({ name: 'module', id: 'incidents' }) },
+    { label: 'Open hazards', value: String(data.navCounts.hazards ?? 0), note: `${summary('hazards')?.value ?? 0} to review`, bad: (summary('hazards')?.value ?? 0) > 0, href: hrefFor({ name: 'module', id: 'hazards' }) },
+    { label: 'Overdue actions', value: summaryValue(summary('actions') ?? { id: '', label: '', value: null, sub: '' }), note: summary('actions')?.sub ?? '', bad: (summary('actions')?.value ?? 0) > 0, href: hrefFor({ name: 'module', id: 'actions' }) },
+  ];
+  if (board) {
+    tiles.push(
+      { label: 'Inspections due', value: String(board.inspectionsDue), note: board.inspectionsDue ? 'overdue or due this week' : 'all up to date', bad: board.inspectionsDue > 0, href: hrefFor({ name: 'module', id: 'inspections' }) },
+      { label: 'SDS to review', value: String(board.sdsToReview), note: 'missing, over 5 years, or due', bad: board.sdsToReview > 0, href: hrefFor({ name: 'module', id: 'chemicals' }) },
+      { label: 'Stocktakes due', value: String(board.stocktakesDue), note: board.stocktakeSites.join(', ') || 'all up to date', bad: board.stocktakesDue > 0, href: hrefFor({ name: 'chem', id: 'stocktake' }) },
+    );
+  }
+  const card = 'bg-white border border-line rounded-xl overflow-hidden';
   return (
-    <div className="flex flex-col gap-6">
-      <div className="flex flex-wrap items-end justify-between gap-3">
-        <div>
-          <h1 className="m-0 text-[26px] font-bold">{greeting(now)}</h1>
-          <p className="mt-1.5 mb-0 text-muted text-[15px]">{formatLongDate(now)} · All Finlay sites</p>
-        </div>
-        <a href={hrefFor({ name: 'incident', id: 'new' })} className="no-underline bg-finlay hover:bg-finlay-dark text-white font-semibold text-[15px] px-4.5 py-3 rounded-lg">
-          Report an incident
-        </a>
+    <div className="flex flex-col gap-5">
+      <div>
+        <h1 className="m-0 text-[26px] font-bold">{greeting(now)}</h1>
+        <p className="mt-1.5 mb-0 text-muted text-[15px]">{formatLongDate(now)} · All Finlay sites</p>
       </div>
 
-      <section aria-label="Quick actions" className="grid grid-cols-2 lg:grid-cols-4 gap-3">
-        {QUICK.map(q => (
-          <a key={q.title} href={q.href} className="no-underline text-ink bg-white border border-line hover:border-[#CFCAC2] rounded-xl p-4 flex flex-col gap-1.5 min-h-[92px]">
-            <span className="font-semibold text-[15px]">{q.title}</span>
-            <span className="text-muted text-[13px] leading-snug">{q.sub}</span>
+      <section aria-label="Summary" className="grid grid-cols-2 lg:grid-cols-3 2xl:grid-cols-6 gap-3">
+        {tiles.map(s => (
+          <a key={s.label} href={s.href} className="no-underline text-ink bg-white border border-line hover:border-[#CFCAC2] rounded-xl p-4">
+            <div className="text-muted text-[13px]">{s.label}</div>
+            <div className={`text-[28px] font-bold mt-1 ${s.bad ? 'text-finlay' : 'text-ink'}`}>{s.value}</div>
+            <div className={`text-xs mt-0.5 ${s.bad ? 'text-finlay-dark' : 'text-muted'}`}>{s.note}</div>
           </a>
         ))}
       </section>
 
-      <section aria-label="Summary" className="grid grid-cols-2 lg:grid-cols-4 gap-3">
-        {data.summary.map(s => (
-          <div key={s.id} className="bg-white border border-line rounded-xl p-4">
-            <div className="text-muted text-[13px]">{s.label}</div>
-            <div className={`text-[28px] font-bold mt-1 ${s.alert && (s.value ?? 0) > 0 ? 'text-finlay' : 'text-ink'}`}>{summaryValue(s)}</div>
-            <div className="text-muted text-xs mt-0.5">{s.sub}</div>
-          </div>
-        ))}
-      </section>
+      {data.charts && <HomeCharts charts={data.charts} inspections={board?.inspections} />}
 
-      {data.charts && <HomeCharts charts={data.charts} />}
-
-      <div className="flex flex-wrap gap-5 items-start">
-        <section className="flex-[2_1_480px] min-w-0 bg-white border border-line rounded-xl overflow-hidden">
+      <div className="grid grid-cols-1 xl:grid-cols-[minmax(0,1.7fr)_minmax(0,1fr)] gap-5 items-start">
+        <section className={card}>
           <div className="px-4.5 py-4 border-b border-[#EEEBE6] flex justify-between items-center">
-            <h2 className="m-0 text-[17px] font-semibold">Needs attention</h2>
+            <h2 className="m-0 text-[17px] font-semibold flex items-center gap-2">Needs attention {attention.length > 0 && <span className="text-xs font-semibold bg-finlay-soft text-finlay-dark rounded-full px-2 py-0.5">{attention.length}</span>}</h2>
             {attention.length > 0 && <a href={hrefFor({ name: 'module', id: 'actions' })} className="text-[13px] text-ink">See all</a>}
           </div>
           {attention.length === 0 ? (
-            <p className="m-0 px-4.5 py-8 text-sm text-muted text-center">
-              Nothing needs attention. Overdue actions, failed checks and documents to sign will show here once those modules are built.
-            </p>
+            <p className="m-0 px-4.5 py-8 text-sm text-muted text-center">Nothing needs attention right now.</p>
           ) : (
             attention.map(a => {
               const pill = pillFor(a.urgency);
@@ -157,20 +182,47 @@ function DesktopHome({ data }: { data: HomeData }) {
           )}
         </section>
 
-        <div className="flex-[1_1_300px] min-w-0 flex flex-col gap-5">
-          <section className="bg-white border border-line rounded-xl overflow-hidden">
-            <div className="px-4.5 py-4 border-b border-[#EEEBE6]">
-              <h2 className="m-0 text-[17px] font-semibold">Latest reports</h2>
-            </div>
+        <div className="flex flex-col gap-5 min-w-0">
+          {board && board.sites.length > 0 && (
+            <section className={card} aria-label="By site">
+              <div className="px-4.5 py-4 border-b border-[#EEEBE6]"><h2 className="m-0 text-[15px] font-semibold">By site</h2></div>
+              {board.sites.map(s => (
+                <a key={s.id} href={s.href} className="no-underline text-ink flex items-center gap-3 px-4.5 py-3 border-b border-line-soft last:border-b-0 hover:bg-[#FAFAF9]">
+                  <span className="flex-1 min-w-0">
+                    <span className="block text-sm font-semibold">{s.name}</span>
+                    <span className="block text-[13px] text-muted">{s.sub}</span>
+                  </span>
+                  <Pill tone={s.tone}>{s.pill}</Pill>
+                </a>
+              ))}
+            </section>
+          )}
+
+          {board && (
+            <section className={card} aria-label="Coming up">
+              <div className="px-4.5 py-4 border-b border-[#EEEBE6]"><h2 className="m-0 text-[15px] font-semibold">Coming up, next 30 days</h2></div>
+              {board.coming.length === 0 ? (
+                <p className="m-0 px-4.5 py-5 text-sm text-muted">Nothing due in the next 30 days.</p>
+              ) : (
+                board.coming.map(c => (
+                  <a key={`${c.day}-${c.what}-${c.site}`} href={c.href} className="no-underline text-ink flex items-center gap-3 px-4.5 py-2.5 border-b border-line-soft last:border-b-0 text-sm hover:bg-[#FAFAF9]">
+                    <span className="w-14 font-semibold text-[13px]">{c.day.slice(8, 10)}/{c.day.slice(5, 7)}</span>
+                    <span className="flex-1">{c.what}</span>
+                    <span className="text-[13px] text-muted">{c.site}</span>
+                  </a>
+                ))
+              )}
+            </section>
+          )}
+
+          <section className={card} aria-label="Latest reports">
+            <div className="px-4.5 py-4 border-b border-[#EEEBE6]"><h2 className="m-0 text-[15px] font-semibold">Latest reports</h2></div>
             {data.latest.length === 0 ? (
-              <p className="m-0 px-4.5 py-6 text-sm text-muted">No reports yet.</p>
+              <p className="m-0 px-4.5 py-5 text-sm text-muted">No reports yet.</p>
             ) : (
               data.latest.map(l => (
                 <div key={l.id} className="px-4.5 py-3 border-b border-line-soft last:border-b-0">
-                  <div className="flex justify-between gap-2 text-xs text-muted">
-                    <span>{l.type}</span>
-                    <span>{formatWhen(l.at, now)}</span>
-                  </div>
+                  <div className="flex justify-between gap-2 text-xs text-muted"><span>{l.type}</span><span>{formatWhen(l.at, now)}</span></div>
                   <div className="text-sm font-medium mt-0.5">{l.title}</div>
                   <div className="text-[13px] text-muted mt-0.5">{l.by}</div>
                 </div>
