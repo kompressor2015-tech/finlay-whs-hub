@@ -35,7 +35,7 @@ export function Screen({ route, user, home }: { route: Route; user: WhsUser; hom
     if (route.id === 'inspections') return <InspectionsPage user={user} />;
     if (route.id === 'plant') return <PlantPage user={user} />;
     if (route.id === 'chemicals') return <ChemicalsPage user={user} />;
-    if (route.id === 'incidents' || route.id === 'hazards') return <RegisterPage key={route.id} tab={route.id} />;
+    if (route.id === 'incidents' || route.id === 'hazards') return <RegisterPage key={route.id} tab={route.id} user={user} />;
     if (route.id === 'actions') return <ActionsPage user={user} />;
   }
   if (route.name === 'module') return <ModulePage id={route.id} access={user.access} />;

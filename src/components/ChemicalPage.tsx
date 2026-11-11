@@ -22,7 +22,7 @@ const BLANK: ChemicalInput = {
 };
 
 /** One chemical: hazards, where it's kept at every site, and its SDS versions. */
-export function ChemicalPage({ id, user }: { id: string; user: WhsUser }) {
+export function ChemicalPage({ id, user, embedded }: { id: string; user: WhsUser; embedded?: boolean }) {
   const office = isOfficeAccess(user.access);
   const officer = user.access === 'admin' || user.access === 'whs_officer';
   const reg = useRegister();
@@ -43,7 +43,9 @@ export function ChemicalPage({ id, user }: { id: string; user: WhsUser }) {
 
   return (
     <div className="flex flex-col gap-5 max-w-[1200px]">
-      <a href={hrefFor({ name: 'module', id: 'chemicals' })} className="text-sm no-underline text-muted">← Chemical register</a>
+      {!embedded && (
+  <a href={hrefFor({ name: 'module', id: 'chemicals' })} className="text-sm no-underline text-muted">← Chemical register</a>
+      )}
       <div className="flex flex-wrap justify-between gap-4 items-start">
         <div className="min-w-0">
           <div className="flex flex-wrap gap-2 items-center">

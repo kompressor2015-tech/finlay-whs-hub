@@ -5,7 +5,11 @@ import { formatDate, formatDay } from '../utils/dates.ts';
 import { looseMatch } from '../utils/search.ts';
 import { csvFor, downloadCsv } from '../utils/csv.ts';
 import { hazardFixBy, hazardStatus, incidentStatus, incidentTypeLabel, riskFor, type Hazard, type Incident, type WhsAction } from '../utils/records.ts';
+import type { WhsUser } from '../services/auth.ts';
 import { ErrorNote } from './Form.tsx';
+import { HazardPage } from './HazardPage.tsx';
+import { IncidentPage } from './IncidentPage.tsx';
+import { SidePanel, linkOpens, rowOpens, useListPanel } from './SidePanel.tsx';
 import { Pill } from './Pill.tsx';
 
 type Tab = 'incidents' | 'hazards';
@@ -15,7 +19,7 @@ const th = 'px-2 py-3 font-semibold border-b border-[#EEEBE6] text-left';
 const td = 'px-2 py-3.5 border-b border-line-soft align-top';
 
 /** The incident and hazard registers, as two tabs. */
-export function RegisterPage({ tab }: { tab: Tab }) {
+export function RegisterPage({ tab, user }: { tab: Tab; user: WhsUser }) {
   const [incidents, setIncidents] = useState<Incident[]>([]);
   const [hazards, setHazards] = useState<Hazard[]>([]);
   const [actions, setActions] = useState<WhsAction[]>([]);
@@ -24,7 +28,7 @@ export function RegisterPage({ tab }: { tab: Tab }) {
   const [q, setQ] = useState('');
   const [filter, setFilter] = useState<Filter>('open');
 
-  useEffect(() => {
+  const load = () =>
     Promise.all([listIncidents(), listHazards(), listActions()]).then(([i, h, a]) => {
       setError(i.error ?? h.error ?? null);
       setIncidents(i.data ?? []);
@@ -32,7 +36,14 @@ export function RegisterPage({ tab }: { tab: Tab }) {
       setActions(a.data ?? []);
       setLoaded(true);
     });
+  useEffect(() => {
+    void load();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
+  // Changes made in the panel (status, actions) show in the list when it closes
+  const panel = useListPanel(() => (tab === 'incidents' ? shownIncidents : shownHazards).map(x => x.id), () => void load());
+  // A panel opened on one tab does not follow you to the other
+  useEffect(() => panel.setOpenId(null), [tab]); // eslint-disable-line react-hooks/exhaustive-deps
 
   const actionsFor = (id: string) => {
     const list = actions.filter(a => a.source_id === id);
@@ -76,8 +87,11 @@ export function RegisterPage({ tab }: { tab: Tab }) {
     }
   }
 
+  const rowCls = (id: string) => `cursor-pointer ${panel.openId === id ? 'bg-finlay-soft' : 'hover:bg-[#FAFAF9]'}`;
+
   return (
-    <div className="flex flex-col gap-4.5">
+    <div className="flex gap-5 items-start">
+    <div className="flex-1 min-w-0 flex flex-col gap-4.5">
       <div className="flex flex-wrap justify-between items-end gap-3">
         <div>
           <h1 className="m-0 text-[26px] font-bold">{tab === 'incidents' ? 'Incidents' : 'Hazards'}</h1>
@@ -132,8 +146,8 @@ export function RegisterPage({ tab }: { tab: Tab }) {
               {shownIncidents.map(i => {
                 const s = incidentStatus(i.status);
                 return (
-                  <tr key={i.id}>
-                    <td className={`${td} pl-4 whitespace-nowrap`}><a href={hrefFor({ name: 'incident', id: i.id })} className="font-semibold">{i.ref}</a></td>
+                  <tr key={i.id} onClick={e => rowOpens(e, () => panel.setOpenId(i.id))} aria-selected={panel.openId === i.id} className={rowCls(i.id)}>
+                    <td className={`${td} pl-4 whitespace-nowrap`}><a href={hrefFor({ name: 'incident', id: i.id })} onClick={e => linkOpens(e, () => panel.setOpenId(i.id))} className="font-semibold">{i.ref}</a></td>
                     <td className={`${td} whitespace-nowrap text-muted`}>{formatDate(i.occurred_at)}</td>
                     <td className={`${td} whitespace-nowrap`}>{incidentTypeLabel(i.type)}</td>
                     <td className={td}>
@@ -163,8 +177,8 @@ export function RegisterPage({ tab }: { tab: Tab }) {
                 const s = hazardStatus(h.status);
                 const r = riskFor(h.severity);
                 return (
-                  <tr key={h.id}>
-                    <td className={`${td} pl-4 whitespace-nowrap`}><a href={hrefFor({ name: 'hazard', id: h.id })} className="font-semibold">{h.ref}</a></td>
+                  <tr key={h.id} onClick={e => rowOpens(e, () => panel.setOpenId(h.id))} aria-selected={panel.openId === h.id} className={rowCls(h.id)}>
+                    <td className={`${td} pl-4 whitespace-nowrap`}><a href={hrefFor({ name: 'hazard', id: h.id })} onClick={e => linkOpens(e, () => panel.setOpenId(h.id))} className="font-semibold">{h.ref}</a></td>
                     <td className={`${td} whitespace-nowrap text-muted`}>{formatDate(h.created_at)}</td>
                     <td className={td}><span className="block font-medium">{h.description}</span><span className="block text-[13px] text-muted mt-0.5">{h.site_name}</span></td>
                     <td className={`${td} whitespace-nowrap text-finlay font-bold`}>{h.unit_no || '—'}</td>
@@ -181,6 +195,12 @@ export function RegisterPage({ tab }: { tab: Tab }) {
           <p className="m-0 px-4 py-8 text-sm text-muted text-center">{q || filter !== 'open' ? 'Nothing matches.' : `No open ${tab}.`}</p>
         )}
       </div>
+    </div>
+    {panel.openId && (
+      <SidePanel label={tab === 'incidents' ? 'Incident' : 'Hazard'} fullHref={hrefFor({ name: tab === 'incidents' ? 'incident' : 'hazard', id: panel.openId })} onClose={panel.close}>
+        {tab === 'incidents' ? <IncidentPage key={panel.openId} id={panel.openId} user={user} embedded /> : <HazardPage key={panel.openId} id={panel.openId} user={user} embedded />}
+      </SidePanel>
+    )}
     </div>
   );
 }

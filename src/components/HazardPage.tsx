@@ -13,7 +13,7 @@ const card = 'bg-white border border-line rounded-xl';
 const smallButton = 'min-h-11 px-4 rounded-lg text-sm font-semibold cursor-pointer disabled:opacity-60 disabled:cursor-not-allowed';
 const SAFE_WORDS = { yes: 'Yes', partly: 'Partly', no: 'No' } as const;
 
-export function HazardPage({ id, user }: { id: string; user: WhsUser }) {
+export function HazardPage({ id, user, embedded }: { id: string; user: WhsUser; embedded?: boolean }) {
   const office = isOfficeAccess(user.access);
   const [hazard, setHazard] = useState<Hazard | null>(null);
   const [actions, setActions] = useState<WhsAction[]>([]);
@@ -54,7 +54,9 @@ export function HazardPage({ id, user }: { id: string; user: WhsUser }) {
 
   return (
     <div className="flex flex-col gap-5">
-      <a href={hrefFor({ name: 'module', id: 'hazards' })} className="text-sm no-underline text-muted">← Hazards</a>
+      {!embedded && (
+  <a href={hrefFor({ name: 'module', id: 'hazards' })} className="text-sm no-underline text-muted">← Hazards</a>
+      )}
 
       <div className="flex flex-wrap justify-between items-start gap-4">
         <div className="min-w-0">

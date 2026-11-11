@@ -10,6 +10,8 @@ import { listChecklists, listChecks, listFlags } from './checks.ts';
 import { withChecks } from '../utils/homeChecks.ts';
 import { listStocktakes, loadRegister } from './chemicals.ts';
 import { withChemicals } from '../utils/homeChemicals.ts';
+import { buildCharts } from '../utils/homeCharts.ts';
+import { buildBoard } from '../utils/homeBoard.ts';
 
 export async function loadHomeData(me: string): Promise<HomeData> {
   const [incidents, hazards, actions, flags, checklists, checks, register, stocktakes] = await Promise.all([
@@ -20,7 +22,13 @@ export async function loadHomeData(me: string): Promise<HomeData> {
   // Step 3 tables may not be there yet; the home screen still works without them.
   // Later steps' tables may not be there yet; the home screen still works without them.
   const withStep3 = flags.error || checklists.error || checks.error ? home : withChecks(home, flags.data ?? [], checklists.data ?? [], checks.data ?? []);
-  if (register.error || !register.data) return withStep3;
-  const r = register.data;
-  return withChemicals(withStep3, r.sites, r.chemicals, r.stock, r.sds, new Date(), stocktakes.data ?? []);
+  const now = new Date();
+  const chemicals = !register.error && register.data ? register.data : null;
+  const charts = buildCharts(incidents.data ?? [], hazards.data ?? [], actions.data ?? [], chemicals?.chemicals ?? [], chemicals?.sds ?? [], now);
+  const board = buildBoard(
+    chemicals?.sites ?? [], chemicals?.chemicals ?? [], chemicals?.stock ?? [], chemicals?.sds ?? [], checklists.data ?? [], checks.data ?? [], now,
+  );
+  if (!chemicals) return { ...withStep3, charts, board };
+  const r = chemicals;
+  return { ...withChemicals(withStep3, r.sites, r.chemicals, r.stock, r.sds, now, stocktakes.data ?? []), charts, board };
 }
