@@ -7,6 +7,7 @@ import { looseMatch } from './search.ts';
 import { actionsInScope, inScope, type ScopeSite } from './siteScope.ts';
 import { incidentTypeLabel } from './records.ts';
 import type { HomeRaw } from './homeBuild.ts';
+import { docTypeLabel } from './documents.ts';
 
 export interface SearchHit {
   id: string;
@@ -16,7 +17,7 @@ export interface SearchHit {
   href: string;
 }
 
-export const SEARCH_GROUPS = ['Incidents', 'Hazards', 'Actions', 'Chemicals', 'Checks'] as const;
+export const SEARCH_GROUPS = ['Incidents', 'Hazards', 'Actions', 'Chemicals', 'Documents', 'Checks'] as const;
 
 const PER_GROUP = 5;
 
@@ -40,6 +41,10 @@ export function searchAll(raw: HomeRaw, query: string, site: ScopeSite | null): 
   add('Chemicals', (raw.register?.chemicals ?? [])
     .filter(c => c.active && looseMatch(query, [c.name, c.manufacturer, c.un_number, c.dg_class ? `class ${c.dg_class}` : '']))
     .map(c => ({ id: c.id, group: 'Chemicals', title: c.name, detail: [c.manufacturer, c.dg_class ? `Class ${c.dg_class}` : '', c.un_number ? `UN ${c.un_number}` : ''].filter(Boolean).join(' · '), href: `#/chemicals/${c.id}` })));
+
+  add('Documents', (raw.documents ?? [])
+    .filter(d => d.active && (!site || !d.site_id || d.site_id === site.id) && looseMatch(query, [d.doc_no, d.title, d.machine_model, docTypeLabel(d.doc_type)]))
+    .map(d => ({ id: d.id, group: 'Documents', title: `${d.doc_no ? d.doc_no + ' · ' : ''}${d.title}`, detail: [docTypeLabel(d.doc_type), d.machine_model && `Model ${d.machine_model}`].filter(Boolean).join(' · '), href: `#/documents/${d.id}` })));
 
   add('Checks', (raw.checks?.checks ?? [])
     .filter(c => (c.kind === 'prestart' || inScope(site, c)) && looseMatch(query, [c.unit_no, c.task, c.checklist_name, c.done_by_name, c.site_name]))
