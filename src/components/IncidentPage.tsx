@@ -34,7 +34,14 @@ export function IncidentPage({ id, user, embedded }: { id: string; user: WhsUser
   const [photos, setPhotos] = useState<string[]>([]);
   const [error, setError] = useState<string | null>(null);
   const [saving, setSaving] = useState(false);
-  const [tab, setTab] = useState<Tab>('overview');
+  const tabKey = `whsIncTab-${id}`;
+  const [tab, setTabState] = useState<Tab>(() => {
+    try { return (sessionStorage.getItem(tabKey) as Tab | null) ?? 'overview'; } catch { return 'overview'; }
+  });
+  const setTab = (t: Tab) => {
+    setTabState(t);
+    try { sessionStorage.setItem(tabKey, t); } catch { /* remembering the tab is optional */ }
+  };
   const [ipeople, setIpeople] = useState<IncidentPerson[]>([]);
   const [claims, setClaims] = useState<Claim[]>([]);
   const [version, setVersion] = useState(0);

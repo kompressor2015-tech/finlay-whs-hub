@@ -9,6 +9,11 @@ import type { Incident } from '../utils/records.ts';
 import { ErrorNote, Field, inputClass } from './Form.tsx';
 import { Pill } from './Pill.tsx';
 
+/** So the person's file can offer a way straight back to this incident. */
+export function rememberBack(incidentId: string, ref: string): void {
+  try { sessionStorage.setItem('whsBack', JSON.stringify({ href: hrefFor({ name: 'incident', id: incidentId }), label: ref })); } catch { /* optional */ }
+}
+
 const card = 'bg-white border border-line rounded-xl';
 const btn = 'min-h-10 px-3.5 rounded-lg border border-[#D6D2CC] bg-white text-[13px] font-semibold cursor-pointer disabled:opacity-60';
 const btnPri = 'min-h-10 px-4 rounded-lg border-0 bg-ink text-white text-[13px] font-semibold cursor-pointer disabled:opacity-60';
@@ -61,7 +66,7 @@ export function IncidentPeopleTab({ incident, people, claims, certs, canEdit, of
             <div className="flex flex-wrap items-center gap-3 px-4.5 py-3.5">
               <span className="w-10 h-10 rounded-full bg-[#E9E4DD] flex items-center justify-center text-sm font-bold shrink-0">{p.name.split(' ').map(w => w[0]).slice(0, 2).join('').toUpperCase()}</span>
               <div className="min-w-0 flex-1">
-                <div className="font-semibold">{p.person_id && officer ? <a href={hrefFor({ name: 'person', id: p.person_id })}>{p.name}</a> : p.name} <Pill tone={p.role === 'injured' ? 'red' : 'grey'}>{roleLabel(p.role)}</Pill></div>
+                <div className="font-semibold">{p.person_id && officer ? <a href={hrefFor({ name: 'person', id: p.person_id })} onClick={() => rememberBack(incident.id, incident.ref)}>{p.name}</a> : p.name} <Pill tone={p.role === 'injured' ? 'red' : 'grey'}>{roleLabel(p.role)}</Pill></div>
                 <div className="text-[13px] text-muted">{p.employer || 'Finlay'}{p.phone ? ` · ${p.phone}` : ''}</div>
               </div>
               {canEdit && <button type="button" className={linkBtn} onClick={() => setEditing(editing === p.id ? null : p.id)}>{editing === p.id ? 'Close' : 'Edit'}</button>}
@@ -87,7 +92,7 @@ export function IncidentPeopleTab({ incident, people, claims, certs, canEdit, of
                     {isOpen(claim) && off !== null && <span className="text-muted">{off} {off === 1 ? 'day' : 'days'} off work</span>}
                     {cs?.current && isOpen(claim) && <span className="text-muted">Certificate to {formatDay(cs.current.to_date)}</span>}
                     {att.map(a => <span key={a.id} className={`px-2.5 py-0.5 rounded-full text-xs font-semibold ${toneBg[a.tone]}`}>{a.what}</span>)}
-                    <a href={hrefFor({ name: 'person', id: claim.person_id })} className="ml-auto font-semibold">Open the full file</a>
+                    <a href={hrefFor({ name: 'person', id: claim.person_id })} onClick={() => rememberBack(incident.id, incident.ref)} className="ml-auto font-semibold">Open the full file</a>
                   </div>
                 ) : p.person_id ? (
                   <StartClaim incident={incident} person={p} busy={busy} onStart={(state, off) => run(() => createClaim({ incident_id: incident.id, person_id: p.person_id!, state, injury_date: brisbaneDay(incident.occurred_at), off_work_from: off || null }))} />
