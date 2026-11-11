@@ -59,6 +59,8 @@ export interface Certificate {
   restrictions: string;
   /** When they next see the doctor, if known */
   next_appointment_on?: string | null;
+  /** The doctor has said no more visits are needed: this is the last certificate */
+  no_further_visits?: boolean;
   file_path: string;
   file_name: string;
   created_by_name: string;
@@ -386,7 +388,7 @@ export interface ClaimAttention {
 
 export function claimAttention(
   claim: Pick<Claim, 'state' | 'status' | 'steps' | 'off_work_from' | 'returned_on' | 'rtw_next_review' | 'rtw_status' | 'insurer_notified_at'>,
-  certs: Pick<Certificate, 'from_date' | 'to_date' | 'capacity' | 'next_appointment_on'>[],
+  certs: Pick<Certificate, 'from_date' | 'to_date' | 'capacity' | 'next_appointment_on' | 'no_further_visits'>[],
   incidentAt: string,
   now: Date = new Date(),
   appointments: Pick<Appointment, 'id' | 'kind' | 'with_whom' | 'on_date' | 'status' | 'follow_up_on' | 'followed_up_at'>[] = []
@@ -396,7 +398,8 @@ export function claimAttention(
   const cs = certificateStatus(certs, now);
   const today = brisbaneDay(now);
   const label = STATES[claim.state].certificate.toLowerCase();
-  if (isOffWork(claim)) {
+  const cleared = Boolean(cs.latest && (cs.latest as { no_further_visits?: boolean }).no_further_visits);
+  if (isOffWork(claim) && !cleared) {
     if (cs.current && cs.endsInDays !== null && cs.endsInDays <= 7) {
       out.push({
         id: 'cert-ends', action: 'certificate', tone: cs.endsInDays <= 3 ? 'red' : 'amber',
@@ -422,7 +425,7 @@ export function claimAttention(
     else if (d <= 7) out.push({ id: 'rtw-due', action: 'plan', tone: 'amber', when: d === 0 ? 'Today' : `In ${d} ${d === 1 ? 'day' : 'days'}`, what: `Return to work review is due ${formatDay(claim.rtw_next_review)}.` });
   }
   const past = certs.find(c => c.next_appointment_on && c.next_appointment_on < today && !certs.some(o => o.from_date >= (c.next_appointment_on as string)));
-  if (past && isOffWork(claim)) {
+  if (past && isOffWork(claim) && !cleared) {
     out.push({ id: 'cert-appt-past', action: 'certificate', tone: 'amber', when: 'Overdue', what: `Doctor appointment was on ${formatDay(past.next_appointment_on)}. Ask for the new certificate.` });
   }
   for (const a of appointments) {

@@ -67,7 +67,7 @@ export const listCertificates = (claimId: string) => many<Certificate>('whs_clai
 
 export async function addCertificate(
   claimId: string,
-  input: { from_date: string; to_date: string; doctor_name: string; capacity: Certificate['capacity']; restrictions: string; next_appointment_on?: string | null },
+  input: { from_date: string; to_date: string; doctor_name: string; capacity: Certificate['capacity']; restrictions: string; next_appointment_on?: string | null; no_further_visits?: boolean },
   file: File | null
 ): Promise<Result<Certificate>> {
   let file_path = '';
@@ -84,6 +84,11 @@ export async function addCertificate(
     return { error: friendly(error.message) };
   }
   return { data: data as Certificate };
+}
+
+export async function updateCertificate(id: string, patch: { no_further_visits?: boolean; next_appointment_on?: string | null }): Promise<Result<Certificate>> {
+  const { data, error } = await supabase.from('whs_claim_certificates').update(patch).eq('id', id).select('*').single();
+  return error ? { error: friendly(error.message) } : { data: data as Certificate };
 }
 
 export async function removeCertificate(c: Certificate): Promise<Result<true>> {

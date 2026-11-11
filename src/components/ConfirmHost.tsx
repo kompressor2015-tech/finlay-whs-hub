@@ -52,7 +52,7 @@ export function ConfirmHost() {
 
   return (
     <dialog ref={ref} onCancel={e => { e.preventDefault(); finish(false); }} onClick={e => { if (e.target === ref.current) finish(false); }}
-      className="rounded-xl border border-line p-0 w-[min(440px,calc(100vw-32px))] backdrop:bg-black/40 shadow-xl">
+      className="m-auto rounded-xl border border-line p-0 w-[min(440px,calc(100vw-32px))] backdrop:bg-black/40 shadow-xl">
       {opts && (
         <div className="p-5 flex flex-col gap-3">
           <h2 className="m-0 text-lg font-semibold">{opts.title}</h2>

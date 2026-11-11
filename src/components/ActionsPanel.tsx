@@ -38,7 +38,7 @@ export function DoneDialog({ action, onClose, onDone }: { action: WhsAction | nu
   }
 
   return (
-    <dialog ref={ref} onClose={onClose} className="rounded-xl border border-line p-0 w-[min(440px,calc(100vw-32px))] backdrop:bg-black/40">
+    <dialog ref={ref} onClose={onClose} className="m-auto rounded-xl border border-line p-0 w-[min(440px,calc(100vw-32px))] backdrop:bg-black/40">
       <form onSubmit={submit} className="p-5 flex flex-col gap-3.5">
         <h2 className="m-0 text-lg font-semibold">Mark as done</h2>
         <p className="m-0 text-sm text-muted">{action?.title}</p>
