@@ -1,7 +1,7 @@
 import type { ReactElement } from 'react';
 import type { WhsUser } from '../services/auth.ts';
 import type { Route } from '../hooks/useRoute.ts';
-import { canOpenModule } from '../utils/access.ts';
+import { canOpenModule, isOfficerAccess } from '../utils/access.ts';
 import { ActionsPage } from './ActionsPage.tsx';
 import { HazardForm } from './HazardForm.tsx';
 import { HazardPage } from './HazardPage.tsx';
@@ -19,6 +19,8 @@ import { ChemicalPage } from './ChemicalPage.tsx';
 import { ChemTool } from './ChemTools.tsx';
 import { DocumentsPage } from './DocumentsPage.tsx';
 import { DocumentDetail } from './DocumentDetail.tsx';
+import { PeoplePage } from './PeoplePage.tsx';
+import { PersonPage } from './PersonPage.tsx';
 
 /** Picks the screen for the current address. Home is drawn by the desktop or phone layout. */
 export function Screen({ route, user, home }: { route: Route; user: WhsUser; home: () => ReactElement }) {
@@ -33,6 +35,7 @@ export function Screen({ route, user, home }: { route: Route; user: WhsUser; hom
   if (route.name === 'checklist') return <ChecklistEditor key={route.id} id={route.id} user={user} />;
   if (route.name === 'chemical') return <ChemicalPage key={route.id} id={route.id} user={user} />;
   if (route.name === 'document') return <DocumentDetail key={route.id} id={route.id} user={user} />;
+  if (route.name === 'person') return isOfficerAccess(user.access) ? <PersonPage key={route.id} id={route.id} user={user} /> : <ModulePage id="people" access={user.access} />;
   if (route.name === 'chem') return <ChemTool key={route.id} tool={route.id} user={user} />;
   if (route.name === 'module' && canOpenModule(user.access, route.id)) {
     if (route.id === 'inspections') return <InspectionsPage user={user} />;
@@ -40,6 +43,7 @@ export function Screen({ route, user, home }: { route: Route; user: WhsUser; hom
     if (route.id === 'chemicals') return <ChemicalsPage user={user} />;
     if (route.id === 'documents') return <DocumentsPage user={user} />;
     if (route.id === 'incidents' || route.id === 'hazards') return <RegisterPage key={route.id} tab={route.id} user={user} />;
+    if (route.id === 'people') return <PeoplePage user={user} />;
     if (route.id === 'actions') return <ActionsPage user={user} />;
   }
   if (route.name === 'module') return <ModulePage id={route.id} access={user.access} />;
