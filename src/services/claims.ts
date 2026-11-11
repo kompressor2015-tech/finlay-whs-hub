@@ -5,7 +5,7 @@
 
 import { supabase } from './supabase.ts';
 import { removeFiles, uploadFile } from './files.ts';
-import type { Certificate, Claim, ClaimContact, ClaimDoc, DocCategory, LogEntry, LogKind, RtwStage, State } from '../utils/claims.ts';
+import type { Appointment, Certificate, Claim, ClaimContact, ClaimDoc, DocCategory, LogEntry, LogKind, RtwStage, State } from '../utils/claims.ts';
 import { STATES } from '../utils/claims.ts';
 
 type Result<T> = { data?: T; error?: string };
@@ -67,7 +67,7 @@ export const listCertificates = (claimId: string) => many<Certificate>('whs_clai
 
 export async function addCertificate(
   claimId: string,
-  input: { from_date: string; to_date: string; doctor_name: string; capacity: Certificate['capacity']; restrictions: string },
+  input: { from_date: string; to_date: string; doctor_name: string; capacity: Certificate['capacity']; restrictions: string; next_appointment_on?: string | null },
   file: File | null
 ): Promise<Result<Certificate>> {
   let file_path = '';
@@ -104,6 +104,33 @@ export async function saveStage(claimId: string, stage: { stage_no: number; duti
 
 export async function removeStage(id: string): Promise<Result<true>> {
   const { error } = await supabase.from('whs_claim_rtw_stages').delete().eq('id', id);
+  return error ? { error: friendly(error.message) } : { data: true };
+}
+
+// Appointments ------------------------------------------------------------------------------------
+
+export const listAppointments = (claimId: string) => many<Appointment>('whs_claim_appointments', claimId, 'on_date');
+
+export async function listAppointmentsFor(claimIds: string[]): Promise<Result<Appointment[]>> {
+  if (!claimIds.length) return { data: [] };
+  const { data, error } = await supabase.from('whs_claim_appointments').select('*').in('claim_id', claimIds).order('on_date');
+  return error ? { error: friendly(error.message) } : { data: (data ?? []) as Appointment[] };
+}
+
+export type AppointmentInput = Pick<Appointment, 'kind' | 'with_whom' | 'on_date' | 'at_time' | 'place'> & { follow_up_on?: string | null };
+
+export async function addAppointment(claimId: string, input: AppointmentInput): Promise<Result<Appointment>> {
+  const { data, error } = await supabase.from('whs_claim_appointments').insert({ claim_id: claimId, ...input }).select('*').single();
+  return error ? { error: friendly(error.message) } : { data: data as Appointment };
+}
+
+export async function updateAppointment(id: string, patch: Partial<Pick<Appointment, 'status' | 'outcome' | 'on_date' | 'at_time' | 'place' | 'follow_up_on' | 'follow_up_note' | 'followed_up_at' | 'followed_up_by_name'>>): Promise<Result<Appointment>> {
+  const { data, error } = await supabase.from('whs_claim_appointments').update(patch).eq('id', id).select('*').single();
+  return error ? { error: friendly(error.message) } : { data: data as Appointment };
+}
+
+export async function removeAppointment(id: string): Promise<Result<true>> {
+  const { error } = await supabase.from('whs_claim_appointments').delete().eq('id', id);
   return error ? { error: friendly(error.message) } : { data: true };
 }
 

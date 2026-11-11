@@ -101,7 +101,7 @@ export function IncidentPage({ id, user, embedded }: { id: string; user: WhsUser
   const prog = investigationProgress(incident);
   const attention = [
     ...incidentAttention(incident, fileData.statements).map(a => ({ id: a.id, tone: a.tone, when: a.when, what: a.what })),
-    ...(officer ? claims.flatMap(c => claimAttention(c, fileData.certs.filter(x => x.claim_id === c.id), incident.occurred_at).map(a => ({ id: `${c.id}-${a.id}`, tone: a.tone, when: a.when, what: a.what }))) : []),
+    ...(officer ? claims.flatMap(c => claimAttention(c, fileData.certs.filter(x => x.claim_id === c.id), incident.occurred_at, new Date(), fileData.appointments.filter(x => x.claim_id === c.id)).map(a => ({ id: `${c.id}-${a.id}`, tone: a.tone, when: a.when, what: a.what }))) : []),
   ];
   const toneBg: Record<string, string> = { red: 'bg-[#FDE8E8] text-[#9B1218]', amber: 'bg-[#FFF1D6] text-[#7A4B00]', green: 'bg-[#E3F4E6] text-[#1F6B2E]', blue: 'bg-[#E4EEFC] text-[#1C4A8F]', grey: 'bg-[#ECECEC] text-[#4A4A50]' };
   const tabs: { id: Tab; label: string; badge?: string }[] = [
@@ -191,7 +191,7 @@ export function IncidentPage({ id, user, embedded }: { id: string; user: WhsUser
       )}
 
       {tabbed && tab === 'investigation' && <InvestigationTab incident={incident} user={user} actions={actions} people={ipeople} canEdit={incident.status !== 'closed'} officer={officer} reload={reload} />}
-      {tabbed && tab === 'people' && <IncidentPeopleTab incident={incident} user={user} people={ipeople} claims={claims} certs={fileData.certs} canEdit={incident.status !== 'closed'} officer={officer} reload={reload} />}
+      {tabbed && tab === 'people' && <IncidentPeopleTab incident={incident} user={user} people={ipeople} claims={claims} certs={fileData.certs} appointments={fileData.appointments} canEdit={incident.status !== 'closed'} officer={officer} reload={reload} />}
       {tabbed && tab === 'timeline' && <TimelineTab history={history} data={fileData} officer={officer} />}
       {tabbed && tab === 'documents' && <DocumentsTab data={fileData} photos={photos} officer={officer} />}
       {tabbed && tab === 'actions' && actionsPanel}

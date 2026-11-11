@@ -3,7 +3,7 @@ import { createClaim } from '../services/claims.ts';
 import { addIncidentPerson, createPerson, listPeople, removeIncidentPerson, updateIncidentPerson } from '../services/incidentFile.ts';
 import { hrefFor } from '../hooks/useRoute.ts';
 import { brisbaneDay, formatDay } from '../utils/dates.ts';
-import { claimAttention, claimStatus, certificateStatus, daysOffWork, isOpen, STATE_LIST, STATES, type Certificate, type Claim, type State } from '../utils/claims.ts';
+import { claimAttention, claimStatus, certificateStatus, daysOffWork, isOpen, STATE_LIST, STATES, type Appointment, type Certificate, type Claim, type State } from '../utils/claims.ts';
 import { PERSON_ROLES, TREATMENTS, roleLabel, type IncidentPerson, type Person, type PersonRole, type Treatment } from '../utils/incidentFile.ts';
 import type { Incident } from '../utils/records.ts';
 import type { WhsUser } from '../services/auth.ts';
@@ -24,8 +24,8 @@ const linkBtn = 'bg-transparent border-0 p-0 text-[13px] font-semibold text-ink 
 const toneBg: Record<string, string> = { red: 'bg-[#FDE8E8] text-[#9B1218]', amber: 'bg-[#FFF1D6] text-[#7A4B00]', green: 'bg-[#E3F4E6] text-[#1F6B2E]', blue: 'bg-[#E4EEFC] text-[#1C4A8F]', grey: 'bg-[#ECECEC] text-[#4A4A50]' };
 
 /** Who was on this incident, their injury details, and (for the WHS officer and admins) each person's claim. */
-export function IncidentPeopleTab({ incident, user, people, claims, certs, canEdit, officer, reload }: {
-  incident: Incident; user: WhsUser; people: IncidentPerson[]; claims: Claim[]; certs: Certificate[]; canEdit: boolean; officer: boolean; reload: () => Promise<void> | void;
+export function IncidentPeopleTab({ incident, user, people, claims, certs, appointments, canEdit, officer, reload }: {
+  incident: Incident; user: WhsUser; people: IncidentPerson[]; claims: Claim[]; certs: Certificate[]; appointments: Appointment[]; canEdit: boolean; officer: boolean; reload: () => Promise<void> | void;
 }) {
   const [staff, setStaff] = useState<Person[]>([]);
   const [error, setError] = useState<string | null>(null);
@@ -67,7 +67,7 @@ export function IncidentPeopleTab({ incident, user, people, claims, certs, canEd
       {people.map(p => {
         const claim = claims.find(c => c.person_id === p.person_id);
         const myCerts = claim ? certs.filter(c => c.claim_id === claim.id) : [];
-        const att = claim ? claimAttention(claim, myCerts, incident.occurred_at) : [];
+        const att = claim ? claimAttention(claim, myCerts, incident.occurred_at, new Date(), appointments.filter(x => x.claim_id === claim.id)) : [];
         const st = claim ? claimStatus(claim.status) : null;
         const off = claim ? daysOffWork(claim) : null;
         const cs = claim ? certificateStatus(myCerts) : null;

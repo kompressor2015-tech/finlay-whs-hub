@@ -1,9 +1,9 @@
 import { useCallback, useEffect, useState } from 'react';
-import { listCertificates, listClaimDocs, listLog } from '../services/claims.ts';
+import { listAppointmentsFor, listCertificates, listClaimDocs, listLog } from '../services/claims.ts';
 import { openFile } from '../services/files.ts';
 import { listEvidence, listStatements, listTimeline } from '../services/incidentFile.ts';
 import { formatWhen } from '../utils/dates.ts';
-import type { Certificate, Claim, ClaimDoc, LogEntry } from '../utils/claims.ts';
+import type { Appointment, Certificate, Claim, ClaimDoc, LogEntry } from '../utils/claims.ts';
 import { logLabel, capacityLabel } from '../utils/claims.ts';
 import { FEED_FILTERS, feedMatches, sortFeed, EVIDENCE_KINDS, type Evidence, type FeedItem, type Statement, type TimelineEntry } from '../utils/incidentFile.ts';
 import type { HistoryEntry } from '../utils/records.ts';
@@ -14,21 +14,22 @@ const linkBtn = 'bg-transparent border-0 p-0 text-[13px] font-semibold text-ink 
 
 export interface FileData {
   evidence: Evidence[]; statements: Statement[]; timeline: TimelineEntry[];
-  certs: Certificate[]; log: LogEntry[]; claimDocs: ClaimDoc[];
+  certs: Certificate[]; log: LogEntry[]; claimDocs: ClaimDoc[]; appointments: Appointment[];
 }
 
 /** Everything attached to the incident. Claim items are only fetched for the WHS officer and admins. */
 export function useFileData(incidentId: string, claims: Claim[], officer: boolean, version: number): FileData {
-  const [d, setD] = useState<FileData>({ evidence: [], statements: [], timeline: [], certs: [], log: [], claimDocs: [] });
+  const [d, setD] = useState<FileData>({ evidence: [], statements: [], timeline: [], certs: [], log: [], claimDocs: [], appointments: [] });
   const key = claims.map(c => c.id).join(',');
   const load = useCallback(async () => {
     const [e, s, t] = await Promise.all([listEvidence(incidentId), listStatements(incidentId), listTimeline(incidentId)]);
-    let certs: Certificate[] = [], log: LogEntry[] = [], claimDocs: ClaimDoc[] = [];
+    let certs: Certificate[] = [], log: LogEntry[] = [], claimDocs: ClaimDoc[] = [], appointments: Appointment[] = [];
     if (officer && claims.length) {
       const per = await Promise.all(claims.map(async c => [(await listCertificates(c.id)).data ?? [], (await listLog(c.id)).data ?? [], (await listClaimDocs(c.id)).data ?? []] as const));
       certs = per.flatMap(x => x[0]); log = per.flatMap(x => x[1]); claimDocs = per.flatMap(x => x[2]);
+      appointments = (await listAppointmentsFor(claims.map(c => c.id))).data ?? [];
     }
-    setD({ evidence: e.data ?? [], statements: s.data ?? [], timeline: t.data ?? [], certs, log, claimDocs });
+    setD({ evidence: e.data ?? [], statements: s.data ?? [], timeline: t.data ?? [], certs, log, claimDocs, appointments });
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [incidentId, officer, key]);
   useEffect(() => { void load(); }, [load, version]);
