@@ -163,6 +163,11 @@ export function requiredParts(incident: Pick<Incident, 'type' | 'notifiable_reas
   return needsFullInvestigation(incident) ? PARTS.map(p => p.id) : ['evidence', 'timeline', 'why', 'findings'];
 }
 
+/** A notifiable incident always has to be investigated; others can be marked not required. */
+export function canWaiveInvestigation(incident: Pick<Incident, 'notifiable_reasons'>): boolean {
+  return incident.notifiable_reasons.length === 0;
+}
+
 export function partsDone(incident: Pick<Incident, 'parts_done'>): PartId[] {
   return Array.from(new Set(incident.parts_done ?? [])) as PartId[];
 }
@@ -189,7 +194,7 @@ export function statementCounts(list: Pick<Statement, 'status'>[]): { signed: nu
 
 /** Plain-words reasons an incident can't be closed yet. Empty when it can. Matches the database's own rule. */
 export function closeBlockers(
-  incident: Pick<Incident, 'status' | 'type' | 'notifiable_reasons' | 'parts_done'>,
+  incident: Pick<Incident, 'status' | 'type' | 'notifiable_reasons' | 'parts_done' | 'investigation_waived'>,
   actions: Pick<WhsAction, 'status'>[],
   claims: { status: string }[] | null
 ): string[] {
@@ -199,7 +204,7 @@ export function closeBlockers(
   if (open) out.push(`${open} ${open === 1 ? 'action is' : 'actions are'} not done`);
   if (needsFullInvestigation(incident)) {
     const p = investigationProgress(incident);
-    if (p.remaining.length) out.push(`Investigation: ${p.remaining.length} of ${p.total} ${p.remaining.length === 1 ? 'part' : 'parts'} not done`);
+    if (!incident.investigation_waived && p.remaining.length) out.push(`Investigation: ${p.remaining.length} of ${p.total} ${p.remaining.length === 1 ? 'part' : 'parts'} not done`);
     const openClaims = (claims ?? []).filter(c => c.status !== 'closed' && c.status !== 'rejected').length;
     if (openClaims) out.push(`${openClaims} ${openClaims === 1 ? 'claim is' : 'claims are'} still open`);
   }

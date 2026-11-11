@@ -51,6 +51,8 @@ export interface Incident {
   root_cause?: string;
   findings?: string;
   parts_done?: string[];
+  investigation_waived?: boolean;
+  investigation_waived_reason?: string;
   investigation_signed_by_name?: string;
   investigation_signed_at?: string | null;
   reviewed_by_name?: string;
