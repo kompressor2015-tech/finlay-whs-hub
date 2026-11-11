@@ -1,11 +1,12 @@
 import { useCallback, useEffect, useState } from 'react';
 import { getHazard, listActions, listHistory, photoLinks, updateHazard } from '../services/records.ts';
 import type { WhsUser } from '../services/auth.ts';
-import { hrefFor } from '../hooks/useRoute.ts';
+import { go, hrefFor } from '../hooks/useRoute.ts';
 import { isOfficeAccess } from '../utils/access.ts';
 import { formatDay, formatLongDate, formatTime, formatWhen } from '../utils/dates.ts';
 import { dueWords, hazardFixBy, hazardStatus, riskFor, SEVERITIES, type Hazard, type HistoryEntry, type WhsAction } from '../utils/records.ts';
 import { ActionsPanel } from './ActionsPanel.tsx';
+import { DeleteEntry } from './DeleteEntry.tsx';
 import { ErrorNote } from './Form.tsx';
 import { Pill } from './Pill.tsx';
 
@@ -13,7 +14,7 @@ const card = 'bg-white border border-line rounded-xl';
 const smallButton = 'min-h-11 px-4 rounded-lg text-sm font-semibold cursor-pointer disabled:opacity-60 disabled:cursor-not-allowed';
 const SAFE_WORDS = { yes: 'Yes', partly: 'Partly', no: 'No' } as const;
 
-export function HazardPage({ id, user, embedded }: { id: string; user: WhsUser; embedded?: boolean }) {
+export function HazardPage({ id, user, embedded, onDeleted }: { id: string; user: WhsUser; embedded?: boolean; onDeleted?: () => void }) {
   const office = isOfficeAccess(user.access);
   const [hazard, setHazard] = useState<Hazard | null>(null);
   const [actions, setActions] = useState<WhsAction[]>([]);
@@ -135,6 +136,10 @@ export function HazardPage({ id, user, embedded }: { id: string; user: WhsUser; 
           </div>
         )}
       </div>
+
+      <DeleteEntry type="hazard" id={hazard.id} user={user} label={hazard.ref ?? 'this hazard'}
+        detail={[...(actions.length ? [`${actions.length} action${actions.length === 1 ? '' : 's'}`] : []), 'Its photos']}
+        onDeleted={() => (onDeleted ? onDeleted() : go({ name: 'module', id: 'hazards' }))} />
     </div>
   );
 }

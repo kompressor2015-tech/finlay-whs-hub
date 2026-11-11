@@ -1,3 +1,4 @@
+import { DeleteEntry } from './DeleteEntry.tsx';
 import { useEffect, useState } from 'react';
 import { updateAction } from '../services/records.ts';
 import { useLookups } from '../hooks/useLookups.ts';
@@ -13,7 +14,7 @@ const label = 'text-muted text-[13px]';
 const input = 'w-full min-h-11 rounded-lg border border-[#D6D2CC] bg-white px-3 text-sm';
 
 /** One corrective action, for the side panel on the Actions page. */
-export function ActionDetail({ action, user, sourceHref, onChanged }: { action: WhsAction; user: WhsUser; sourceHref: string | null; onChanged: () => void }) {
+export function ActionDetail({ action, user, sourceHref, onChanged, onDeleted }: { action: WhsAction; user: WhsUser; sourceHref: string | null; onChanged: () => void; onDeleted?: () => void }) {
   const office = isOfficeAccess(user.access);
   const canEdit = office || action.owner_id === user.id;
   const { people } = useLookups();
@@ -80,6 +81,8 @@ export function ActionDetail({ action, user, sourceHref, onChanged }: { action: 
       )}
 
       <DoneDialog action={finishing ? a : null} onClose={() => setFinishing(false)} onDone={() => { setFinishing(false); onChanged(); }} />
+
+      <DeleteEntry type="action" id={a.id} user={user} label="this action" onDeleted={() => (onDeleted ?? onChanged)()} />
     </div>
   );
 }

@@ -186,7 +186,7 @@ export function InspectionsPage({ user }: { user: WhsUser }) {
     </div>
     {panel.openId && (
       <SidePanel label="Check" fullHref={hrefFor({ name: 'check', id: panel.openId })} onClose={panel.close}>
-        <CheckPage key={panel.openId} id={panel.openId} user={user} embedded />
+        <CheckPage key={panel.openId} id={panel.openId} user={user} embedded onDeleted={() => { const gone = panel.openId; panel.close(); setChecks(cs => cs.filter(c => c.id !== gone)); }} />
       </SidePanel>
     )}
     </div>

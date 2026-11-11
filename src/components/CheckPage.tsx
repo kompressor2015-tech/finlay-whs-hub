@@ -2,11 +2,12 @@ import { useCallback, useEffect, useState } from 'react';
 import { getCheck, listFlags } from '../services/checks.ts';
 import { listActions, photoLinks } from '../services/records.ts';
 import type { WhsUser } from '../services/auth.ts';
-import { hrefFor } from '../hooks/useRoute.ts';
+import { go, hrefFor } from '../hooks/useRoute.ts';
 import { formatDate, formatLongDate, formatTime } from '../utils/dates.ts';
 import { answerText, flagPill, isProblem, resultPill, sections, type Check, type PlantFlag } from '../utils/checks.ts';
 import type { WhsAction } from '../utils/records.ts';
 import { ActionsPanel } from './ActionsPanel.tsx';
+import { DeleteEntry } from './DeleteEntry.tsx';
 import { ErrorNote } from './Form.tsx';
 import { Pill } from './Pill.tsx';
 
@@ -14,7 +15,7 @@ const card = 'bg-white border border-line rounded-xl';
 const TITLES = { prestart: 'Pre-start', take5: 'Take 5', site: 'Site inspection' } as const;
 
 /** A completed pre-start, Take 5 or site inspection. Checks are records: they can't be edited. */
-export function CheckPage({ id, user, embedded = false }: { id: string; user: WhsUser; embedded?: boolean }) {
+export function CheckPage({ id, user, embedded = false, onDeleted }: { id: string; user: WhsUser; embedded?: boolean; onDeleted?: () => void }) {
   const [check, setCheck] = useState<Check | null>(null);
   const [links, setLinks] = useState<Record<string, string>>({});
   const [actions, setActions] = useState<WhsAction[]>([]);
@@ -144,6 +145,10 @@ export function CheckPage({ id, user, embedded = false }: { id: string; user: Wh
           onChanged={load}
         />
       )}
+
+      <DeleteEntry type="check" id={check.id} user={user} label={`this ${TITLES[check.kind].toLowerCase()}`}
+        detail={[...(actions.length ? [`${actions.length} action${actions.length === 1 ? '' : 's'}`] : []), 'Its photos and signature']}
+        onDeleted={() => (onDeleted ? onDeleted() : go({ name: 'module', id: 'inspections' }))} />
     </div>
   );
 }

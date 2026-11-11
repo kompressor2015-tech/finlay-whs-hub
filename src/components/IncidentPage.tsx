@@ -2,7 +2,7 @@ import { useCallback, useEffect, useState } from 'react';
 import { getIncident, listActions, listHistory, photoLinks, updateIncident } from '../services/records.ts';
 import type { WhsUser } from '../services/auth.ts';
 import { useLookups } from '../hooks/useLookups.ts';
-import { hrefFor } from '../hooks/useRoute.ts';
+import { go, hrefFor } from '../hooks/useRoute.ts';
 import { isOfficeAccess } from '../utils/access.ts';
 import { addDays, brisbaneDay, formatDate, formatDay, formatLongDate, formatTime, formatWhen } from '../utils/dates.ts';
 import {
@@ -19,6 +19,7 @@ import { DocumentsTab, TimelineTab, useFileData } from './IncidentFileTabs.tsx';
 import { IncidentSummary } from './IncidentSummary.tsx';
 import { InvestigationTab } from './InvestigationTab.tsx';
 import { ErrorNote, Field, inputClass } from './Form.tsx';
+import { DeleteEntry } from './DeleteEntry.tsx';
 import { Pill } from './Pill.tsx';
 
 import { askConfirm } from './ConfirmHost.tsx';
@@ -26,7 +27,7 @@ const card = 'bg-white border border-line rounded-xl';
 type Tab = 'overview' | 'investigation' | 'people' | 'timeline' | 'documents' | 'actions';
 const smallButton = 'min-h-11 px-4 rounded-lg text-sm font-semibold cursor-pointer disabled:opacity-60 disabled:cursor-not-allowed';
 
-export function IncidentPage({ id, user, embedded }: { id: string; user: WhsUser; embedded?: boolean }) {
+export function IncidentPage({ id, user, embedded, onDeleted }: { id: string; user: WhsUser; embedded?: boolean; onDeleted?: () => void }) {
   const { people } = useLookups();
   const office = isOfficeAccess(user.access);
   const officer = user.access === 'admin' || user.access === 'whs_officer';
@@ -389,6 +390,16 @@ export function IncidentPage({ id, user, embedded }: { id: string; user: WhsUser
         </div>
       </div>
       )}
+
+      <DeleteEntry type="incident" id={incident.id} user={user} label={incident.ref ?? 'this incident'}
+        blockedReason={incident.notifiable ? 'A notifiable incident is a legal record and is kept: it cannot be deleted.' : undefined}
+        detail={[
+          ...(actions.length ? [`${actions.length} action${actions.length === 1 ? '' : 's'}`] : []),
+          ...(ipeople.length ? [`${ipeople.length} ${ipeople.length === 1 ? 'person' : 'people'} on the incident`] : []),
+          ...(claims.length ? [`${claims.length} injury claim${claims.length === 1 ? '' : 's'}, with certificates and files`] : []),
+          'Its evidence, statements, timeline and photos',
+        ]}
+        onDeleted={() => (onDeleted ? onDeleted() : go({ name: 'module', id: 'incidents' }))} />
     </div>
   );
 }
