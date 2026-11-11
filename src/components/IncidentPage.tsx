@@ -16,7 +16,7 @@ import { Pill } from './Pill.tsx';
 const card = 'bg-white border border-line rounded-xl';
 const smallButton = 'min-h-11 px-4 rounded-lg text-sm font-semibold cursor-pointer disabled:opacity-60 disabled:cursor-not-allowed';
 
-export function IncidentPage({ id, user }: { id: string; user: WhsUser }) {
+export function IncidentPage({ id, user, embedded }: { id: string; user: WhsUser; embedded?: boolean }) {
   const { people } = useLookups();
   const office = isOfficeAccess(user.access);
   const officer = user.access === 'admin' || user.access === 'whs_officer';
@@ -75,7 +75,9 @@ export function IncidentPage({ id, user }: { id: string; user: WhsUser }) {
 
   return (
     <div className="flex flex-col gap-5">
-      <a href={hrefFor({ name: 'module', id: 'incidents' })} className="text-sm no-underline text-muted">← Incidents</a>
+      {!embedded && (
+  <a href={hrefFor({ name: 'module', id: 'incidents' })} className="text-sm no-underline text-muted">← Incidents</a>
+      )}
 
       <div className="flex flex-wrap justify-between items-start gap-4">
         <div className="min-w-0">

@@ -3,6 +3,8 @@ import { ChevronDown, ChevronRight } from 'lucide-react';
 import type { WhsUser } from '../services/auth.ts';
 import { rememberSite, rememberedSite, useRegister } from '../hooks/useRegister.ts';
 import { hrefFor } from '../hooks/useRoute.ts';
+import { ChemicalPage } from './ChemicalPage.tsx';
+import { SidePanel, linkOpens, rowOpens, useListPanel } from './SidePanel.tsx';
 import { isOfficeAccess } from '../utils/access.ts';
 import { formatDay } from '../utils/dates.ts';
 import { looseMatch } from '../utils/search.ts';
@@ -63,6 +65,9 @@ export function ChemicalsPage({ user }: { user: WhsUser }) {
   const worst = site ? worstLine(siteTotals(site.state, siteStock, reg.chemById)) : null;
   const take = site ? stocktakeDue(site, siteStock) : null;
 
+  const sectionOpen = (section: string) => q.trim() !== '' || filter !== 'all' || open.includes(section);
+  const panel = useListPanel(() => SECTIONS.flatMap(s => (sectionOpen(s) ? shown.filter(c => c.section === s).map(c => c.id) : [])), () => reg.reload());
+
   const pick = (id: string) => {
     setSiteId(id);
     rememberSite(id);
@@ -83,7 +88,8 @@ export function ChemicalsPage({ user }: { user: WhsUser }) {
   const seg = pairA && pairB && byId(pairA) && byId(pairB) ? segregation(byId(pairA) as Chemical, byId(pairB) as Chemical) : null;
 
   return (
-    <div className="flex flex-col gap-4">
+    <div className="flex gap-5 items-start">
+    <div className="flex-1 min-w-0 flex flex-col gap-4">
       <div className="flex flex-wrap justify-between items-end gap-3">
         <div>
           <h1 className="m-0 text-[26px] font-bold">Hazardous chemicals &amp; DG register</h1>
@@ -176,7 +182,7 @@ export function ChemicalsPage({ user }: { user: WhsUser }) {
         const rows = shown.filter(c => c.section === section);
         if (!rows.length) return null;
         // Searching or filtering shows every match; otherwise sections open and close
-        const isOpen = q.trim() !== '' || filter !== 'all' || open.includes(section);
+        const isOpen = sectionOpen(section);
         const noSds = rows.filter(c => ['missing', 'expired'].includes(sdsState(reg.currentSdsOf(c.id)))).length;
         const confirm = rows.filter(classToConfirm).length;
         return (
@@ -199,13 +205,19 @@ export function ChemicalsPage({ user }: { user: WhsUser }) {
                 </tr>
               </thead>
               <tbody>
-                {rows.map(c => <Row key={c.id} c={c} stock={siteStock.filter(s => s.chemical_id === c.id)} showSite={!site} sites={reg.sites} sds={sdsPill(reg.currentSdsOf(c.id))} />)}
+                {rows.map(c => <Row key={c.id} selected={panel.openId === c.id} onOpen={() => panel.setOpenId(c.id)} c={c} stock={siteStock.filter(s => s.chemical_id === c.id)} showSite={!site} sites={reg.sites} sds={sdsPill(reg.currentSdsOf(c.id))} />)}
               </tbody>
             </table>}
           </section>
         );
       })}
       {reg.loaded && shown.length === 0 && <p className="m-0 bg-white border border-line rounded-xl px-4 py-8 text-sm text-muted text-center">Nothing matches.</p>}
+    </div>
+    {panel.openId && (
+      <SidePanel label="Chemical" fullHref={hrefFor({ name: 'chemical', id: panel.openId })} onClose={panel.close}>
+        <ChemicalPage key={panel.openId} id={panel.openId} user={user} embedded />
+      </SidePanel>
+    )}
     </div>
   );
 }
@@ -220,11 +232,11 @@ function Stat({ label, value, sub, alert }: { label: string; value: string; sub:
   );
 }
 
-function Row({ c, stock, showSite, sites, sds: p }: { c: Chemical; stock: Stock[]; showSite: boolean; sites: { id: string; name: string }[]; sds: { label: string; tone: Tone } }) {
+function Row({ c, stock, showSite, sites, sds: p, selected, onOpen }: { c: Chemical; stock: Stock[]; showSite: boolean; sites: { id: string; name: string }[]; sds: { label: string; tone: Tone }; selected: boolean; onOpen: () => void }) {
   return (
-    <tr>
+    <tr onClick={e => rowOpens(e, onOpen)} aria-selected={selected} className={`cursor-pointer ${selected ? 'bg-finlay-soft' : 'hover:bg-[#FAFAF9]'}`}>
       <td className={`${td} pl-4`}>
-        <a href={hrefFor({ name: 'chemical', id: c.id })} className="font-semibold no-underline">{c.name}</a>
+        <a href={hrefFor({ name: 'chemical', id: c.id })} onClick={e => linkOpens(e, onOpen)} className="font-semibold no-underline">{c.name}</a>
         <span className="block text-xs text-muted">{c.manufacturer}</span>
       </td>
       <td className={td}>
