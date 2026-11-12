@@ -43,6 +43,15 @@ export interface WhsDocument {
   updated_at: string;
 }
 
+export interface DocReview {
+  id: string;
+  document_id: string;
+  reviewed_on: string;
+  reviewed_by_name: string;
+  note: string;
+  created_at: string;
+}
+
 export interface DocVersion {
   id: string;
   document_id: string;

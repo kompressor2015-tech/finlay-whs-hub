@@ -1,7 +1,7 @@
 /** The Documents library: documents, their file versions, and the private file store. */
 
 import { supabase } from './supabase.ts';
-import { today, type DocType, type DocVersion, type WhsDocument } from '../utils/documents.ts';
+import { type DocReview, type DocType, type DocVersion, type WhsDocument } from '../utils/documents.ts';
 
 type Result<T> = { data?: T; error?: string };
 
@@ -47,9 +47,22 @@ export async function updateDocument(id: string, patch: Partial<DocumentInput>):
   return error ? { error: friendly(error.message) } : { data: data as WhsDocument };
 }
 
-/** Someone has read it through and it is still right: the review clock restarts today. */
-export function markReviewed(id: string): Promise<Result<WhsDocument>> {
-  return updateDocument(id, { reviewed_on: today() });
+/** Every review of a document, newest first. */
+export async function listReviews(documentId: string): Promise<Result<DocReview[]>> {
+  const { data, error } = await supabase.from('whs_document_reviews').select('*').eq('document_id', documentId).order('reviewed_on', { ascending: false }).order('created_at', { ascending: false });
+  return error ? { error: friendly(error.message) } : { data: (data ?? []) as DocReview[] };
+}
+
+/** Someone has read it through: a line goes in the log and the review clock restarts from that date. */
+export async function addReview(documentId: string, reviewedOn: string, note: string): Promise<Result<DocReview>> {
+  const { data, error } = await supabase.from('whs_document_reviews').insert({ document_id: documentId, reviewed_on: reviewedOn, note }).select('*').single();
+  return error ? { error: friendly(error.message) } : { data: data as DocReview };
+}
+
+/** Administrators only: remove a review entered by mistake. */
+export async function deleteReview(id: string): Promise<Result<true>> {
+  const { error } = await supabase.from('whs_document_reviews').delete().eq('id', id);
+  return error ? { error: friendly(error.message) } : { data: true };
 }
 
 export async function deleteDocument(id: string, filePaths: string[]): Promise<Result<true>> {
