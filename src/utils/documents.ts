@@ -22,6 +22,8 @@ export function docTypeLabel(type: DocType): string {
   return DOC_TYPES.find(t => t.id === type)?.short ?? type;
 }
 
+export const CATEGORY_SUGGESTIONS = ['Hand tools and workshop', 'Mobile plant', 'Crusher and screen changeovers', 'Other'];
+
 export interface WhsDocument {
   id: string;
   doc_type: DocType;
@@ -29,6 +31,8 @@ export interface WhsDocument {
   title: string;
   site_id: string | null;
   machine_model: string;
+  /** Optional heading to group a long list under, e.g. "Mobile plant" */
+  category: string;
   owner_name: string;
   review_months: number;
   reviewed_on: string | null;
@@ -45,6 +49,8 @@ export interface DocVersion {
   version: string;
   file_path: string;
   file_name: string;
+  /** The date printed on this version, if known */
+  issued_on: string | null;
   uploaded_at: string;
   uploaded_by_name: string;
 }

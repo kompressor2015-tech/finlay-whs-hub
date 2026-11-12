@@ -1,11 +1,12 @@
 import { useEffect, useState, type FormEvent } from 'react';
 import type { WhsUser } from '../services/auth.ts';
-import { deleteDocument, getDocument, markReviewed, openDocumentFile, updateDocument, uploadVersion } from '../services/documents.ts';
+import { deleteDocument, getDocument, markReviewed, openDocumentFile, updateDocument, updateVersion, uploadVersion } from '../services/documents.ts';
 import { hrefFor } from '../hooks/useRoute.ts';
 import { useSiteScope } from '../hooks/useSiteScope.tsx';
 import { isOfficeAccess } from '../utils/access.ts';
 import { formatDay, formatWhen } from '../utils/dates.ts';
 import { DOC_TYPES, currentVersion, docTypeLabel, fileKind, reviewBy, reviewPill, type DocType, type DocVersion, type WhsDocument } from '../utils/documents.ts';
+import { CategoryField } from './CategoryField.tsx';
 import { ErrorNote, Field, inputClass, textareaClass } from './Form.tsx';
 import { Pill } from './Pill.tsx';
 
@@ -24,6 +25,8 @@ export function DocumentDetail({ id, user, embedded, onChanged }: { id: string; 
   const [busy, setBusy] = useState(false);
   const [file, setFile] = useState<File | null>(null);
   const [versionLabel, setVersionLabel] = useState('');
+  const [issuedOn, setIssuedOn] = useState('');
+  const [editing, setEditing] = useState<{ id: string; version: string; issued_on: string } | null>(null);
   const [confirmDelete, setConfirmDelete] = useState(false);
   const [deleted, setDeleted] = useState(false);
 
@@ -42,7 +45,7 @@ export function DocumentDetail({ id, user, embedded, onChanged }: { id: string; 
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [id]);
 
-  const dirty = !!doc && !!form && (['doc_type', 'doc_no', 'title', 'site_id', 'machine_model', 'owner_name', 'review_months', 'notes'] as const).some(k => doc[k] !== form[k]);
+  const dirty = !!doc && !!form && (['doc_type', 'doc_no', 'title', 'site_id', 'machine_model', 'category', 'owner_name', 'review_months', 'reviewed_on', 'notes'] as const).some(k => doc[k] !== form[k]);
 
   async function save(e?: FormEvent) {
     e?.preventDefault();
@@ -51,8 +54,8 @@ export function DocumentDetail({ id, user, embedded, onChanged }: { id: string; 
     setBusy(true);
     setError(null);
     const res = await updateDocument(form.id, {
-      doc_type: form.doc_type, doc_no: form.doc_no.trim(), title: form.title.trim(), site_id: form.site_id, machine_model: form.machine_model.trim(),
-      owner_name: form.owner_name.trim(), review_months: Math.max(1, Math.round(Number(form.review_months) || 12)), notes: form.notes,
+      doc_type: form.doc_type, doc_no: form.doc_no.trim(), title: form.title.trim(), site_id: form.site_id, machine_model: form.machine_model.trim(), category: form.category.trim(),
+      owner_name: form.owner_name.trim(), review_months: Math.max(1, Math.round(Number(form.review_months) || 12)), reviewed_on: form.reviewed_on || null, notes: form.notes,
     });
     setBusy(false);
     if (res.error) return setError(res.error);
@@ -76,11 +79,24 @@ export function DocumentDetail({ id, user, embedded, onChanged }: { id: string; 
     if (!doc || !file) return;
     setBusy(true);
     setError(null);
-    const res = await uploadVersion(doc.id, file, versionLabel.trim());
+    const res = await uploadVersion(doc.id, file, versionLabel.trim(), issuedOn || null);
     setBusy(false);
     if (res.error) return setError(res.error);
     setFile(null);
     setVersionLabel('');
+    setIssuedOn('');
+    await load();
+    onChanged?.();
+  }
+
+  async function saveVersion() {
+    if (!editing) return;
+    setBusy(true);
+    setError(null);
+    const res = await updateVersion(editing.id, { version: editing.version.trim(), issued_on: editing.issued_on || null });
+    setBusy(false);
+    if (res.error) return setError(res.error);
+    setEditing(null);
     await load();
     onChanged?.();
   }
@@ -138,13 +154,26 @@ export function DocumentDetail({ id, user, embedded, onChanged }: { id: string; 
         <div className="border border-line rounded-xl bg-white">
           {versions.length === 0 && <p className="m-0 px-3.5 py-3 text-sm text-muted">No file yet.</p>}
           {versions.map((v, i) => (
-            <div key={v.id} className={`flex items-center gap-3 px-3.5 py-2.5 text-sm ${i ? 'border-t border-line-soft' : ''}`}>
-              <span className="flex-1 min-w-0">
-                <span className="font-semibold">{v.version || 'No version label'}</span>
-                {i === 0 && <span className="ml-2"><Pill tone="green">Current</Pill></span>}
-                <span className="block text-xs text-muted truncate">{v.file_name} · {formatWhen(v.uploaded_at)}{v.uploaded_by_name ? ` · ${v.uploaded_by_name}` : ''}</span>
-              </span>
-              <button type="button" onClick={() => void openDocumentFile(v.file_path)} className={btn}>Open</button>
+            <div key={v.id} className={`flex items-center gap-3 px-3.5 py-2.5 text-sm flex-wrap ${i ? 'border-t border-line-soft' : ''}`}>
+              {editing?.id === v.id ? (
+                <span className="flex flex-wrap gap-2 items-end flex-1">
+                  <Field label="Version" htmlFor={`ev-${v.id}`}><input id={`ev-${v.id}`} value={editing.version} onChange={e => setEditing({ ...editing, version: e.target.value })} placeholder="v5.0" className={`${inputClass} w-28`} /></Field>
+                  <Field label="Issue date" optional htmlFor={`ei-${v.id}`}><input id={`ei-${v.id}`} type="date" value={editing.issued_on} onChange={e => setEditing({ ...editing, issued_on: e.target.value })} className={inputClass} /></Field>
+                  <button type="button" disabled={busy} onClick={() => void saveVersion()} className={primary}>Save</button>
+                  <button type="button" onClick={() => setEditing(null)} className={btn}>Cancel</button>
+                </span>
+              ) : (
+                <>
+                  <span className="flex-1 min-w-0">
+                    <span className="font-semibold">{v.version || 'No version label'}</span>
+                    {i === 0 && <span className="ml-2"><Pill tone="green">Current</Pill></span>}
+                    <span className="block text-xs text-muted">{v.issued_on ? `Issued ${formatDay(v.issued_on)} · ` : 'No issue date · '}uploaded {formatWhen(v.uploaded_at)}{v.uploaded_by_name ? ` by ${v.uploaded_by_name}` : ''}</span>
+                    <span className="block text-xs text-muted truncate">{v.file_name}</span>
+                  </span>
+                  {office && <button type="button" onClick={() => setEditing({ id: v.id, version: v.version, issued_on: v.issued_on ?? '' })} className={btn}>Edit</button>}
+                  <button type="button" onClick={() => void openDocumentFile(v.file_path)} className={btn}>Open</button>
+                </>
+              )}
             </div>
           ))}
         </div>
@@ -155,6 +184,9 @@ export function DocumentDetail({ id, user, embedded, onChanged }: { id: string; 
             </Field>
             <Field label="Version" optional htmlFor="doc-ver">
               <input id="doc-ver" value={versionLabel} onChange={e => setVersionLabel(e.target.value)} placeholder="v5.0" className={`${inputClass} w-28`} />
+            </Field>
+            <Field label="Issue date" optional htmlFor="doc-iss">
+              <input id="doc-iss" type="date" value={issuedOn} onChange={e => setIssuedOn(e.target.value)} className={inputClass} />
             </Field>
             <button type="submit" disabled={!file || busy} className={primary}>Upload</button>
             <p className="m-0 basis-full text-xs text-muted">Older versions are kept. Staff are always given the newest.</p>
@@ -182,7 +214,13 @@ export function DocumentDetail({ id, user, embedded, onChanged }: { id: string; 
               </select>
             </Field>
             <Field label="Machine model" optional htmlFor="d-model"><input id="d-model" value={form.machine_model} onChange={e => set('machine_model', e.target.value)} placeholder="J-1480" className={inputClass} /></Field>
+            <Field label="Category (heading in the list)" optional htmlFor="d-cat">
+              <CategoryField id="d-cat" value={form.category} onChange={v => set('category', v)} />
+            </Field>
             <Field label="Owner" htmlFor="d-owner"><input id="d-owner" value={form.owner_name} onChange={e => set('owner_name', e.target.value)} className={inputClass} /></Field>
+            <Field label="Last reviewed" optional htmlFor="d-rev">
+              <input id="d-rev" type="date" value={form.reviewed_on ?? ''} onChange={e => set('reviewed_on', e.target.value || null)} className={inputClass} />
+            </Field>
             <Field label="Review every (months)" htmlFor="d-months"><input id="d-months" type="number" min={1} value={form.review_months} onChange={e => set('review_months', Number(e.target.value))} className={inputClass} /></Field>
           </div>
           <Field label="Notes" optional htmlFor="d-notes"><textarea id="d-notes" value={form.notes} onChange={e => set('notes', e.target.value)} rows={2} className={textareaClass} /></Field>

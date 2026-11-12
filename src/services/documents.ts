@@ -35,7 +35,7 @@ export async function getDocument(id: string): Promise<Result<{ doc: WhsDocument
   return { data: { doc: d.data as WhsDocument, versions: (v.data ?? []) as DocVersion[] } };
 }
 
-export type DocumentInput = Pick<WhsDocument, 'doc_type' | 'doc_no' | 'title' | 'site_id' | 'machine_model' | 'owner_name' | 'review_months' | 'notes'> & { reviewed_on?: string | null };
+export type DocumentInput = Pick<WhsDocument, 'doc_type' | 'doc_no' | 'title' | 'site_id' | 'machine_model' | 'category' | 'owner_name' | 'review_months' | 'notes'> & { reviewed_on?: string | null };
 
 export async function createDocument(input: DocumentInput): Promise<Result<WhsDocument>> {
   const { data, error } = await supabase.from('whs_documents').insert(input).select('*').single();
@@ -60,17 +60,23 @@ export async function deleteDocument(id: string, filePaths: string[]): Promise<R
 }
 
 /** Upload a file as a new version of a document. Older versions are kept. */
-export async function uploadVersion(documentId: string, file: File, version: string): Promise<Result<DocVersion>> {
+export async function uploadVersion(documentId: string, file: File, version: string, issuedOn: string | null = null): Promise<Result<DocVersion>> {
   const safe = file.name.replace(/[^A-Za-z0-9._-]+/g, '_').slice(-80);
   const path = `${documentId}/${Date.now()}_${crypto.randomUUID().slice(0, 8)}_${safe}`;
   const up = await supabase.storage.from(BUCKET).upload(path, file, { contentType: file.type || 'application/octet-stream' });
   if (up.error) return { error: `Could not upload ${file.name}: ${friendly(up.error.message)}` };
-  const { data, error } = await supabase.from('whs_document_versions').insert({ document_id: documentId, version, file_path: path, file_name: file.name }).select('*').single();
+  const { data, error } = await supabase.from('whs_document_versions').insert({ document_id: documentId, version, issued_on: issuedOn || null, file_path: path, file_name: file.name }).select('*').single();
   if (error) {
     await supabase.storage.from(BUCKET).remove([path]);
     return { error: friendly(error.message) };
   }
   return { data: data as DocVersion };
+}
+
+/** Fix a version's label or issue date (the file itself never changes). */
+export async function updateVersion(id: string, patch: { version?: string; issued_on?: string | null }): Promise<Result<DocVersion>> {
+  const { data, error } = await supabase.from('whs_document_versions').update(patch).eq('id', id).select('*').single();
+  return error ? { error: friendly(error.message) } : { data: data as DocVersion };
 }
 
 export async function documentLink(path: string): Promise<string | null> {
