@@ -1,7 +1,8 @@
 import { useState, type FormEvent } from 'react';
 import { createDocument, uploadVersion } from '../services/documents.ts';
 import { useSiteScope } from '../hooks/useSiteScope.tsx';
-import { CATEGORY_SUGGESTIONS, DOC_TYPES, fileKind, parseDocFile, type DocType, type WhsDocument } from '../utils/documents.ts';
+import { DOC_TYPES, fileKind, parseDocFile, type DocType, type WhsDocument } from '../utils/documents.ts';
+import { CategoryField } from './CategoryField.tsx';
 import { ErrorNote, Field, inputClass } from './Form.tsx';
 
 const btn = 'min-h-10 px-3.5 rounded-lg border border-[#D6D2CC] bg-white text-sm font-semibold cursor-pointer';
@@ -72,8 +73,7 @@ export function AddDocumentForm({ onDone, onCancel }: { onDone: (id: string) => 
         <Field label="Number" optional htmlFor="n-no"><input id="n-no" value={docNo} onChange={e => setDocNo(e.target.value)} placeholder="SWI-055" className={inputClass} /></Field>
         <Field label="Version" optional htmlFor="n-ver"><input id="n-ver" value={version} onChange={e => setVersion(e.target.value)} placeholder="v1.0" className={inputClass} /></Field>
         <Field label="Category (heading in the list)" optional htmlFor="n-cat">
-          <input id="n-cat" list="n-cats" value={category} onChange={e => setCategory(e.target.value)} placeholder="e.g. Mobile plant" className={inputClass} />
-          <datalist id="n-cats">{CATEGORY_SUGGESTIONS.map(c => <option key={c} value={c} />)}</datalist>
+          <CategoryField id="n-cat" value={category} onChange={setCategory} />
         </Field>
         <Field label="Machine model" optional htmlFor="n-model"><input id="n-model" value={model} onChange={e => setModel(e.target.value)} placeholder="J-1480" className={inputClass} /></Field>
       </div>

@@ -5,7 +5,8 @@ import { hrefFor } from '../hooks/useRoute.ts';
 import { useSiteScope } from '../hooks/useSiteScope.tsx';
 import { isOfficeAccess } from '../utils/access.ts';
 import { formatDay, formatWhen } from '../utils/dates.ts';
-import { CATEGORY_SUGGESTIONS, DOC_TYPES, currentVersion, docTypeLabel, fileKind, reviewBy, reviewPill, type DocType, type DocVersion, type WhsDocument } from '../utils/documents.ts';
+import { DOC_TYPES, currentVersion, docTypeLabel, fileKind, reviewBy, reviewPill, type DocType, type DocVersion, type WhsDocument } from '../utils/documents.ts';
+import { CategoryField } from './CategoryField.tsx';
 import { ErrorNote, Field, inputClass, textareaClass } from './Form.tsx';
 import { Pill } from './Pill.tsx';
 
@@ -183,8 +184,7 @@ export function DocumentDetail({ id, user, embedded, onChanged }: { id: string; 
             </Field>
             <Field label="Machine model" optional htmlFor="d-model"><input id="d-model" value={form.machine_model} onChange={e => set('machine_model', e.target.value)} placeholder="J-1480" className={inputClass} /></Field>
             <Field label="Category (heading in the list)" optional htmlFor="d-cat">
-              <input id="d-cat" list="d-cats" value={form.category} onChange={e => set('category', e.target.value)} placeholder="e.g. Mobile plant" className={inputClass} />
-              <datalist id="d-cats">{CATEGORY_SUGGESTIONS.map(c => <option key={c} value={c} />)}</datalist>
+              <CategoryField id="d-cat" value={form.category} onChange={v => set('category', v)} />
             </Field>
             <Field label="Owner" htmlFor="d-owner"><input id="d-owner" value={form.owner_name} onChange={e => set('owner_name', e.target.value)} className={inputClass} /></Field>
             <Field label="Review every (months)" htmlFor="d-months"><input id="d-months" type="number" min={1} value={form.review_months} onChange={e => set('review_months', Number(e.target.value))} className={inputClass} /></Field>
