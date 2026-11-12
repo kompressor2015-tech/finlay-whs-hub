@@ -140,7 +140,7 @@ export function ChemicalsPage({ user }: { user: WhsUser }) {
         <div className="grid grid-cols-2 lg:grid-cols-4 gap-3">
           <Stat label="Products" value={String(chemicals.length)} sub={`${chemicals.filter(c => c.dg_class).length} dangerous goods`} />
           <Stat label="SDS missing" value={String(missing)} sub="upload from the SDS folders" alert={missing > 0} />
-          <Stat label="SDS over 5 years old" value={String(old)} sub={soon ? `${soon} more due within 90 days` : 'none due soon'} alert={old > 0} />
+          <Stat label="SDS over 5 years old" value={String(old)} sub={soon ? `${soon} more due within 90 days` : 'none due soon'} alert={old > 0} tone={!old && soon > 0 ? 'amber' : undefined} />
           <Stat label="Sites" value={String(reg.sites.length)} sub="QLD, NSW and VIC rules" />
         </div>
       )}
@@ -234,12 +234,15 @@ export function ChemicalsPage({ user }: { user: WhsUser }) {
   );
 }
 
+/** Tinted when it needs attention: red for a problem, amber for something coming up. */
 function Stat({ label, value, sub, alert, tone }: { label: string; value: string; sub: string; alert?: boolean; tone?: 'amber' }) {
+  const box = alert ? 'bg-[#FBE3E4] border-[#F0B8BB]' : tone === 'amber' ? 'bg-[#FFF1D6] border-[#F2D9A6]' : 'bg-white border-line';
+  const ink = alert ? 'text-[#8E0F15]' : tone === 'amber' ? 'text-[#7A4A00]' : '';
   return (
-    <div className="bg-white border border-line rounded-xl px-4 py-3.5">
-      <div className="text-muted text-[13px]">{label}</div>
-      <div className={`text-[26px] font-bold mt-0.5 ${alert ? 'text-finlay' : tone === 'amber' ? 'text-[#7A4A00]' : ''}`}>{value}</div>
-      <div className="text-muted text-xs mt-0.5">{sub}</div>
+    <div className={`border rounded-xl px-4 py-3.5 ${box}`}>
+      <div className={`text-[13px] ${ink || 'text-muted'}`}>{label}</div>
+      <div className={`text-[26px] font-bold mt-0.5 ${ink}`}>{value}</div>
+      <div className={`text-xs mt-0.5 ${ink || 'text-muted'}`}>{sub}</div>
     </div>
   );
 }

@@ -114,11 +114,17 @@ export function DocumentsPage({ user }: { user: WhsUser }) {
     { id: 'soon', label: `Due in 90 days (${counts.soon})` },
     { id: 'none', label: `No review date (${counts.none})` },
   ];
-  const stat = (label: string, value: number, sub: string, color = '') => (
-    <div className="bg-white border border-line rounded-xl px-4 py-3.5">
-      <div className="text-muted text-[13px]">{label}</div>
-      <div className={`text-[26px] font-bold mt-0.5 ${color}`}>{value}</div>
-      <div className="text-muted text-xs mt-0.5">{sub}</div>
+  // A tile with something to look at is tinted: red for overdue, amber for coming up or missing
+  const TILE = {
+    none: { box: 'bg-white border-line', num: '' },
+    red: { box: 'bg-[#FBE3E4] border-[#F0B8BB]', num: 'text-[#8E0F15]' },
+    amber: { box: 'bg-[#FFF1D6] border-[#F2D9A6]', num: 'text-[#7A4A00]' },
+  } as const;
+  const stat = (label: string, value: number, sub: string, tone: keyof typeof TILE = 'none') => (
+    <div className={`border rounded-xl px-4 py-3.5 ${TILE[tone].box}`}>
+      <div className={`text-[13px] ${tone === 'none' ? 'text-muted' : TILE[tone].num}`}>{label}</div>
+      <div className={`text-[26px] font-bold mt-0.5 ${TILE[tone].num}`}>{value}</div>
+      <div className={`text-xs mt-0.5 ${tone === 'none' ? 'text-muted' : TILE[tone].num}`}>{sub}</div>
     </div>
   );
   const rowCls = (id: string) => `cursor-pointer ${panel.openId === id ? 'bg-finlay-soft' : 'hover:bg-[#FAFAF9]'}`;
@@ -146,9 +152,9 @@ export function DocumentsPage({ user }: { user: WhsUser }) {
 
         <section aria-label="Document review health" className="grid grid-cols-2 lg:grid-cols-4 gap-3">
           {stat('Documents', inSite.length, site ? `for ${site.name} and all sites` : 'in the library')}
-          {stat('Review overdue', counts.overdue, 'past the review date', counts.overdue ? 'text-finlay' : '')}
-          {stat('Review due in 90 days', counts.soon, 'same warning as the SDS', counts.soon ? 'text-[#7A4A00]' : '')}
-          {stat('No review date yet', counts.none, 'new uploads start here', counts.none ? 'text-[#7A4A00]' : '')}
+          {stat('Review overdue', counts.overdue, 'past the review date', counts.overdue ? 'red' : 'none')}
+          {stat('Review due in 90 days', counts.soon, 'same warning as the SDS', counts.soon ? 'amber' : 'none')}
+          {stat('No review date yet', counts.none, 'new uploads start here', counts.none ? 'amber' : 'none')}
         </section>
 
         <div role="tablist" aria-label="Document type" className="flex flex-wrap gap-2">
