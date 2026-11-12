@@ -5,7 +5,7 @@ import { hrefFor } from '../hooks/useRoute.ts';
 import { useSiteScope } from '../hooks/useSiteScope.tsx';
 import { isOfficeAccess } from '../utils/access.ts';
 import { formatDay, formatWhen } from '../utils/dates.ts';
-import { DOC_TYPES, currentVersion, docTypeLabel, fileKind, reviewBy, reviewPill, type DocType, type DocVersion, type WhsDocument } from '../utils/documents.ts';
+import { CATEGORY_SUGGESTIONS, DOC_TYPES, currentVersion, docTypeLabel, fileKind, reviewBy, reviewPill, type DocType, type DocVersion, type WhsDocument } from '../utils/documents.ts';
 import { ErrorNote, Field, inputClass, textareaClass } from './Form.tsx';
 import { Pill } from './Pill.tsx';
 
@@ -42,7 +42,7 @@ export function DocumentDetail({ id, user, embedded, onChanged }: { id: string; 
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [id]);
 
-  const dirty = !!doc && !!form && (['doc_type', 'doc_no', 'title', 'site_id', 'machine_model', 'owner_name', 'review_months', 'notes'] as const).some(k => doc[k] !== form[k]);
+  const dirty = !!doc && !!form && (['doc_type', 'doc_no', 'title', 'site_id', 'machine_model', 'category', 'owner_name', 'review_months', 'notes'] as const).some(k => doc[k] !== form[k]);
 
   async function save(e?: FormEvent) {
     e?.preventDefault();
@@ -51,7 +51,7 @@ export function DocumentDetail({ id, user, embedded, onChanged }: { id: string; 
     setBusy(true);
     setError(null);
     const res = await updateDocument(form.id, {
-      doc_type: form.doc_type, doc_no: form.doc_no.trim(), title: form.title.trim(), site_id: form.site_id, machine_model: form.machine_model.trim(),
+      doc_type: form.doc_type, doc_no: form.doc_no.trim(), title: form.title.trim(), site_id: form.site_id, machine_model: form.machine_model.trim(), category: form.category.trim(),
       owner_name: form.owner_name.trim(), review_months: Math.max(1, Math.round(Number(form.review_months) || 12)), notes: form.notes,
     });
     setBusy(false);
@@ -182,6 +182,10 @@ export function DocumentDetail({ id, user, embedded, onChanged }: { id: string; 
               </select>
             </Field>
             <Field label="Machine model" optional htmlFor="d-model"><input id="d-model" value={form.machine_model} onChange={e => set('machine_model', e.target.value)} placeholder="J-1480" className={inputClass} /></Field>
+            <Field label="Category (heading in the list)" optional htmlFor="d-cat">
+              <input id="d-cat" list="d-cats" value={form.category} onChange={e => set('category', e.target.value)} placeholder="e.g. Mobile plant" className={inputClass} />
+              <datalist id="d-cats">{CATEGORY_SUGGESTIONS.map(c => <option key={c} value={c} />)}</datalist>
+            </Field>
             <Field label="Owner" htmlFor="d-owner"><input id="d-owner" value={form.owner_name} onChange={e => set('owner_name', e.target.value)} className={inputClass} /></Field>
             <Field label="Review every (months)" htmlFor="d-months"><input id="d-months" type="number" min={1} value={form.review_months} onChange={e => set('review_months', Number(e.target.value))} className={inputClass} /></Field>
           </div>

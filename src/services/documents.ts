@@ -35,7 +35,7 @@ export async function getDocument(id: string): Promise<Result<{ doc: WhsDocument
   return { data: { doc: d.data as WhsDocument, versions: (v.data ?? []) as DocVersion[] } };
 }
 
-export type DocumentInput = Pick<WhsDocument, 'doc_type' | 'doc_no' | 'title' | 'site_id' | 'machine_model' | 'owner_name' | 'review_months' | 'notes'> & { reviewed_on?: string | null };
+export type DocumentInput = Pick<WhsDocument, 'doc_type' | 'doc_no' | 'title' | 'site_id' | 'machine_model' | 'category' | 'owner_name' | 'review_months' | 'notes'> & { reviewed_on?: string | null };
 
 export async function createDocument(input: DocumentInput): Promise<Result<WhsDocument>> {
   const { data, error } = await supabase.from('whs_documents').insert(input).select('*').single();

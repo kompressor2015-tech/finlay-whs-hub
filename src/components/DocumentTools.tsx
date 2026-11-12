@@ -1,7 +1,7 @@
 import { useState, type FormEvent } from 'react';
 import { createDocument, uploadVersion } from '../services/documents.ts';
 import { useSiteScope } from '../hooks/useSiteScope.tsx';
-import { DOC_TYPES, fileKind, parseDocFile, type DocType, type WhsDocument } from '../utils/documents.ts';
+import { CATEGORY_SUGGESTIONS, DOC_TYPES, fileKind, parseDocFile, type DocType, type WhsDocument } from '../utils/documents.ts';
 import { ErrorNote, Field, inputClass } from './Form.tsx';
 
 const btn = 'min-h-10 px-3.5 rounded-lg border border-[#D6D2CC] bg-white text-sm font-semibold cursor-pointer';
@@ -17,6 +17,7 @@ export function AddDocumentForm({ onDone, onCancel }: { onDone: (id: string) => 
   const [version, setVersion] = useState('');
   const [siteId, setSiteId] = useState<string>(site?.id ?? '');
   const [model, setModel] = useState('');
+  const [category, setCategory] = useState('');
   const [owner, setOwner] = useState('WHS officer');
   const [file, setFile] = useState<File | null>(null);
   const [error, setError] = useState<string | null>(null);
@@ -39,7 +40,7 @@ export function AddDocumentForm({ onDone, onCancel }: { onDone: (id: string) => 
     if (!title.trim()) return setError('Give the document a title.');
     setBusy(true);
     setError(null);
-    const made = await createDocument({ doc_type: type, doc_no: docNo.trim(), title: title.trim(), site_id: siteId || null, machine_model: model.trim(), owner_name: owner.trim() || 'WHS officer', review_months: 12, notes: '' });
+    const made = await createDocument({ doc_type: type, doc_no: docNo.trim(), title: title.trim(), site_id: siteId || null, machine_model: model.trim(), category: category.trim(), owner_name: owner.trim() || 'WHS officer', review_months: 12, notes: '' });
     if (made.error || !made.data) {
       setBusy(false);
       return setError(made.error ?? 'Could not add the document.');
@@ -70,6 +71,10 @@ export function AddDocumentForm({ onDone, onCancel }: { onDone: (id: string) => 
         </Field>
         <Field label="Number" optional htmlFor="n-no"><input id="n-no" value={docNo} onChange={e => setDocNo(e.target.value)} placeholder="SWI-055" className={inputClass} /></Field>
         <Field label="Version" optional htmlFor="n-ver"><input id="n-ver" value={version} onChange={e => setVersion(e.target.value)} placeholder="v1.0" className={inputClass} /></Field>
+        <Field label="Category (heading in the list)" optional htmlFor="n-cat">
+          <input id="n-cat" list="n-cats" value={category} onChange={e => setCategory(e.target.value)} placeholder="e.g. Mobile plant" className={inputClass} />
+          <datalist id="n-cats">{CATEGORY_SUGGESTIONS.map(c => <option key={c} value={c} />)}</datalist>
+        </Field>
         <Field label="Machine model" optional htmlFor="n-model"><input id="n-model" value={model} onChange={e => setModel(e.target.value)} placeholder="J-1480" className={inputClass} /></Field>
       </div>
       <Field label="Title" htmlFor="n-title"><input id="n-title" value={title} onChange={e => setTitle(e.target.value)} className={inputClass} /></Field>
@@ -141,7 +146,7 @@ export function BulkDocumentUpload({ existing, onDone, onCancel }: { existing: W
       const k = key(it.type, it.doc_no.trim(), it.title.trim());
       let docId = made.get(k);
       if (!docId) {
-        const res = await createDocument({ doc_type: it.type, doc_no: it.doc_no.trim(), title: it.title.trim(), site_id: site?.id ?? null, machine_model: it.machine_model.trim(), owner_name: 'WHS officer', review_months: 12, notes: '' });
+        const res = await createDocument({ doc_type: it.type, doc_no: it.doc_no.trim(), title: it.title.trim(), site_id: site?.id ?? null, machine_model: it.machine_model.trim(), category: '', owner_name: 'WHS officer', review_months: 12, notes: '' });
         if (res.error || !res.data) {
           update(i, { status: 'error', message: res.error ?? 'Could not add' });
           continue;

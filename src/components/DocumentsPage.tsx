@@ -15,6 +15,8 @@ import { AddDocumentForm, BulkDocumentUpload } from './DocumentTools.tsx';
 type Filter = 'all' | 'overdue' | 'soon' | 'none';
 
 const BLOCK = 20;
+/** Headed groups A to Z, with "Other" and no category last */
+const catRank = (a: string, b: string) => (a === b ? 0 : !a ? 1 : !b ? -1 : a === 'Other' ? 1 : b === 'Other' ? -1 : a.localeCompare(b));
 const typeRank = (t: DocType) => DOC_TYPES.findIndex(x => x.id === t);
 const th = 'px-2 py-3 font-semibold border-b border-[#EEEBE6] text-left';
 const td = 'px-2 py-3 border-b border-line-soft align-top';
@@ -66,7 +68,7 @@ export function DocumentsPage({ user }: { user: WhsUser }) {
         if (filter === 'soon' && s !== 'due_soon') return false;
         if (filter === 'none' && s !== 'none') return false;
         return looseMatch(q, [d.doc_no, d.title, d.machine_model, d.owner_name, docTypeLabel(d.doc_type)]);
-      }).sort((a, b) => typeRank(a.doc_type) - typeRank(b.doc_type) || (a.doc_no || a.title).localeCompare(b.doc_no || b.title, undefined, { numeric: true, sensitivity: 'base' })),
+      }).sort((a, b) => typeRank(a.doc_type) - typeRank(b.doc_type) || catRank(a.category, b.category) || (a.doc_no || a.title).localeCompare(b.doc_no || b.title, undefined, { numeric: true, sensitivity: 'base' })),
     [inSite, tab, filter, q]
   );
 
@@ -76,16 +78,20 @@ export function DocumentsPage({ user }: { user: WhsUser }) {
   const blocks = useMemo(() => {
     const out: { key: string; label: string; range: string; docs: WhsDocument[] }[] = [];
     for (const t of DOC_TYPES) {
-      const list = shown.filter(d => d.doc_type === t.id);
-      for (let i = 0; i < list.length; i += BLOCK) {
-        const part = list.slice(i, i + BLOCK);
-        const name = (d: WhsDocument) => d.doc_no || d.title.slice(0, 18);
-        out.push({
-          key: `${t.id}-${i}`,
-          label: t.label,
-          range: list.length > BLOCK ? `${name(part[0])} to ${name(part[part.length - 1])}` : '',
-          docs: part,
-        });
+      const ofType = shown.filter(d => d.doc_type === t.id);
+      const cats = Array.from(new Set<string>(ofType.map(d => d.category ?? ''))).sort(catRank);
+      for (const cat of cats) {
+        const list = ofType.filter(d => (d.category ?? '') === cat);
+        for (let i = 0; i < list.length; i += BLOCK) {
+          const part = list.slice(i, i + BLOCK);
+          const name = (d: WhsDocument) => d.doc_no || d.title.slice(0, 18);
+          out.push({
+            key: `${t.id}-${cat}-${i}`,
+            label: cat && cats.length > 0 && cats.some(Boolean) ? cat : t.label,
+            range: [cat && cats.some(Boolean) ? t.label : '', list.length > BLOCK ? `${name(part[0])} to ${name(part[part.length - 1])}` : ''].filter(Boolean).join(' · '),
+            docs: part,
+          });
+        }
       }
     }
     return out;
