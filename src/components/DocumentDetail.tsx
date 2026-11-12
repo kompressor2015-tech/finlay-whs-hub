@@ -29,6 +29,7 @@ export function DocumentDetail({ id, user, embedded, onChanged }: { id: string; 
   const [issuedOn, setIssuedOn] = useState('');
   const [editing, setEditing] = useState<{ id: string; version: string; issued_on: string } | null>(null);
   const [reviews, setReviews] = useState<DocReview[]>([]);
+  const [lastReviewed, setLastReviewed] = useState('');
   const [reviewing, setReviewing] = useState<{ on: string; note: string } | null>(null);
   const [alsoReview, setAlsoReview] = useState(true);
   const [confirmDelete, setConfirmDelete] = useState(false);
@@ -43,6 +44,7 @@ export function DocumentDetail({ id, user, embedded, onChanged }: { id: string; 
     setDoc(res.data.doc);
     setForm(res.data.doc);
     setVersions(res.data.versions);
+    setLastReviewed(res.data.doc.reviewed_on ?? '');
     const rv = await listReviews(id);
     setReviews(rv.data ?? []);
   }
@@ -51,7 +53,7 @@ export function DocumentDetail({ id, user, embedded, onChanged }: { id: string; 
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [id]);
 
-  const dirty = !!doc && !!form && (['doc_type', 'doc_no', 'title', 'site_id', 'machine_model', 'category', 'owner_name', 'review_months', 'notes'] as const).some(k => doc[k] !== form[k]);
+  const dirty = !!doc && !!form && (['doc_type', 'doc_no', 'title', 'site_id', 'machine_model', 'category', 'owner_name', 'review_months', 'notes'] as const).some(k => doc[k] !== form[k]) || (!!doc && lastReviewed !== '' && lastReviewed !== (doc.reviewed_on ?? ''));
 
   async function save(e?: FormEvent) {
     e?.preventDefault();
@@ -63,6 +65,10 @@ export function DocumentDetail({ id, user, embedded, onChanged }: { id: string; 
       doc_type: form.doc_type, doc_no: form.doc_no.trim(), title: form.title.trim(), site_id: form.site_id, machine_model: form.machine_model.trim(), category: form.category.trim(),
       owner_name: form.owner_name.trim(), review_months: Math.max(1, Math.round(Number(form.review_months) || 12)), notes: form.notes,
     });
+    if (!res.error && doc && lastReviewed && lastReviewed !== (doc.reviewed_on ?? '')) {
+      const rv = await addReview(form.id, lastReviewed, 'Date entered in details');
+      if (rv.error) setError(rv.error);
+    }
     setBusy(false);
     if (res.error) return setError(res.error);
     await load();
@@ -267,6 +273,9 @@ export function DocumentDetail({ id, user, embedded, onChanged }: { id: string; 
               <CategoryField id="d-cat" value={form.category} onChange={v => set('category', v)} />
             </Field>
             <Field label="Owner" htmlFor="d-owner"><input id="d-owner" value={form.owner_name} onChange={e => set('owner_name', e.target.value)} className={inputClass} /></Field>
+            <Field label="Last reviewed" optional htmlFor="d-rev">
+              <input id="d-rev" type="date" value={lastReviewed} max={today()} onChange={e => setLastReviewed(e.target.value)} className={inputClass} />
+            </Field>
             <Field label="Review every (months)" htmlFor="d-months"><input id="d-months" type="number" min={1} value={form.review_months} onChange={e => set('review_months', Number(e.target.value))} className={inputClass} /></Field>
           </div>
           <Field label="Notes" optional htmlFor="d-notes"><textarea id="d-notes" value={form.notes} onChange={e => set('notes', e.target.value)} rows={2} className={textareaClass} /></Field>
