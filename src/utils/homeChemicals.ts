@@ -15,6 +15,7 @@ export function withChemicals(
   const sdsOf = (id: string) => currentSds(sds.filter(s => s.chemical_id === id));
   const missing = active.filter(c => sdsState(sdsOf(c.id), now) === 'missing').length;
   const expired = active.filter(c => sdsState(sdsOf(c.id), now) === 'expired').length;
+  const dueSoon = active.filter(c => sdsState(sdsOf(c.id), now) === 'due_soon').length;
 
   for (const site of sites) {
     const here = stock.filter(s => s.site_id === site.id);
@@ -44,11 +45,12 @@ export function withChemicals(
     }
   }
   if (expired) attention.push({ id: 'sds-old', urgency: 'review', title: `${expired} SDS over 5 years old`, detail: 'Get the current SDS from the supplier', moduleId: 'chemicals', href: '#/m/chemicals' });
+  if (dueSoon) attention.push({ id: 'sds-soon', urgency: 'due_soon', title: `${dueSoon} SDS due for review within 90 days`, detail: 'Ask the supplier for the current SDS before it expires', moduleId: 'chemicals', href: '#/m/chemicals' });
   if (missing) attention.push({ id: 'sds-missing', urgency: 'review', title: `${missing} chemical(s) with no SDS in the app`, detail: 'Upload them from the SDS folders', moduleId: 'chemicals', href: '#/chem/upload-sds' });
 
   return {
     ...home,
     attention,
-    navCounts: { ...home.navCounts, ...(missing + expired ? { chemicals: missing + expired } : {}) },
+    navCounts: { ...home.navCounts, ...(missing + expired + dueSoon ? { chemicals: missing + expired + dueSoon } : {}) },
   };
 }

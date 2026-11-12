@@ -59,3 +59,13 @@ test('the home screen gets one line per kind of review warning, and the nav coun
   assert.equal(home.navCounts.documents, 2);
   assert.deepEqual(documentsComing(docs, now).map(c => c.href), ['#/documents/b']);
 });
+
+test('home flags SDS due for review within 90 days', async () => {
+  const { withChemicals } = await import('./homeChemicals.ts');
+  const { emptyHomeData } = await import('./homeData.ts');
+  const now = new Date('2026-11-12T00:00:00+10:00');
+  const chem = { id: 'c1', active: true } as never;
+  const sds = [{ chemical_id: 'c1', issue_date: '2021-12-20' }] as never;
+  const home = withChemicals(emptyHomeData(), [], [chem], [], sds, now);
+  assert.ok(home.attention.some(a => a.id === 'sds-soon'));
+});

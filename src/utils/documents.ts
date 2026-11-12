@@ -49,6 +49,8 @@ export interface DocVersion {
   version: string;
   file_path: string;
   file_name: string;
+  /** The date printed on this version, if known */
+  issued_on: string | null;
   uploaded_at: string;
   uploaded_by_name: string;
 }

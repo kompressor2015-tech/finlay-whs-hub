@@ -1,6 +1,7 @@
 import { useEffect, useMemo, useState } from 'react';
 import type { WhsUser } from '../services/auth.ts';
 import { listAllVersions, listDocuments } from '../services/documents.ts';
+import { formatDay } from '../utils/dates.ts';
 import { hrefFor } from '../hooks/useRoute.ts';
 import { useSiteScope } from '../hooks/useSiteScope.tsx';
 import { isOfficeAccess } from '../utils/access.ts';
@@ -216,7 +217,7 @@ export function DocumentsPage({ user }: { user: WhsUser }) {
                           {d.machine_model && <span className="block text-[13px] text-muted mt-0.5">Model {d.machine_model}</span>}
                         </td>
                         <td className={`${td} whitespace-nowrap`}><Pill tone="grey">{docTypeLabel(d.doc_type)}</Pill></td>
-                        <td className={`${td} whitespace-nowrap text-muted`}>{cur?.version || '—'}</td>
+                        <td className={`${td} whitespace-nowrap text-muted`}>{cur?.version || '—'}{cur?.issued_on && <span className="block text-xs">Issued {formatDay(cur.issued_on)}</span>}</td>
                         <td className={`${td} whitespace-nowrap`}>{siteName(d.site_id)}</td>
                         <td className={`${td} whitespace-nowrap text-muted`}>{d.owner_name}</td>
                         <td className={`${td} whitespace-nowrap`}><Pill tone={p.tone}>{p.label}</Pill></td>
