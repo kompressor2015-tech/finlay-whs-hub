@@ -1,9 +1,10 @@
-import { Fragment, useEffect, useMemo, useState, type FormEvent } from 'react';
+import { Fragment, useEffect, useMemo, useRef, useState, type FormEvent, type ReactNode } from 'react';
 import type { WhsUser } from '../services/auth.ts';
 import { authoriseStocktake, finishStocktake, getStocktake, listStocktakes, openSds, recordCount, updateSite, uploadSds } from '../services/chemicals.ts';
 import { photoLinks, uploadPhotos } from '../services/records.ts';
 import { rememberSite, rememberedSite, useRegister } from '../hooks/useRegister.ts';
 import { go, hrefFor } from '../hooks/useRoute.ts';
+import { useSiteScope } from '../hooks/useSiteScope.tsx';
 import { isOfficeAccess } from '../utils/access.ts';
 import { brisbaneDay, formatDate, formatDay, formatWhen } from '../utils/dates.ts';
 import { looseMatch } from '../utils/search.ts';
@@ -24,11 +25,28 @@ export function ChemTool({ tool, user }: { tool: string; user: WhsUser }) {
   if (tool === 'upload-sds') return <BulkSdsUpload user={user} />;
   if (tool === 'stocktake') return <StocktakePicker />;
   const m = /^(totals|stocktake|print|sheet)-([a-z0-9_-]+)$/.exec(tool);
-  if (m?.[1] === 'totals') return <SiteTotals siteId={m[2]} />;
+  if (m?.[1] === 'totals') return <FollowSwitcher tool="totals"><SiteTotals siteId={m[2]} /></FollowSwitcher>;
   if (m?.[1] === 'stocktake') return <Stocktake siteId={m[2]} user={user} />;
   if (m?.[1] === 'sheet') return <StocktakeSheet id={m[2]} user={user} />;
-  if (m?.[1] === 'print') return <PrintRegister siteId={m[2]} />;
+  if (m?.[1] === 'print') return <FollowSwitcher tool="print"><PrintRegister siteId={m[2]} /></FollowSwitcher>;
   return <ErrorNote message="Page not found." />;
+}
+
+/**
+ * The site switcher at the top changes which site these pages show: pick another site and the page
+ * moves to it (All sites goes back to the register). Only a change made while the page is open counts,
+ * so a link straight to one site's totals still opens that site.
+ */
+function FollowSwitcher({ tool, children }: { tool: 'totals' | 'print'; children: ReactNode }) {
+  const scope = useSiteScope();
+  const current = scope.site?.id ?? 'all';
+  const first = useRef(current);
+  useEffect(() => {
+    if (current === first.current) return;
+    first.current = current;
+    go(current === 'all' ? { name: 'module', id: 'chemicals' } : { name: 'chem', id: `${tool}-${current}` });
+  }, [current, tool]);
+  return <>{children}</>;
 }
 
 // ---------------------------------------------------------------------------------
