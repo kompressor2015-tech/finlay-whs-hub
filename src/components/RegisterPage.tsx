@@ -204,7 +204,7 @@ export function RegisterPage({ tab, user }: { tab: Tab; user: WhsUser }) {
     </div>
     {panel.openId && (
       <SidePanel label={tab === 'incidents' ? 'Incident' : 'Hazard'} fullHref={hrefFor({ name: tab === 'incidents' ? 'incident' : 'hazard', id: panel.openId })} onClose={panel.close}>
-        {tab === 'incidents' ? <IncidentPage key={panel.openId} id={panel.openId} user={user} embedded /> : <HazardPage key={panel.openId} id={panel.openId} user={user} embedded />}
+        {tab === 'incidents' ? <IncidentPage key={panel.openId} id={panel.openId} user={user} embedded onDeleted={panel.close} /> : <HazardPage key={panel.openId} id={panel.openId} user={user} embedded onDeleted={panel.close} />}
       </SidePanel>
     )}
     </div>

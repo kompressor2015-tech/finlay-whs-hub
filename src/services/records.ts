@@ -185,3 +185,24 @@ export async function listHistory(type: 'incident' | 'hazard', id: string): Prom
     .order('occurred_at', { ascending: false });
   return error || !data ? [] : (data as HistoryEntry[]);
 }
+
+// ---------------------------------------------------------------------------------
+// Deleting (administrators only; the database refuses anyone else)
+// ---------------------------------------------------------------------------------
+
+export type DeletableType = 'incident' | 'hazard' | 'action' | 'check';
+
+/** Deletes the record and what hangs off it, then removes its stored files. */
+export async function deleteRecord(type: DeletableType, id: string): Promise<{ error?: string }> {
+  const { data, error } = await supabase.rpc('whs_delete_record', { p_type: type, p_id: id });
+  if (error) return { error: friendly(error.message) };
+  const byBucket = new Map<string, string[]>();
+  for (const entry of (data ?? []) as string[]) {
+    const slash = entry.indexOf('/');
+    const bucket = entry.slice(0, slash);
+    byBucket.set(bucket, [...(byBucket.get(bucket) ?? []), entry.slice(slash + 1)]);
+  }
+  // The record is already gone; a file that will not delete is not worth failing over.
+  await Promise.all([...byBucket].map(([bucket, paths]) => supabase.storage.from(bucket).remove(paths).catch(() => null)));
+  return {};
+}

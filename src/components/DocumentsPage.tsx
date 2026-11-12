@@ -14,6 +14,8 @@ import { AddDocumentForm, BulkDocumentUpload } from './DocumentTools.tsx';
 
 type Filter = 'all' | 'overdue' | 'soon' | 'none';
 
+const BLOCK = 20;
+const typeRank = (t: DocType) => DOC_TYPES.findIndex(x => x.id === t);
 const th = 'px-2 py-3 font-semibold border-b border-[#EEEBE6] text-left';
 const td = 'px-2 py-3 border-b border-line-soft align-top';
 
@@ -64,9 +66,33 @@ export function DocumentsPage({ user }: { user: WhsUser }) {
         if (filter === 'soon' && s !== 'due_soon') return false;
         if (filter === 'none' && s !== 'none') return false;
         return looseMatch(q, [d.doc_no, d.title, d.machine_model, d.owner_name, docTypeLabel(d.doc_type)]);
-      }),
+      }).sort((a, b) => typeRank(a.doc_type) - typeRank(b.doc_type) || (a.doc_no || a.title).localeCompare(b.doc_no || b.title, undefined, { numeric: true, sensitivity: 'base' })),
     [inSite, tab, filter, q]
   );
+
+  // A long list is broken into collapsible blocks (by type, then 20 at a time) so it does not mean endless scrolling
+  const searching = q.trim() !== '' || filter !== 'all';
+  const [open, setOpen] = useState<Set<string>>(new Set());
+  const blocks = useMemo(() => {
+    const out: { key: string; label: string; range: string; docs: WhsDocument[] }[] = [];
+    for (const t of DOC_TYPES) {
+      const list = shown.filter(d => d.doc_type === t.id);
+      for (let i = 0; i < list.length; i += BLOCK) {
+        const part = list.slice(i, i + BLOCK);
+        const name = (d: WhsDocument) => d.doc_no || d.title.slice(0, 18);
+        out.push({
+          key: `${t.id}-${i}`,
+          label: t.label,
+          range: list.length > BLOCK ? `${name(part[0])} to ${name(part[part.length - 1])}` : '',
+          docs: part,
+        });
+      }
+    }
+    return out;
+  }, [shown]);
+  const showAll = searching || shown.length <= BLOCK;
+  const isOpen = (key: string, docsInBlock: WhsDocument[]) => showAll || open.has(key) || docsInBlock.some(d => d.id === panel.openId);
+  const toggle = (key: string) => setOpen(prev => { const n = new Set(prev); if (n.has(key)) n.delete(key); else n.add(key); return n; });
 
   const panel = useListPanel(() => shown.map(d => d.id), () => void load());
   const siteName = (id: string | null) => (id ? sites.find(s => s.id === id)?.name.replace(/ (Yard|Workshop|Site)$/, '') ?? id : 'All sites');
@@ -139,6 +165,13 @@ export function DocumentsPage({ user }: { user: WhsUser }) {
           ))}
         </div>
 
+        {!showAll && blocks.length > 1 && (
+          <div className="flex gap-3 text-[13px]">
+            <button type="button" onClick={() => setOpen(new Set(blocks.map(b => b.key)))} className="bg-transparent border-0 p-0 text-finlay font-semibold cursor-pointer">Open all groups</button>
+            <button type="button" onClick={() => setOpen(new Set())} className="bg-transparent border-0 p-0 text-finlay font-semibold cursor-pointer">Close all groups</button>
+          </div>
+        )}
+
         <div className="bg-white border border-line rounded-xl overflow-x-auto">
           <table className="w-full border-collapse text-sm min-w-[980px]">
             <thead>
@@ -147,29 +180,47 @@ export function DocumentsPage({ user }: { user: WhsUser }) {
                 <th scope="col" className={th}>Applies to</th><th scope="col" className={th}>Owner</th><th scope="col" className={th}>Review by</th><th scope="col" className={`${th} pr-4`}>File</th>
               </tr>
             </thead>
-            <tbody>
-              {shown.map(d => {
-                const cur = currentVersion(versionsOf.get(d.id) ?? []);
-                const p = reviewPill(d);
-                return (
-                  <tr key={d.id} onClick={e => rowOpens(e, () => panel.setOpenId(d.id))} aria-selected={panel.openId === d.id} className={rowCls(d.id)}>
-                    <td className={`${td} pl-4 whitespace-nowrap font-semibold`}>
-                      <a href={hrefFor({ name: 'document', id: d.id })} onClick={e => linkOpens(e, () => panel.setOpenId(d.id))}>{d.doc_no || '—'}</a>
-                    </td>
-                    <td className={td}>
-                      <span className="block font-medium">{d.title}</span>
-                      {d.machine_model && <span className="block text-[13px] text-muted mt-0.5">Model {d.machine_model}</span>}
-                    </td>
-                    <td className={`${td} whitespace-nowrap`}><Pill tone="grey">{docTypeLabel(d.doc_type)}</Pill></td>
-                    <td className={`${td} whitespace-nowrap text-muted`}>{cur?.version || '—'}</td>
-                    <td className={`${td} whitespace-nowrap`}>{siteName(d.site_id)}</td>
-                    <td className={`${td} whitespace-nowrap text-muted`}>{d.owner_name}</td>
-                    <td className={`${td} whitespace-nowrap`}><Pill tone={p.tone}>{p.label}</Pill></td>
-                    <td className={`${td} pr-4 whitespace-nowrap text-[13px] ${cur ? '' : 'text-finlay font-semibold'}`}>{cur ? fileKind(cur.file_name) : 'No file'}</td>
-                  </tr>
-                );
-              })}
-            </tbody>
+            {blocks.map(b => {
+              const expanded = isOpen(b.key, b.docs);
+              return (
+                <tbody key={b.key}>
+                  {!showAll && (
+                    <tr className="bg-[#F6F4F0]">
+                      <td colSpan={8} className="p-0 border-b border-line-soft">
+                        <button type="button" aria-expanded={expanded} onClick={() => toggle(b.key)}
+                          className="w-full min-h-11 px-4 flex items-center gap-2 bg-transparent border-0 text-left cursor-pointer text-sm">
+                          <span aria-hidden className="text-muted w-3">{expanded ? '▾' : '▸'}</span>
+                          <span className="font-bold">{b.label}</span>
+                          {b.range && <span className="text-muted">{b.range}</span>}
+                          <span className="text-muted ml-auto">{b.docs.length} {b.docs.length === 1 ? 'document' : 'documents'}</span>
+                        </button>
+                      </td>
+                    </tr>
+                  )}
+                  {expanded && b.docs.map(d => {
+                    const cur = currentVersion(versionsOf.get(d.id) ?? []);
+                    const p = reviewPill(d);
+                    return (
+                      <tr key={d.id} onClick={e => rowOpens(e, () => panel.setOpenId(d.id))} aria-selected={panel.openId === d.id} className={rowCls(d.id)}>
+                        <td className={`${td} pl-4 whitespace-nowrap font-semibold`}>
+                          <a href={hrefFor({ name: 'document', id: d.id })} onClick={e => linkOpens(e, () => panel.setOpenId(d.id))}>{d.doc_no || '—'}</a>
+                        </td>
+                        <td className={td}>
+                          <span className="block font-medium">{d.title}</span>
+                          {d.machine_model && <span className="block text-[13px] text-muted mt-0.5">Model {d.machine_model}</span>}
+                        </td>
+                        <td className={`${td} whitespace-nowrap`}><Pill tone="grey">{docTypeLabel(d.doc_type)}</Pill></td>
+                        <td className={`${td} whitespace-nowrap text-muted`}>{cur?.version || '—'}</td>
+                        <td className={`${td} whitespace-nowrap`}>{siteName(d.site_id)}</td>
+                        <td className={`${td} whitespace-nowrap text-muted`}>{d.owner_name}</td>
+                        <td className={`${td} whitespace-nowrap`}><Pill tone={p.tone}>{p.label}</Pill></td>
+                        <td className={`${td} pr-4 whitespace-nowrap text-[13px] ${cur ? '' : 'text-finlay font-semibold'}`}>{cur ? fileKind(cur.file_name) : 'No file'}</td>
+                      </tr>
+                    );
+                  })}
+                </tbody>
+              );
+            })}
           </table>
           {loaded && shown.length === 0 && (
             <p className="m-0 px-4 py-8 text-sm text-muted text-center">

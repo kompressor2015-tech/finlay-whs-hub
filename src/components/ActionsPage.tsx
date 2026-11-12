@@ -173,7 +173,7 @@ export function ActionsPage({ user }: { user: WhsUser }) {
     </div>
     {openAction && (
       <SidePanel label="Action" fullHref={hrefFor({ name: 'module', id: 'actions' })} onClose={panel.close}>
-        <ActionDetail key={openAction.id} action={openAction} user={user} sourceHref={sourceHref(openAction)} onChanged={() => void load()} />
+        <ActionDetail key={openAction.id} action={openAction} user={user} sourceHref={sourceHref(openAction)} onChanged={() => void load()} onDeleted={() => { panel.close(); void load(); }} />
       </SidePanel>
     )}
     </div>
