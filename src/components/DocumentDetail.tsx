@@ -1,11 +1,12 @@
 import { useEffect, useState, type FormEvent } from 'react';
 import type { WhsUser } from '../services/auth.ts';
-import { deleteDocument, getDocument, markReviewed, openDocumentFile, updateDocument, updateVersion, uploadVersion } from '../services/documents.ts';
+import { addReview, deleteDocument, deleteReview, getDocument, listReviews, openDocumentFile, updateDocument, updateVersion, uploadVersion } from '../services/documents.ts';
 import { hrefFor } from '../hooks/useRoute.ts';
 import { useSiteScope } from '../hooks/useSiteScope.tsx';
 import { isOfficeAccess } from '../utils/access.ts';
 import { formatDay, formatWhen } from '../utils/dates.ts';
-import { DOC_TYPES, currentVersion, docTypeLabel, fileKind, reviewBy, reviewPill, type DocType, type DocVersion, type WhsDocument } from '../utils/documents.ts';
+import { DOC_TYPES, today, currentVersion, docTypeLabel, fileKind, reviewBy, reviewPill, type DocReview, type DocType, type DocVersion, type WhsDocument } from '../utils/documents.ts';
+import { askConfirm } from './ConfirmHost.tsx';
 import { CategoryField } from './CategoryField.tsx';
 import { ErrorNote, Field, inputClass, textareaClass } from './Form.tsx';
 import { Pill } from './Pill.tsx';
@@ -27,6 +28,9 @@ export function DocumentDetail({ id, user, embedded, onChanged }: { id: string; 
   const [versionLabel, setVersionLabel] = useState('');
   const [issuedOn, setIssuedOn] = useState('');
   const [editing, setEditing] = useState<{ id: string; version: string; issued_on: string } | null>(null);
+  const [reviews, setReviews] = useState<DocReview[]>([]);
+  const [reviewing, setReviewing] = useState<{ on: string; note: string } | null>(null);
+  const [alsoReview, setAlsoReview] = useState(true);
   const [confirmDelete, setConfirmDelete] = useState(false);
   const [deleted, setDeleted] = useState(false);
 
@@ -39,13 +43,15 @@ export function DocumentDetail({ id, user, embedded, onChanged }: { id: string; 
     setDoc(res.data.doc);
     setForm(res.data.doc);
     setVersions(res.data.versions);
+    const rv = await listReviews(id);
+    setReviews(rv.data ?? []);
   }
   useEffect(() => {
     void load();
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [id]);
 
-  const dirty = !!doc && !!form && (['doc_type', 'doc_no', 'title', 'site_id', 'machine_model', 'category', 'owner_name', 'review_months', 'reviewed_on', 'notes'] as const).some(k => doc[k] !== form[k]);
+  const dirty = !!doc && !!form && (['doc_type', 'doc_no', 'title', 'site_id', 'machine_model', 'category', 'owner_name', 'review_months', 'notes'] as const).some(k => doc[k] !== form[k]);
 
   async function save(e?: FormEvent) {
     e?.preventDefault();
@@ -55,7 +61,7 @@ export function DocumentDetail({ id, user, embedded, onChanged }: { id: string; 
     setError(null);
     const res = await updateDocument(form.id, {
       doc_type: form.doc_type, doc_no: form.doc_no.trim(), title: form.title.trim(), site_id: form.site_id, machine_model: form.machine_model.trim(), category: form.category.trim(),
-      owner_name: form.owner_name.trim(), review_months: Math.max(1, Math.round(Number(form.review_months) || 12)), reviewed_on: form.reviewed_on || null, notes: form.notes,
+      owner_name: form.owner_name.trim(), review_months: Math.max(1, Math.round(Number(form.review_months) || 12)), notes: form.notes,
     });
     setBusy(false);
     if (res.error) return setError(res.error);
@@ -63,11 +69,23 @@ export function DocumentDetail({ id, user, embedded, onChanged }: { id: string; 
     onChanged?.();
   }
 
-  async function reviewedToday() {
-    if (!doc) return;
+  async function saveReview() {
+    if (!doc || !reviewing) return;
+    if (!reviewing.on) return setError('Pick the date it was reviewed.');
     setBusy(true);
     setError(null);
-    const res = await markReviewed(doc.id);
+    const res = await addReview(doc.id, reviewing.on, reviewing.note.trim());
+    setBusy(false);
+    if (res.error) return setError(res.error);
+    setReviewing(null);
+    await load();
+    onChanged?.();
+  }
+
+  async function removeReview(r: DocReview) {
+    if (!(await askConfirm({ title: `Remove the review on ${formatDay(r.reviewed_on)}?`, body: 'Use this only for one entered by mistake.', confirmLabel: 'Remove', danger: true }))) return;
+    setBusy(true);
+    const res = await deleteReview(r.id);
     setBusy(false);
     if (res.error) return setError(res.error);
     await load();
@@ -80,6 +98,10 @@ export function DocumentDetail({ id, user, embedded, onChanged }: { id: string; 
     setBusy(true);
     setError(null);
     const res = await uploadVersion(doc.id, file, versionLabel.trim(), issuedOn || null);
+    if (!res.error && alsoReview) {
+      const rv = await addReview(doc.id, issuedOn || today(), versionLabel.trim() ? `New version ${versionLabel.trim()} issued` : 'New version issued');
+      if (rv.error) setError(rv.error);
+    }
     setBusy(false);
     if (res.error) return setError(res.error);
     setFile(null);
@@ -137,8 +159,17 @@ export function DocumentDetail({ id, user, embedded, onChanged }: { id: string; 
 
       <div className="flex flex-wrap gap-2">
         {current && <button type="button" onClick={() => void openDocumentFile(current.file_path)} className={primary}>Open the file</button>}
-        {office && <button type="button" onClick={() => void reviewedToday()} disabled={busy} className={btn}>Reviewed today</button>}
+        {office && <button type="button" onClick={() => setReviewing(reviewing ? null : { on: today(), note: '' })} disabled={busy} className={btn}>Record a review</button>}
       </div>
+
+      {office && reviewing && (
+        <div className="flex flex-wrap gap-2 items-end border border-line rounded-xl bg-white p-3.5">
+          <Field label="Reviewed on" htmlFor="rv-on"><input id="rv-on" type="date" value={reviewing.on} max={today()} onChange={e => setReviewing({ ...reviewing, on: e.target.value })} className={inputClass} /></Field>
+          <Field label="Note" optional htmlFor="rv-note"><input id="rv-note" value={reviewing.note} onChange={e => setReviewing({ ...reviewing, note: e.target.value })} placeholder="No changes needed" className={`${inputClass} w-56`} /></Field>
+          <button type="button" disabled={busy} onClick={() => void saveReview()} className={primary}>Save review</button>
+          <button type="button" onClick={() => setReviewing(null)} className={btn}>Cancel</button>
+        </div>
+      )}
 
       <dl className="m-0 grid grid-cols-[120px_1fr] gap-x-3 gap-y-2 text-sm">
         <dt className="text-muted">Owner</dt><dd className="m-0">{doc.owner_name || '—'}</dd>
@@ -188,10 +219,28 @@ export function DocumentDetail({ id, user, embedded, onChanged }: { id: string; 
             <Field label="Issue date" optional htmlFor="doc-iss">
               <input id="doc-iss" type="date" value={issuedOn} onChange={e => setIssuedOn(e.target.value)} className={inputClass} />
             </Field>
+            <label className="flex items-center gap-2 text-sm basis-full"><input type="checkbox" checked={alsoReview} onChange={e => setAlsoReview(e.target.checked)} /> Also record this as a review</label>
             <button type="submit" disabled={!file || busy} className={primary}>Upload</button>
             <p className="m-0 basis-full text-xs text-muted">Older versions are kept. Staff are always given the newest.</p>
           </form>
         )}
+      </section>
+
+      <section aria-label="Review history">
+        <h2 className="m-0 mb-2 text-[13px] font-semibold text-muted">Review history</h2>
+        <div className="border border-line rounded-xl bg-white">
+          {reviews.length === 0 && <p className="m-0 px-3.5 py-3 text-sm text-muted">Not reviewed yet. Use Record a review.</p>}
+          {reviews.map((r, i) => (
+            <div key={r.id} className={`flex items-center gap-3 px-3.5 py-2.5 text-sm ${i ? 'border-t border-line-soft' : ''}`}>
+              <span className="flex-1 min-w-0">
+                <span className="font-semibold">{formatDay(r.reviewed_on)}</span>
+                <span className="text-muted"> · {r.reviewed_by_name || 'Unknown'}</span>
+                {r.note && <span className="block text-xs text-muted">{r.note}</span>}
+              </span>
+              {user.access === 'admin' && <button type="button" disabled={busy} onClick={() => void removeReview(r)} className={btn}>Remove</button>}
+            </div>
+          ))}
+        </div>
       </section>
 
       {office && (
@@ -218,9 +267,6 @@ export function DocumentDetail({ id, user, embedded, onChanged }: { id: string; 
               <CategoryField id="d-cat" value={form.category} onChange={v => set('category', v)} />
             </Field>
             <Field label="Owner" htmlFor="d-owner"><input id="d-owner" value={form.owner_name} onChange={e => set('owner_name', e.target.value)} className={inputClass} /></Field>
-            <Field label="Last reviewed" optional htmlFor="d-rev">
-              <input id="d-rev" type="date" value={form.reviewed_on ?? ''} onChange={e => set('reviewed_on', e.target.value || null)} className={inputClass} />
-            </Field>
             <Field label="Review every (months)" htmlFor="d-months"><input id="d-months" type="number" min={1} value={form.review_months} onChange={e => set('review_months', Number(e.target.value))} className={inputClass} /></Field>
           </div>
           <Field label="Notes" optional htmlFor="d-notes"><textarea id="d-notes" value={form.notes} onChange={e => set('notes', e.target.value)} rows={2} className={textareaClass} /></Field>
