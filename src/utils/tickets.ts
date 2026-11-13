@@ -22,7 +22,8 @@ export interface Ticket {
 export const TICKET_PRESETS: { name: string; months: number | null; note: string }[] = [
   { name: 'Provide First Aid', months: 36, note: 'Renew every 3 years' },
   { name: 'CPR refresher', months: 12, note: 'Every year' },
-  { name: 'Fire warden', months: 12, note: 'Refresher interval to confirm' },
+  { name: 'Fire warden', months: 6, note: 'Refresher at least every 6 months (AS 3745)' },
+  { name: 'Fire extinguisher training', months: 6, note: 'Company online course, every 6 months' },
   { name: 'White card', months: null, note: 'General construction induction, no expiry' },
   { name: 'Forklift licence', months: null, note: 'Enter the expiry from the licence' },
   { name: 'Working at heights', months: null, note: 'Enter the expiry from the card' },
