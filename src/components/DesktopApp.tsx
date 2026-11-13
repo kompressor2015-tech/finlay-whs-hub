@@ -34,7 +34,7 @@ const NEW_MENU = [
 const GROUPS: { label: string; ids: string[] }[] = [
   { label: 'Do', ids: ['incidents', 'hazards', 'actions', 'inspections', 'recurring'] },
   { label: 'Registers', ids: ['chemicals', 'plant', 'documents'] },
-  { label: 'People', ids: ['people'] },
+  { label: 'People & site', ids: ['people', 'training'] },
 ];
 
 export function DesktopApp({ user, data, route, onSignOut, onPhoneLayout }: Props) {

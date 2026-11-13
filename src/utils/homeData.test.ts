@@ -9,7 +9,7 @@ test('the real home screen shows dashes, not made-up numbers, until modules exis
   assert.equal(home.attention.length, 0);
 });
 
-test('training and tickets is not in the menu for now', () => {
-  assert.equal(MODULES.some(m => /training|ticket/i.test(m.label)), false);
+test('training and site cover is in the menu and module ids are unique', () => {
+  assert.equal(MODULES.some(m => m.id === 'training'), true);
   assert.equal(new Set(MODULES.map(m => m.id)).size, MODULES.length);
 });

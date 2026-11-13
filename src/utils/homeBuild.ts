@@ -11,6 +11,9 @@ import { buildCharts } from './homeCharts.ts';
 import { buildBoard } from './homeBoard.ts';
 import { documentsComing, withDocuments } from './homeDocuments.ts';
 import type { WhsDocument } from './documents.ts';
+import { withTickets } from './homeTickets.ts';
+import type { Person } from './incidentFile.ts';
+import type { Ticket } from './tickets.ts';
 import { recurringComing, withRecurring } from './homeRecurring.ts';
 import type { CheckLogLine, RecurringCheck } from './recurringChecks.ts';
 import { actionsInScope, inScope, type ScopeSite } from './siteScope.ts';
@@ -30,6 +33,8 @@ export interface HomeRaw {
   /** null when the documents table is not there yet */
   documents?: WhsDocument[] | null;
   /** null when the recurring checks tables are not there yet */
+  /** null when the people tickets tables are not there yet or the person cannot read them */
+  training?: { people: Person[]; tickets: Ticket[]; siteIds: string[] } | null;
   recurring?: { checks: RecurringCheck[]; log: CheckLogLine[]; sites: { id: string; name: string }[] } | null;
 }
 
@@ -65,6 +70,10 @@ export function buildHomeData(raw: HomeRaw, me: string, site: ScopeSite | null, 
   const rec = raw.recurring;
   const recChecks = rec ? rec.checks.filter(c => !site || c.site_id === site.id || c.site_id === site.depotSiteId) : [];
   const withStep7 = rec ? withRecurring(withStep5, recChecks, rec.log, now) : withStep5;
+  const tr = raw.training;
+  const trPeople = tr ? tr.people.filter(p => !site || !p.site_id || p.site_id === site.id || p.site_id === site.depotSiteId) : [];
+  const trSites = tr ? tr.siteIds.filter(id => !site || id === site.id || id === site.depotSiteId) : [];
+  const withStep8 = tr ? withTickets(withStep7, trPeople, tr.tickets, trSites, now) : withStep7;
   const coming = [...board.coming, ...documentsComing(docs, now), ...(rec ? recurringComing(recChecks, rec.log, rec.sites, now) : [])].sort((a, b) => a.day.localeCompare(b.day)).slice(0, 5);
-  return { ...withStep7, charts, board: { ...board, coming } };
+  return { ...withStep8, charts, board: { ...board, coming } };
 }
