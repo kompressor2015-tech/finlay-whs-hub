@@ -2,7 +2,7 @@
 
 import { supabase } from './supabase.ts';
 
-export type FileBucket = 'whs-incident-files' | 'whs-claim-files' | 'whs-check-files';
+export type FileBucket = 'whs-incident-files' | 'whs-claim-files' | 'whs-check-files' | 'whs-training-files';
 
 export async function uploadFile(bucket: FileBucket, folder: string, file: File): Promise<{ path?: string; error?: string }> {
   const safe = file.name.replace(/[^A-Za-z0-9._-]+/g, '_').slice(-80);

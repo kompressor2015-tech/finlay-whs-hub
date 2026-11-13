@@ -29,6 +29,12 @@ export interface Person {
   start_date: string | null;
   notes: string;
   active: boolean;
+  is_first_aider: boolean;
+  is_fire_warden: boolean;
+  warden_role: '' | 'chief' | 'warden';
+  left_on: string | null;
+  archived_at: string | null;
+  archived_by_name: string;
   created_at: string;
   updated_at: string;
 }

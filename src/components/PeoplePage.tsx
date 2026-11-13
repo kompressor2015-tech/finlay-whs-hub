@@ -2,6 +2,8 @@ import { useCallback, useEffect, useMemo, useState } from 'react';
 import type { WhsUser } from '../services/auth.ts';
 import { listAppointmentsFor, listCertificates, listClaims } from '../services/claims.ts';
 import { createPerson, listPeople } from '../services/incidentFile.ts';
+import { listTickets } from '../services/tickets.ts';
+import { ticketsNeedingAction, ticketState, type Ticket } from '../utils/tickets.ts';
 import { go, hrefFor } from '../hooks/useRoute.ts';
 import { claimAttention, claimStatus, daysOffWork, isOpen, isOffWork, STATES, type Certificate, type Claim, type ClaimAttention } from '../utils/claims.ts';
 import type { Person } from '../utils/incidentFile.ts';
@@ -17,15 +19,18 @@ export function PeoplePage({ user: _user }: { user: WhsUser }) {
   const [claims, setClaims] = useState<Claim[]>([]);
   const [att, setAtt] = useState<Record<string, ClaimAttention[]>>({});
   const [q, setQ] = useState('');
-  const [only, setOnly] = useState(true);
+  const [only, setOnly] = useState(false);
+  const [archived, setArchived] = useState(false);
+  const [tickets, setTickets] = useState<Ticket[]>([]);
   const [adding, setAdding] = useState(false);
   const [name, setName] = useState('');
   const [position, setPosition] = useState('');
   const [error, setError] = useState<string | null>(null);
 
   const load = useCallback(async () => {
-    const [p, c] = await Promise.all([listPeople(), listClaims()]);
-    setError(p.error ?? c.error ?? null);
+    const [p, c, tk] = await Promise.all([listPeople(), listClaims(), listTickets()]);
+    setError(p.error ?? c.error ?? tk.error ?? null);
+    setTickets(tk.data ?? []);
     setPeople(p.data ?? []);
     const list = c.data ?? [];
     setClaims(list);
@@ -41,19 +46,28 @@ export function PeoplePage({ user: _user }: { user: WhsUser }) {
     const t = q.trim().toLowerCase();
     return people
       .map(p => ({ p, mine: claims.filter(c => c.person_id === p.id) }))
-      .filter(r => (!only || r.mine.length > 0) && (!t || r.p.name.toLowerCase().includes(t) || r.p.position.toLowerCase().includes(t)))
+      .filter(r => (archived ? !r.p.active : r.p.active) && (!only || r.mine.length > 0) && (!t || r.p.name.toLowerCase().includes(t) || r.p.position.toLowerCase().includes(t)))
       .sort((a, b) => {
         const score = (m: Claim[]) => m.reduce((s, c) => s + (att[c.id] ?? []).reduce((n, x) => n + (x.tone === 'red' ? 100 : x.tone === 'amber' ? 10 : 1), 0), 0);
         return score(b.mine) - score(a.mine) || a.p.name.localeCompare(b.p.name);
       });
-  }, [people, claims, att, q, only]);
+  }, [people, claims, att, q, only, archived]);
+
+  const needs = useMemo(() => {
+    const m = new Map<string, { red: number; amber: number }>();
+    for (const p of people) {
+      const list = ticketsNeedingAction(tickets.filter(t => t.person_id === p.id));
+      if (list.length) m.set(p.id, { red: list.filter(t => ticketState(t) === 'expired').length, amber: list.filter(t => ticketState(t) === 'due_soon').length });
+    }
+    return m;
+  }, [people, tickets]);
 
   return (
     <div className="flex flex-col gap-4">
       <div className="flex flex-wrap items-end justify-between gap-3">
         <div>
           <h1 className="m-0 text-2xl font-bold">People &amp; claims</h1>
-          <p className="mt-1.5 mb-0 text-muted text-[15px]">Each worker&apos;s incidents, claim, certificates, return to work and correspondence. Visible to the WHS officer and admins only.</p>
+          <p className="mt-1.5 mb-0 text-muted text-[15px]">Each worker&apos;s incidents, claim, tickets and training, certificates, return to work and correspondence. Visible to the WHS officer and admins only.</p>
         </div>
         <button type="button" className="min-h-10 px-4 rounded-lg border border-[#D6D2CC] bg-white text-[13px] font-semibold cursor-pointer" onClick={() => setAdding(!adding)}>+ Add a person</button>
       </div>
@@ -72,12 +86,19 @@ export function PeoplePage({ user: _user }: { user: WhsUser }) {
       <div className="flex flex-wrap items-center gap-3">
         <input aria-label="Search people" placeholder="Search by name or position" className={`${inputClass} max-w-xs`} value={q} onChange={e => setQ(e.target.value)} />
         <label className="flex items-center gap-2 text-sm cursor-pointer"><input type="checkbox" className="w-5 h-5" checked={only} onChange={e => setOnly(e.target.checked)} /> Only people with a claim</label>
+        <label className="flex items-center gap-2 text-sm cursor-pointer"><input type="checkbox" className="w-5 h-5" checked={archived} onChange={e => setArchived(e.target.checked)} /> Archived people ({people.filter(p => !p.active).length})</label>
       </div>
-      {rows.length === 0 ? <p className={`${card} m-0 px-5 py-6 text-sm text-muted`}>{only ? 'No claims yet. Start one from the People tab of an incident.' : 'Nobody found.'}</p> : (
+      {rows.length === 0 ? <p className={`${card} m-0 px-5 py-6 text-sm text-muted`}>{archived ? 'No archived people.' : only ? 'No claims yet. Start one from the People tab of an incident, or untick "Only people with a claim" to see everyone.' : 'Nobody found.'}</p> : (
         <ul className={`${card} list-none m-0 p-0 divide-y divide-line-soft`}>
           {rows.map(({ p, mine }) => (
             <li key={p.id} className="px-4.5 py-3 flex flex-wrap items-center gap-x-4 gap-y-1.5">
               <a href={hrefFor({ name: 'person', id: p.id })} className="min-w-44 font-semibold">{p.name}<span className="block text-[13px] font-normal text-muted">{p.position || 'No position'}</span></a>
+              <span className="flex flex-wrap gap-1.5">
+                {p.is_first_aider && <Pill tone="blue">First aider</Pill>}
+                {p.is_fire_warden && <Pill tone="blue">Fire warden</Pill>}
+                {needs.get(p.id)?.red ? <Pill tone="red">{needs.get(p.id)?.red} ticket{needs.get(p.id)?.red === 1 ? '' : 's'} expired</Pill> : null}
+                {needs.get(p.id)?.amber ? <Pill tone="amber">{needs.get(p.id)?.amber} due soon</Pill> : null}
+              </span>
               <div className="flex flex-wrap items-center gap-2 flex-1 min-w-0">
                 {mine.map(c => {
                   const st = claimStatus(c.status);

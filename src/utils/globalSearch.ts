@@ -22,7 +22,7 @@ export const SEARCH_GROUPS = ['Incidents', 'Hazards', 'Actions', 'Chemicals', 'D
 const PER_GROUP = 5;
 
 /** `people` is only passed for the WHS officer and admins, who are the ones who can open a person's file. */
-export function searchAll(raw: HomeRaw, query: string, site: ScopeSite | null, people: { id: string; name: string; position: string }[] = []): SearchHit[] {
+export function searchAll(raw: HomeRaw, query: string, site: ScopeSite | null, people: { id: string; name: string; position: string; active?: boolean }[] = []): SearchHit[] {
   if (query.trim().length < 2) return [];
   const hits: SearchHit[] = [];
   const add = (group: string, items: SearchHit[]) => hits.push(...items.slice(0, PER_GROUP));
@@ -58,7 +58,7 @@ export function searchAll(raw: HomeRaw, query: string, site: ScopeSite | null, p
 
   add('People', people
     .filter(p => looseMatch(query, [p.name, p.position]))
-    .map(p => ({ id: p.id, group: 'People', title: p.name, detail: p.position || 'Worker file: incidents and claims', href: `#/people/${p.id}` })));
+    .map(p => ({ id: p.id, group: 'People', title: p.name, detail: `${p.active === false ? 'Archived · ' : ''}${p.position || 'Worker file: incidents and claims'}`, href: `#/people/${p.id}` })));
 
   return hits;
 }
