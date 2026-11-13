@@ -25,7 +25,7 @@ test('cover counts only active people at the site with current tickets', () => {
     person('gone', { is_first_aider: true, active: false }),
     person('other', { site_id: 's2', is_first_aider: true }),
   ];
-  const tickets = [ticket('fa1', 'Provide First Aid', '2027-06-01'), ticket('fa2', 'Provide First Aid', '2026-10-01'), ticket('fw', 'Fire warden', '2027-03-01')];
+  const tickets = [ticket('fa1', 'Provide First Aid', '2027-06-01'), ticket('fa1', 'CPR refresher', '2027-03-01'), ticket('fa2', 'Provide First Aid', '2026-10-01'), ticket('fa2', 'CPR refresher', '2027-03-01'), ticket('fw', 'Fire warden', '2027-03-01')];
   const c = coverFor('s1', people, tickets, now);
   assert.equal(c.headcount, 33);
   assert.equal(c.required, 2);
@@ -39,7 +39,7 @@ test('cover counts only active people at the site with current tickets', () => {
 
 test('a site with no people has no gaps, and a warden with no chief is flagged', () => {
   assert.deepEqual(coverFor('s9', [], [], now).gaps, []);
-  const c = coverFor('s1', [person('a', { is_first_aider: true }), person('b', { is_fire_warden: true })], [ticket('a', 'Provide First Aid', '2027-01-01'), ticket('b', 'Fire warden', '2027-01-01')], now);
+  const c = coverFor('s1', [person('a', { is_first_aider: true }), person('b', { is_fire_warden: true })], [ticket('a', 'Provide First Aid', '2027-01-01'), ticket('a', 'CPR refresher', '2027-01-01'), ticket('b', 'Fire warden', '2027-01-01')], now);
   assert.deepEqual(c.gaps, ['No chief warden named']);
 });
 
@@ -49,4 +49,10 @@ test('home shows expired, due soon and short sites', () => {
   const home = withTickets(emptyHomeData(), people, tickets, ['s1'], now);
   assert.deepEqual(home.attention.map(a => a.id).sort(), ['cover-short', 'tickets-expired', 'tickets-soon']);
   assert.equal(home.navCounts.training, 3);
+});
+
+test('a first aider with a lapsed CPR does not count', () => {
+  const c = coverFor('s1', [person('a', { is_first_aider: true })], [ticket('a', 'Provide First Aid', '2027-01-01'), ticket('a', 'CPR refresher', '2026-10-01')], now);
+  assert.equal(c.validFirstAiders, 0);
+  assert.ok(c.gaps.some(g => g.includes('without current CPR')));
 });
