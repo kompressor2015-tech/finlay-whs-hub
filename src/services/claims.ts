@@ -63,6 +63,12 @@ async function many<T>(table: string, claimId: string, order: string, ascending 
 
 // Certificates -------------------------------------------------------------------------------
 
+export async function listCertificatesFor(claimIds: string[]): Promise<Result<Certificate[]>> {
+  if (!claimIds.length) return { data: [] };
+  const { data, error } = await supabase.from('whs_claim_certificates').select('*').in('claim_id', claimIds).order('from_date', { ascending: false });
+  return error ? { error: friendly(error.message) } : { data: (data ?? []) as Certificate[] };
+}
+
 export const listCertificates = (claimId: string) => many<Certificate>('whs_claim_certificates', claimId, 'from_date', false);
 
 export async function addCertificate(

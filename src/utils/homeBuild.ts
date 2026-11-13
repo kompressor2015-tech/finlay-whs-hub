@@ -11,6 +11,8 @@ import { buildCharts } from './homeCharts.ts';
 import { buildBoard } from './homeBoard.ts';
 import { documentsComing, withDocuments } from './homeDocuments.ts';
 import type { WhsDocument } from './documents.ts';
+import { withClaims } from './homeClaims.ts';
+import type { Appointment, Certificate, Claim } from './claims.ts';
 import { withTickets } from './homeTickets.ts';
 import type { Person } from './incidentFile.ts';
 import type { Ticket } from './tickets.ts';
@@ -34,6 +36,8 @@ export interface HomeRaw {
   documents?: WhsDocument[] | null;
   /** null when the recurring checks tables are not there yet */
   /** null when the people tickets tables are not there yet or the person cannot read them */
+  /** Claims with their certificates and appointments; empty for anyone but the WHS officer and admins */
+  claims?: { claims: Claim[]; certs: Certificate[]; appts: Appointment[]; names: [string, string][] } | null;
   training?: { people: Person[]; tickets: Ticket[]; siteIds: string[] } | null;
   recurring?: { checks: RecurringCheck[]; log: CheckLogLine[]; sites: { id: string; name: string }[] } | null;
 }
@@ -74,6 +78,9 @@ export function buildHomeData(raw: HomeRaw, me: string, site: ScopeSite | null, 
   const trPeople = tr ? tr.people.filter(p => !site || !p.site_id || p.site_id === site.id || p.site_id === site.depotSiteId) : [];
   const trSites = tr ? tr.siteIds.filter(id => !site || id === site.id || id === site.depotSiteId) : [];
   const withStep8 = tr ? withTickets(withStep7, trPeople, tr.tickets, trSites, now) : withStep7;
+  const cl = raw.claims;
+  const inc = new Set(incidents.map(i => i.id));
+  const withStep9 = cl && cl.claims.length ? withClaims(withStep8, cl.claims.filter(c => inc.has(c.incident_id)), cl.certs, cl.appts, new Map(cl.names), now) : withStep8;
   const coming = [...board.coming, ...documentsComing(docs, now), ...(rec ? recurringComing(recChecks, rec.log, rec.sites, now) : [])].sort((a, b) => a.day.localeCompare(b.day)).slice(0, 5);
-  return { ...withStep8, charts, board: { ...board, coming } };
+  return { ...withStep9, charts, board: { ...board, coming } };
 }
