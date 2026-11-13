@@ -44,7 +44,7 @@ export function IncidentPeopleTab({ incident, user, people, claims, certs, appoi
 
   const loadStaff = useCallback(async () => {
     const res = await listPeople();
-    setStaff(res.data ?? []);
+    setStaff((res.data ?? []).filter(p => p.active));
   }, []);
   useEffect(() => {
     void loadStaff();
