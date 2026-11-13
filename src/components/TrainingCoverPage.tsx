@@ -62,6 +62,7 @@ export function TrainingCoverPage({ user: _user }: { user: WhsUser }) {
       {extra && <Pill tone="blue">{extra}</Pill>}
       {h.ticket ? <Pill tone={ticketPill(h.ticket).tone}>{ticketPill(h.ticket).label}</Pill> : <Pill tone="red">No ticket recorded</Pill>}
       {h.ticket?.expires_on && <span className="text-xs text-muted">to {formatDay(h.ticket.expires_on)}</span>}
+      {h.cpr !== undefined && (h.cpr ? <><span className="text-xs text-muted">CPR</span><Pill tone={ticketPill(h.cpr).tone}>{ticketPill(h.cpr).label}</Pill></> : <><span className="text-xs text-muted">CPR</span><Pill tone="red">None recorded</Pill></>)}
     </li>
   );
 
@@ -132,7 +133,7 @@ export function TrainingCoverPage({ user: _user }: { user: WhsUser }) {
         </section>
       )}
 
-      <p className="m-0 text-xs text-muted">How cover is worked out: one first aider for every {WORKERS_PER_FIRST_AIDER} workers (Finlay sites are treated as high risk; the state first aid codes give 1 in 50 for low risk and 1 in 10 for remote high risk). Only people at the site whose first aid ticket has not expired count. Headcount is the active people whose site is set to that site. The fire warden refresher interval is still to be confirmed.</p>
+      <p className="m-0 text-xs text-muted">How cover is worked out: one first aider for every {WORKERS_PER_FIRST_AIDER} workers (Finlay sites are treated as high risk; the state first aid codes give 1 in 50 for low risk and 1 in 10 for remote high risk). Only people at the site whose first aid ticket and CPR (renewed every 12 months) have not expired count. Headcount is the active people whose site is set to that site. The fire warden refresher interval is still to be confirmed.</p>
     </div>
   );
 }
