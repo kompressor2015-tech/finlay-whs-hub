@@ -11,6 +11,8 @@ import { buildCharts } from './homeCharts.ts';
 import { buildBoard } from './homeBoard.ts';
 import { documentsComing, withDocuments } from './homeDocuments.ts';
 import type { WhsDocument } from './documents.ts';
+import { recurringComing, withRecurring } from './homeRecurring.ts';
+import type { CheckLogLine, RecurringCheck } from './recurringChecks.ts';
 import { actionsInScope, inScope, type ScopeSite } from './siteScope.ts';
 import type { Check, Checklist, PlantFlag } from './checks.ts';
 import type { Chemical, Sds, Site, Stock } from './chemicals.ts';
@@ -27,6 +29,8 @@ export interface HomeRaw {
   stocktakes: Pick<Stocktake, 'id' | 'site_id' | 'done_at' | 'authorised_at'>[];
   /** null when the documents table is not there yet */
   documents?: WhsDocument[] | null;
+  /** null when the recurring checks tables are not there yet */
+  recurring?: { checks: RecurringCheck[]; log: CheckLogLine[]; sites: { id: string; name: string }[] } | null;
 }
 
 export function buildHomeData(raw: HomeRaw, me: string, site: ScopeSite | null, now: Date = new Date()): HomeData {
@@ -58,6 +62,9 @@ export function buildHomeData(raw: HomeRaw, me: string, site: ScopeSite | null, 
   // A document applies to every site unless it was set to one site
   const docs = (raw.documents ?? []).filter(d => !site || !d.site_id || d.site_id === site.id);
   const withStep5 = raw.documents ? withDocuments(withStep4, docs, now) : withStep4;
-  const coming = [...board.coming, ...documentsComing(docs, now)].sort((a, b) => a.day.localeCompare(b.day)).slice(0, 5);
-  return { ...withStep5, charts, board: { ...board, coming } };
+  const rec = raw.recurring;
+  const recChecks = rec ? rec.checks.filter(c => !site || c.site_id === site.id || c.site_id === site.depotSiteId) : [];
+  const withStep7 = rec ? withRecurring(withStep5, recChecks, rec.log, now) : withStep5;
+  const coming = [...board.coming, ...documentsComing(docs, now), ...(rec ? recurringComing(recChecks, rec.log, rec.sites, now) : [])].sort((a, b) => a.day.localeCompare(b.day)).slice(0, 5);
+  return { ...withStep7, charts, board: { ...board, coming } };
 }
