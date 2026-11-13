@@ -49,7 +49,7 @@ export function isOfficeAccess(access: WhsAccess): boolean {
 }
 
 /** Modules that only office roles open (field staff report and check from the phone). */
-const OFFICE_ONLY = new Set(['reports', 'risk', 'contractors']);
+const OFFICE_ONLY = new Set(['reports', 'risk', 'contractors', 'recurring']);
 
 /** Injury management (claims, certificates, doctors) is for the WHS officer and admins only. */
 const OFFICER_ONLY = new Set(['people', 'sites']);

@@ -54,14 +54,14 @@ export function linkOpens(e: MouseEvent, open: () => void) {
   open();
 }
 
-export function SidePanel({ label, fullHref, onClose, children }: { label: string; fullHref: string; onClose: () => void; children: ReactNode }) {
+export function SidePanel({ label, fullHref, onClose, children }: { label: string; fullHref?: string; onClose: () => void; children: ReactNode }) {
   return (
     <aside
       aria-label={label}
       className="fixed inset-y-0 right-0 z-30 w-[min(560px,100vw)] bg-white border-l border-line shadow-2xl flex flex-col xl:sticky xl:top-4 xl:inset-auto xl:z-auto xl:shadow-none xl:w-[520px] xl:flex-none xl:h-[calc(100vh-2rem)] xl:border xl:rounded-xl print:hidden"
     >
       <div className="flex items-center gap-3 px-4 py-2.5 border-b border-line-soft">
-        <a href={fullHref} className="text-[13px] font-semibold text-ink">Open full page</a>
+        {fullHref && <a href={fullHref} className="text-[13px] font-semibold text-ink">Open full page</a>}
         <span className="text-xs text-muted hidden xl:inline">Up and down arrows for the next row · Esc to close</span>
         <button type="button" onClick={onClose} aria-label="Close panel" className="ml-auto w-9 h-9 rounded-lg border border-[#D6D2CC] bg-white flex items-center justify-center cursor-pointer hover:text-finlay">
           <X className="w-4 h-4" aria-hidden="true" />

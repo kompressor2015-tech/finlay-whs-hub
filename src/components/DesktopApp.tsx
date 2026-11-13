@@ -32,7 +32,7 @@ const NEW_MENU = [
 
 /** Menu groups, in order; anything not listed falls under More. */
 const GROUPS: { label: string; ids: string[] }[] = [
-  { label: 'Do', ids: ['incidents', 'hazards', 'actions', 'inspections'] },
+  { label: 'Do', ids: ['incidents', 'hazards', 'actions', 'inspections', 'recurring'] },
   { label: 'Registers', ids: ['chemicals', 'plant', 'documents'] },
   { label: 'People', ids: ['people'] },
 ];
