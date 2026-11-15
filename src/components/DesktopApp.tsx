@@ -35,6 +35,7 @@ const GROUPS: { label: string; ids: string[] }[] = [
   { label: 'Do', ids: ['incidents', 'hazards', 'actions', 'inspections', 'recurring', 'risk'] },
   { label: 'Registers', ids: ['chemicals', 'plant', 'documents'] },
   { label: 'People & site', ids: ['people', 'training'] },
+  { label: 'Report', ids: ['reports'] },
 ];
 
 export function DesktopApp({ user, data, route, onSignOut, onPhoneLayout }: Props) {

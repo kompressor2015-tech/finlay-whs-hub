@@ -21,6 +21,7 @@ import { DocumentsPage } from './DocumentsPage.tsx';
 import { DocumentDetail } from './DocumentDetail.tsx';
 import { RecurringChecksPage } from './RecurringChecksPage.tsx';
 import { TrainingCoverPage } from './TrainingCoverPage.tsx';
+import { ReportsPage } from './ReportsPage.tsx';
 import { RiskModule } from './RiskModule.tsx';
 import { SwmsPage } from './SwmsPage.tsx';
 import { SwmsFieldPage } from './SwmsFieldPage.tsx';
@@ -53,6 +54,7 @@ export function Screen({ route, user, home }: { route: Route; user: WhsUser; hom
     if (route.id === 'recurring') return <RecurringChecksPage user={user} />;
     if (route.id === 'training') return <TrainingCoverPage user={user} />;
     if (route.id === 'risk') return <RiskModule user={user} />;
+    if (route.id === 'reports') return <ReportsPage user={user} />;
     if (route.id === 'swms') return <SwmsFieldPage user={user} />;
     if (route.id === 'sites') return <SitesPage />;
     if (route.id === 'people') return <PeoplePage user={user} />;
