@@ -1,11 +1,14 @@
 import { useCallback, useEffect, useState } from 'react';
 import type { WhsUser } from '../services/auth.ts';
 import { listAccess, listClaims, logAccess, type AccessEntry } from '../services/claims.ts';
+import { StartClaim } from './IncidentPeopleTab.tsx';
+import { createClaim } from '../services/claims.ts';
+import { brisbaneDay } from '../utils/dates.ts';
 import { getPerson, listPersonIncidents, updatePerson } from '../services/incidentFile.ts';
 import { getIncident } from '../services/records.ts';
 import { hrefFor } from '../hooks/useRoute.ts';
 import { formatDay, formatWhen } from '../utils/dates.ts';
-import { claimStatus, isOpen, STATES, type Claim } from '../utils/claims.ts';
+import { claimStatus, isOpen, STATES, type Claim, type State } from '../utils/claims.ts';
 import { roleLabel, type IncidentPerson, type Person } from '../utils/incidentFile.ts';
 import { incidentStatus, incidentTypeLabel, type Incident } from '../utils/records.ts';
 import { today } from '../utils/documents.ts';
@@ -55,6 +58,15 @@ export function PersonPage({ id, user }: { id: string; user: WhsUser }) {
   useEffect(() => { void logAccess(id, null, 'Opened the person file'); }, [id]);
 
   if (!person) return error ? <ErrorNote message={error} /> : <p className="text-sm text-muted">Loading…</p>;
+
+  async function startClaim(incidentId: string, occurredAt: string, state: State, off: string) {
+    setBusy(true);
+    const r = await createClaim({ incident_id: incidentId, person_id: id, state, injury_date: brisbaneDay(occurredAt), off_work_from: off || null });
+    setBusy(false);
+    if (r.error) return setError(r.error);
+    await load();
+    if (r.data) setPicked(r.data.id);
+  }
 
   async function archive() {
     setBusy(true);
@@ -137,6 +149,11 @@ export function PersonPage({ id, user }: { id: string; user: WhsUser }) {
                   <span className="text-muted">{incident ? `${incidentTypeLabel(incident.type)} · ${formatDay(incident.occurred_at.slice(0, 10))}` : ''}</span>
                   <Pill tone={ip.role === 'injured' ? 'red' : 'grey'}>{roleLabel(ip.role)}</Pill>
                   {st && <Pill tone={st.tone}>{st.label}</Pill>}
+                  {!claim && incident && ip.role === 'injured' && (
+                    <span className="basis-full">
+                      <StartClaim incident={incident} person={ip} busy={busy} onStart={(state, off) => void startClaim(ip.incident_id, incident.occurred_at, state, off)} />
+                    </span>
+                  )}
                   {claim && <button type="button" className="ml-auto bg-transparent border-0 p-0 font-semibold underline cursor-pointer text-[13px]" onClick={() => setPicked(claim.id)}>{STATES[claim.state].scheme}: {claimStatus(claim.status).label}</button>}
                 </li>
               );
@@ -159,7 +176,7 @@ export function PersonPage({ id, user }: { id: string; user: WhsUser }) {
       {shown ? (
         <ClaimFile key={shown.id} claim={shown} incidentRef={shownInc?.ref ?? 'incident'} incidentAt={shownInc?.occurred_at ?? shown.created_at} user={user} onChanged={() => void load()} />
       ) : (
-        <p className={`${card} m-0 px-5 py-6 text-sm text-muted`}>No claim on file. Start one from the People tab of an incident this person was injured in.</p>
+        <p className={`${card} m-0 px-5 py-6 text-sm text-muted`}>No claim on file. Where this person is recorded as injured on an incident above, use Start a claim file. If the incident is not listed, add them as injured on that incident first.</p>
       )}
 
       <section className={`${card} px-4.5 py-4`}>
