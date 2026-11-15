@@ -30,7 +30,7 @@ export const MODULES: readonly WhsModule[] = [
   { id: 'risk', built: true, label: 'Risk & SWMS', about: 'The risk register, safe work method statements written and approved here, and jobs with a sign-on sheet.', step: 6 },
   { id: 'swms', built: true, hidden: true, label: 'SWMS and sign-on', about: 'Approved SWMS to read, and signing on from a phone.', step: 6 },
   { id: 'contractors', label: 'Contractors', about: 'Contractor insurance, licences, inductions and SWMS sign-off.', step: 6 },
-  { id: 'reports', label: 'Reports', about: 'Dashboards, trends and exports.', step: 6 },
+  { id: 'reports', built: true, label: 'Reports', about: 'The monthly WHS summary, trends and injury rates (LTIFR, TRIFR), hours worked from payroll, and the audit pack.', step: 6 },
 ];
 
 export function moduleById(id: string): WhsModule | undefined {
