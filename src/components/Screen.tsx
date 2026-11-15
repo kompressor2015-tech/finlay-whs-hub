@@ -21,6 +21,7 @@ import { DocumentsPage } from './DocumentsPage.tsx';
 import { DocumentDetail } from './DocumentDetail.tsx';
 import { RecurringChecksPage } from './RecurringChecksPage.tsx';
 import { TrainingCoverPage } from './TrainingCoverPage.tsx';
+import { RisksPage } from './RisksPage.tsx';
 import { SitesPage } from './SitesPage.tsx';
 import { PeoplePage } from './PeoplePage.tsx';
 import { PersonPage } from './PersonPage.tsx';
@@ -48,6 +49,7 @@ export function Screen({ route, user, home }: { route: Route; user: WhsUser; hom
     if (route.id === 'incidents' || route.id === 'hazards') return <RegisterPage key={route.id} tab={route.id} user={user} />;
     if (route.id === 'recurring') return <RecurringChecksPage user={user} />;
     if (route.id === 'training') return <TrainingCoverPage user={user} />;
+    if (route.id === 'risk') return <RisksPage user={user} />;
     if (route.id === 'sites') return <SitesPage />;
     if (route.id === 'people') return <PeoplePage user={user} />;
     if (route.id === 'actions') return <ActionsPage user={user} />;
