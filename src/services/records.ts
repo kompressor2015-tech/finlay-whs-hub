@@ -176,7 +176,7 @@ export async function updateAction(id: string, patch: Partial<WhsAction>): Promi
 // History
 // ---------------------------------------------------------------------------------
 
-export async function listHistory(type: 'incident' | 'hazard', id: string): Promise<HistoryEntry[]> {
+export async function listHistory(type: 'incident' | 'hazard' | 'risk' | 'swms', id: string): Promise<HistoryEntry[]> {
   const { data, error } = await supabase
     .from('whs_history')
     .select('id, occurred_at, actor_name, what')

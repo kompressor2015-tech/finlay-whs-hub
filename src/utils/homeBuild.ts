@@ -11,6 +11,8 @@ import { buildCharts } from './homeCharts.ts';
 import { buildBoard } from './homeBoard.ts';
 import { documentsComing, withDocuments } from './homeDocuments.ts';
 import type { WhsDocument } from './documents.ts';
+import { withRisks } from './homeRisks.ts';
+import type { Risk, RiskControl } from './risks.ts';
 import { withClaims } from './homeClaims.ts';
 import type { Appointment, Certificate, Claim } from './claims.ts';
 import { withTickets } from './homeTickets.ts';
@@ -37,6 +39,8 @@ export interface HomeRaw {
   /** null when the recurring checks tables are not there yet */
   /** null when the people tickets tables are not there yet or the person cannot read them */
   /** Claims with their certificates and appointments; empty for anyone but the WHS officer and admins */
+  /** null when the risk register tables are not there yet */
+  risks?: { risks: Risk[]; controls: RiskControl[] } | null;
   claims?: { claims: Claim[]; certs: Certificate[]; appts: Appointment[]; names: [string, string][] } | null;
   training?: { people: Person[]; tickets: Ticket[]; siteIds: string[] } | null;
   recurring?: { checks: RecurringCheck[]; log: CheckLogLine[]; sites: { id: string; name: string }[] } | null;
@@ -81,6 +85,8 @@ export function buildHomeData(raw: HomeRaw, me: string, site: ScopeSite | null, 
   const cl = raw.claims;
   const inc = new Set(incidents.map(i => i.id));
   const withStep9 = cl && cl.claims.length ? withClaims(withStep8, cl.claims.filter(c => inc.has(c.incident_id)), cl.certs, cl.appts, new Map(cl.names), now) : withStep8;
+  const rk = raw.risks;
+  const withStep10 = rk ? withRisks(withStep9, rk.risks.filter(r => !r.site_id || !site || r.site_id === site.id || r.site_id === site.depotSiteId), rk.controls, now) : withStep9;
   const coming = [...board.coming, ...documentsComing(docs, now), ...(rec ? recurringComing(recChecks, rec.log, rec.sites, now) : [])].sort((a, b) => a.day.localeCompare(b.day)).slice(0, 5);
-  return { ...withStep9, charts, board: { ...board, coming } };
+  return { ...withStep10, charts, board: { ...board, coming } };
 }
