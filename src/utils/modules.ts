@@ -25,7 +25,7 @@ export const MODULES: readonly WhsModule[] = [
   { id: 'training', built: true, label: 'Training & site cover', about: 'First aiders and fire wardens for each site, and tickets that have run out or are about to.', step: 7 },
   { id: 'sites', built: true, label: 'Sites', about: 'The sites, the other names each goes by, and how often stocktakes are due.', step: 2 },
   { id: 'plant', built: true, label: 'Plant safety', about: 'The safety view of the fleet register: flags from pre-starts, inspections and defects.', step: 3 },
-  { id: 'risk', built: true, label: 'Risk & SWMS', about: 'The risk register with ratings before and after controls, owners and reviews. SWMS and sign-on come next.', step: 6 },
+  { id: 'risk', built: true, label: 'Risk & SWMS', about: 'The risk register, and safe work method statements written and approved here. Sign-on comes next.', step: 6 },
   { id: 'contractors', label: 'Contractors', about: 'Contractor insurance, licences, inductions and SWMS sign-off.', step: 6 },
   { id: 'reports', label: 'Reports', about: 'Dashboards, trends and exports.', step: 6 },
 ];

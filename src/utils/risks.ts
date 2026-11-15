@@ -1,6 +1,7 @@
 /**
- * The risk register. A risk is rated twice on one 5 by 5 grid: before controls and after controls.
- * Score is likelihood times consequence: 1 to 4 low, 5 to 9 medium, 10 to 16 high, 17 to 25 extreme.
+ * The risk register. A risk is rated twice on one 5 by 5 matrix: before controls and after controls.
+ * The matrix is Finlay's own (the one printed in the SWMS): each square has a score from 1 to 25.
+ * 1 to 8 low, 9 to 15 medium, 16 to 19 high, 20 to 25 extreme.
  * Controls use the same five levels as incident fixes. Every risk is reviewed on a cycle (12 months
  * unless set otherwise), flagged 60 days before.
  */
@@ -54,27 +55,48 @@ export interface RiskReview {
 }
 
 export const LIKELIHOODS = [
-  { n: 5, label: 'Almost certain', sub: 'Expected most times' },
-  { n: 4, label: 'Likely', sub: 'Will probably happen' },
-  { n: 3, label: 'Possible', sub: 'Could happen' },
-  { n: 2, label: 'Unlikely', sub: 'Not expected' },
-  { n: 1, label: 'Rare', sub: 'Only in unusual conditions' },
+  { n: 5, label: 'Almost certain', sub: 'Common or repeating; more than once a month' },
+  { n: 4, label: 'Likely', sub: 'Known to occur, or it has happened; more than 1 a year' },
+  { n: 3, label: 'Possible', sub: 'Could occur; between 1 and 5 years' },
+  { n: 2, label: 'Unlikely', sub: 'Not likely or remote; between 5 and 20 years' },
+  { n: 1, label: 'Rare', sub: 'Practically impossible; more than 20 years' },
 ] as const;
 
 export const CONSEQUENCES = [
-  { n: 1, label: 'Insignificant', sub: 'First aid' },
-  { n: 2, label: 'Minor', sub: 'Medical treatment' },
-  { n: 3, label: 'Moderate', sub: 'Time off work' },
-  { n: 4, label: 'Major', sub: 'Serious injury or illness' },
-  { n: 5, label: 'Fatal', sub: 'Death or multiple serious injuries' },
+  { n: 1, label: 'Minor', sub: 'First aid case, minor illness' },
+  { n: 2, label: 'Moderate', sub: 'Medical treatment, no restricted duties' },
+  { n: 3, label: 'Serious', sub: 'Lost time injury of 1 to 3 days, or restricted duties' },
+  { n: 4, label: 'Major', sub: 'Lost time of 4 days or more; potential permanent disability' },
+  { n: 5, label: 'Severe', sub: 'Fatality or significant permanent disability' },
 ] as const;
+
+/** Finlay's matrix: MATRIX[likelihood][consequence] is the score. */
+const MATRIX: Record<number, Record<number, number>> = {
+  5: { 1: 11, 2: 16, 3: 20, 4: 23, 5: 25 },
+  4: { 1: 7, 2: 12, 3: 17, 4: 21, 5: 24 },
+  3: { 1: 4, 2: 9, 3: 13, 4: 18, 5: 22 },
+  2: { 1: 2, 2: 5, 3: 10, 4: 14, 5: 19 },
+  1: { 1: 1, 2: 3, 3: 6, 4: 8, 5: 15 },
+};
+
+export function riskScore(likelihood: number | null, consequence: number | null): number | null {
+  if (likelihood === null || consequence === null) return null;
+  return MATRIX[likelihood]?.[consequence] ?? null;
+}
 
 export const RISK_CATEGORIES = ['Mobile plant', 'Plant and machinery', 'Working at height', 'Hot work', 'Manual tasks', 'Health and hygiene', 'Chemicals', 'Electrical', 'Traffic and yard', 'Contractors', 'Other'];
 
 export function riskLevel(likelihood: number | null, consequence: number | null): RiskLevel | null {
-  if (likelihood === null || consequence === null) return null;
-  const s = likelihood * consequence;
-  return s >= 17 ? 'extreme' : s >= 10 ? 'high' : s >= 5 ? 'medium' : 'low';
+  const s = riskScore(likelihood, consequence);
+  if (s === null) return null;
+  return s >= 20 ? 'extreme' : s >= 16 ? 'high' : s >= 9 ? 'medium' : 'low';
+}
+
+/** The way the SWMS prints a rating: a letter for the level and the score, such as H18 or M13. */
+export function riskCode(likelihood: number | null, consequence: number | null): string {
+  const lv = riskLevel(likelihood, consequence);
+  const sc = riskScore(likelihood, consequence);
+  return lv && sc !== null ? `${lv === 'extreme' ? 'E' : lv === 'high' ? 'H' : lv === 'medium' ? 'M' : 'L'}${sc}` : '';
 }
 
 export const LEVELS: Record<RiskLevel, { label: string; tone: Tone; rank: number }> = {

@@ -143,7 +143,7 @@ export function RisksPage({ user }: { user: WhsUser }) {
             </table>
           </div>
         )}
-        <p className="m-0 text-xs text-muted">Click a row to open it beside the list. Ratings use one 5 by 5 grid: score 1 to 4 low, 5 to 9 medium, 10 to 16 high, 17 to 25 extreme.</p>
+        <p className="m-0 text-xs text-muted">Click a row to open it beside the list. Ratings use the Finlay matrix: score 1 to 8 low, 9 to 15 medium, 16 to 19 high, 20 to 25 extreme.</p>
       </div>
 
       {openId === NEW && office && (

@@ -1,7 +1,7 @@
 import type { ReactElement } from 'react';
 import type { WhsUser } from '../services/auth.ts';
 import type { Route } from '../hooks/useRoute.ts';
-import { canOpenModule, isOfficerAccess } from '../utils/access.ts';
+import { canOpenModule, isOfficeAccess, isOfficerAccess } from '../utils/access.ts';
 import { ActionsPage } from './ActionsPage.tsx';
 import { HazardForm } from './HazardForm.tsx';
 import { HazardPage } from './HazardPage.tsx';
@@ -21,7 +21,8 @@ import { DocumentsPage } from './DocumentsPage.tsx';
 import { DocumentDetail } from './DocumentDetail.tsx';
 import { RecurringChecksPage } from './RecurringChecksPage.tsx';
 import { TrainingCoverPage } from './TrainingCoverPage.tsx';
-import { RisksPage } from './RisksPage.tsx';
+import { RiskModule } from './RiskModule.tsx';
+import { SwmsPage } from './SwmsPage.tsx';
 import { SitesPage } from './SitesPage.tsx';
 import { PeoplePage } from './PeoplePage.tsx';
 import { PersonPage } from './PersonPage.tsx';
@@ -40,6 +41,7 @@ export function Screen({ route, user, home }: { route: Route; user: WhsUser; hom
   if (route.name === 'chemical') return <ChemicalPage key={route.id} id={route.id} user={user} />;
   if (route.name === 'document') return <DocumentDetail key={route.id} id={route.id} user={user} />;
   if (route.name === 'person') return isOfficerAccess(user.access) ? <PersonPage key={route.id} id={route.id} user={user} /> : <ModulePage id="people" access={user.access} />;
+  if (route.name === 'swms') return isOfficeAccess(user.access) ? <SwmsPage key={route.id} id={route.id} user={user} /> : <ModulePage id="risk" access={user.access} />;
   if (route.name === 'chem') return <ChemTool key={route.id} tool={route.id} user={user} />;
   if (route.name === 'module' && canOpenModule(user.access, route.id)) {
     if (route.id === 'inspections') return <InspectionsPage user={user} />;
@@ -49,7 +51,7 @@ export function Screen({ route, user, home }: { route: Route; user: WhsUser; hom
     if (route.id === 'incidents' || route.id === 'hazards') return <RegisterPage key={route.id} tab={route.id} user={user} />;
     if (route.id === 'recurring') return <RecurringChecksPage user={user} />;
     if (route.id === 'training') return <TrainingCoverPage user={user} />;
-    if (route.id === 'risk') return <RisksPage user={user} />;
+    if (route.id === 'risk') return <RiskModule user={user} />;
     if (route.id === 'sites') return <SitesPage />;
     if (route.id === 'people') return <PeoplePage user={user} />;
     if (route.id === 'actions') return <ActionsPage user={user} />;
