@@ -7,7 +7,7 @@ import { listDocuments } from '../services/documents.ts';
 import { listHistory, photoLinks } from '../services/records.ts';
 import { useSiteScope } from '../hooks/useSiteScope.tsx';
 import { go, hrefFor } from '../hooks/useRoute.ts';
-import { isOfficerAccess } from '../utils/access.ts';
+import { isOfficeAccess, isOfficerAccess } from '../utils/access.ts';
 import { brisbaneDay, formatDay, formatWhen } from '../utils/dates.ts';
 import type { HistoryEntry } from '../utils/records.ts';
 import type { WhsDocument } from '../utils/documents.ts';
@@ -18,6 +18,7 @@ import { ErrorNote, Field, inputClass, textareaClass } from './Form.tsx';
 import { Pill } from './Pill.tsx';
 import { RatingGrid } from './RatingGrid.tsx';
 import { SwmsPrint } from './SwmsPrint.tsx';
+import { SwmsSignOnSection } from './SwmsSignOnSection.tsx';
 import { SignaturePad } from './SignaturePad.tsx';
 
 const btn = 'min-h-10 px-3.5 rounded-lg border border-[#D6D2CC] bg-white text-sm font-semibold cursor-pointer hover:text-finlay disabled:opacity-60';
@@ -77,6 +78,8 @@ function Read({ label: l, value }: { label: string; value: string | null | undef
 /** One SWMS as a full page: write it, send it for approval, approve it with a signature, review it. */
 export function SwmsPage({ id, user }: { id: string; user: WhsUser }) {
   const officer = isOfficerAccess(user.access);
+  const office = isOfficeAccess(user.access);
+  const back = office ? '#/m/risk/swms' : '#/m/swms';
   const { sites } = useSiteScope();
   const [swms, setSwms] = useState<Swms | null>(null);
   const [versions, setVersions] = useState<SwmsVersion[]>([]);
@@ -129,7 +132,7 @@ export function SwmsPage({ id, user }: { id: string; user: WhsUser }) {
 
   if (!loaded) return <p className="text-muted">Loading…</p>;
   if (!swms) return (
-    <div className={card}><h1 className="m-0 text-xl font-bold">SWMS not found</h1><p className="mt-2 mb-0 text-sm"><a href="#/m/risk/swms" className="text-finlay">Back to the SWMS list</a></p></div>
+    <div className={card}><h1 className="m-0 text-xl font-bold">SWMS not found</h1><p className="mt-2 mb-0 text-sm"><a href={back} className="text-finlay">Back to the SWMS list</a></p></div>
   );
 
   const run = async (fn: () => Promise<{ error?: string }>, after?: () => void) => {
@@ -181,7 +184,7 @@ export function SwmsPage({ id, user }: { id: string; user: WhsUser }) {
     <>
     {picked && <SwmsPrint swms={swms} version={picked} sigs={urls} risksRef={swms.risk_register_ref ? `Risk register ref: ${swms.risk_register_ref}` : ''} />}
     <div className="flex flex-col gap-4 max-w-[1000px] print:hidden">
-      <a href="#/m/risk/swms" className="text-sm text-finlay no-underline print:hidden">← All SWMS</a>
+      <a href={back} className="text-sm text-finlay no-underline print:hidden">← All SWMS</a>
       <div className="flex flex-wrap items-start gap-3">
         <div className="min-w-0 flex-1">
           <div className="text-xs font-semibold text-muted">{swms.swms_number ? `SWMS ${swms.swms_number}` : swms.ref} · {siteName}</div>
@@ -207,8 +210,8 @@ export function SwmsPage({ id, user }: { id: string; user: WhsUser }) {
 
       {!picked ? (
         <div className={card}>
-          <p className="m-0 text-sm text-muted">This SWMS has no version yet.</p>
-          <button type="button" className={`${primary} mt-3`} disabled={busy} onClick={() => void run(() => startVersion(swms.id))}>Start writing</button>
+          <p className="m-0 text-sm text-muted">{office ? 'This SWMS has no version yet.' : 'This SWMS has not been approved yet, so it cannot be used.'}</p>
+          {office && <button type="button" className={`${primary} mt-3`} disabled={busy} onClick={() => void run(() => startVersion(swms.id))}>Start writing</button>}
         </div>
       ) : (
         <>
@@ -444,7 +447,7 @@ export function SwmsPage({ id, user }: { id: string; user: WhsUser }) {
           )}
 
           {/* Approved: next actions */}
-          {picked.status === 'approved' && (
+          {office && picked.status === 'approved' && (
             <section className={`${card} flex flex-col gap-3 print:hidden`}>
               <div className="flex flex-wrap gap-2">
                 {open
@@ -461,6 +464,7 @@ export function SwmsPage({ id, user }: { id: string; user: WhsUser }) {
               </form>
             </section>
           )}
+          {picked.status === 'approved' && approved?.id === picked.id && swms.status === 'active' && <SwmsSignOnSection key={picked.id} swms={swms} version={picked} user={user} />}
         </>
       )}
 
@@ -474,10 +478,10 @@ export function SwmsPage({ id, user }: { id: string; user: WhsUser }) {
             ? <a href={hrefFor({ name: 'document', id: swms.document_id })} className="text-finlay">{docs.find(d => d.id === swms.document_id)?.title ?? 'Open the file'}</a>
             : <span className="text-muted">none linked</span>}
           {' '}
-          <select aria-label="Link a document" value={swms.document_id ?? ''} onChange={e => void run(async () => updateSwms(swms.id, { document_id: e.target.value || null }))} className="min-h-9 rounded-lg border border-[#D6D2CC] bg-white px-2 text-[13px] ml-1">
+          {office && <select aria-label="Link a document" value={swms.document_id ?? ''} onChange={e => void run(async () => updateSwms(swms.id, { document_id: e.target.value || null }))} className="min-h-9 rounded-lg border border-[#D6D2CC] bg-white px-2 text-[13px] ml-1">
             <option value="">None</option>
             {docs.filter(d => d.doc_type === 'swms').map(d => <option key={d.id} value={d.id}>{[d.doc_no, d.title].filter(Boolean).join(' · ')}</option>)}
-          </select>
+          </select>}
         </div>
         {reviews.length > 0 && (
           <div className="mt-1 border border-line rounded-xl">
@@ -491,7 +495,7 @@ export function SwmsPage({ id, user }: { id: string; user: WhsUser }) {
         )}
       </section>
 
-      {history.length > 0 && (
+      {office && history.length > 0 && (
         <section className="print:hidden">
           <div className={label}>History</div>
           <ul className="m-0 p-0 list-none text-[13px] text-muted">{history.map(h => <li key={h.id} className="py-0.5">{formatWhen(h.occurred_at)} · {h.actor_name}: {h.what}</li>)}</ul>
@@ -499,7 +503,7 @@ export function SwmsPage({ id, user }: { id: string; user: WhsUser }) {
         </section>
       )}
 
-      <div className="flex flex-wrap gap-2 print:hidden">
+      <div className={`${office ? 'flex' : 'hidden'} flex-wrap gap-2 print:hidden`}>
         <button type="button" disabled={busy} className={btn} onClick={() => void run(async () => updateSwms(swms.id, { status: swms.status === 'active' ? 'retired' : 'active' }))}>{swms.status === 'active' ? 'Retire this SWMS' : 'Put back in use'}</button>
         {user.access === 'admin' && <button type="button" disabled={busy} className={`${btn} text-[#9B1218] border-[#E3B7B7]`} onClick={async () => { if (await askConfirm({ title: `Delete ${swms.ref}?`, body: 'This removes the SWMS and all its versions for good. Retire it instead if it is no longer used.', confirmLabel: 'Delete', danger: true })) { setBusy(true); const r = await deleteSwms(swms.id); setBusy(false); if (r.error) setError(r.error); else go({ name: 'module', id: 'risk' }); } }}>Delete</button>}
       </div>

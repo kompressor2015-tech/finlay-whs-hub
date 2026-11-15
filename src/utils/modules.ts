@@ -11,6 +11,8 @@ export interface WhsModule {
   step: number;
   /** Built and working (otherwise a placeholder page) */
   built?: boolean;
+  /** Left out of the desktop menu (reached from the phone or another page) */
+  hidden?: boolean;
 }
 
 export const MODULES: readonly WhsModule[] = [
@@ -25,7 +27,8 @@ export const MODULES: readonly WhsModule[] = [
   { id: 'training', built: true, label: 'Training & site cover', about: 'First aiders and fire wardens for each site, and tickets that have run out or are about to.', step: 7 },
   { id: 'sites', built: true, label: 'Sites', about: 'The sites, the other names each goes by, and how often stocktakes are due.', step: 2 },
   { id: 'plant', built: true, label: 'Plant safety', about: 'The safety view of the fleet register: flags from pre-starts, inspections and defects.', step: 3 },
-  { id: 'risk', built: true, label: 'Risk & SWMS', about: 'The risk register, and safe work method statements written and approved here. Sign-on comes next.', step: 6 },
+  { id: 'risk', built: true, label: 'Risk & SWMS', about: 'The risk register, safe work method statements written and approved here, and jobs with a sign-on sheet.', step: 6 },
+  { id: 'swms', built: true, hidden: true, label: 'SWMS and sign-on', about: 'Approved SWMS to read, and signing on from a phone.', step: 6 },
   { id: 'contractors', label: 'Contractors', about: 'Contractor insurance, licences, inductions and SWMS sign-off.', step: 6 },
   { id: 'reports', label: 'Reports', about: 'Dashboards, trends and exports.', step: 6 },
 ];
