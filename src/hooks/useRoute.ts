@@ -10,6 +10,7 @@ import { useCallback, useEffect, useState } from 'react';
  *   #/checklists/<id>  edit a checklist
  *   #/chemicals/<id>   one chemical (or "new")
  *   #/documents/<id>   one document
+ *   #/swms/<id>        one SWMS
  *   #/people/<id>      one person's file (WHS officer and admin only)
  *   #/chem/<tool>      chemical tools: find-sds, upload-sds, stocktake (pick a site), totals-<site>, stocktake-<site>, print-<site>, sheet-<stocktake id>
  */
@@ -23,14 +24,15 @@ export type Route =
   | { name: 'chemical'; id: string }
   | { name: 'document'; id: string }
   | { name: 'person'; id: string }
+  | { name: 'swms'; id: string }
   | { name: 'chem'; id: string };
 
 export function parseHash(hash: string): Route {
   const m = /^#\/m\/([a-z-]+)/.exec(hash);
   if (m) return { name: 'module', id: m[1] };
-  const r = /^#\/(incidents|hazards|checks|checklists|chemicals|chem|documents|people)\/([A-Za-z0-9-]+)/.exec(hash);
+  const r = /^#\/(incidents|hazards|checks|checklists|chemicals|chem|documents|people|swms)\/([A-Za-z0-9-]+)/.exec(hash);
   if (r) {
-    const names = { incidents: 'incident', hazards: 'hazard', checks: 'check', checklists: 'checklist', chemicals: 'chemical', chem: 'chem', documents: 'document', people: 'person' } as const;
+    const names = { incidents: 'incident', hazards: 'hazard', checks: 'check', checklists: 'checklist', chemicals: 'chemical', chem: 'chem', documents: 'document', people: 'person', swms: 'swms' } as const;
     return { name: names[r[1] as keyof typeof names], id: r[2] };
   }
   return { name: 'home' };
@@ -58,6 +60,8 @@ export function hrefFor(route: Route): string {
       return `#/documents/${route.id}`;
     case 'person':
       return `#/people/${route.id}`;
+    case 'swms':
+      return `#/swms/${route.id}`;
   }
 }
 
@@ -74,6 +78,7 @@ export function moduleOf(route: Route): string {
   if (route.name === 'chemical' || route.name === 'chem') return 'chemicals';
   if (route.name === 'document') return 'documents';
   if (route.name === 'person') return 'people';
+  if (route.name === 'swms') return 'risk';
   return 'home';
 }
 

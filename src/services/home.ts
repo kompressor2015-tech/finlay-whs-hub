@@ -12,13 +12,14 @@ import { listDocuments } from './documents.ts';
 import { listAppointmentsFor, listCertificatesFor, listClaims } from './claims.ts';
 import { isOpen } from '../utils/claims.ts';
 import { loadRisks } from './risks.ts';
+import { loadSwms } from './swms.ts';
 import { listPeople } from './incidentFile.ts';
 import { listTickets } from './tickets.ts';
 import { loadChecks } from './recurringChecks.ts';
 
 export async function loadHomeRaw(): Promise<HomeRaw | null> {
-  const [incidents, hazards, actions, flags, checklists, checks, register, stocktakes, documents, recurring, people, tickets, riskData] = await Promise.all([
-    listIncidents(), listHazards(), listActions(), listFlags(), listChecklists(), listChecks(60), loadRegister(), listStocktakes(), listDocuments(), loadChecks(), listPeople(), listTickets(), loadRisks(),
+  const [incidents, hazards, actions, flags, checklists, checks, register, stocktakes, documents, recurring, people, tickets, riskData, swmsData] = await Promise.all([
+    listIncidents(), listHazards(), listActions(), listFlags(), listChecklists(), listChecks(60), loadRegister(), listStocktakes(), listDocuments(), loadChecks(), listPeople(), listTickets(), loadRisks(), loadSwms(),
   ]);
   if (incidents.error || hazards.error || actions.error) return null;
   // Claims are for the WHS officer and admins; anyone else gets nothing back, so the alerts stay off
@@ -33,6 +34,7 @@ export async function loadHomeRaw(): Promise<HomeRaw | null> {
     register: !register.error && register.data ? register.data : null,
     stocktakes: stocktakes.data ?? [],
     documents: documents.error ? null : documents.data ?? [],
+    swms: swmsData.error || !swmsData.data ? null : { swms: swmsData.data.swms, versions: swmsData.data.versions },
     risks: riskData.error || !riskData.data ? null : riskData.data,
     claims: claimList.error || claimCerts.error || claimAppts.error ? null : { claims: open, certs: claimCerts.data ?? [], appts: claimAppts.data ?? [], names: (people.data ?? []).map(p => [p.id, p.name] as [string, string]) },
     training: people.error || tickets.error || !recurring.data ? null : { people: people.data ?? [], tickets: tickets.data ?? [], siteIds: recurring.data.sites.map(x => x.id) },
