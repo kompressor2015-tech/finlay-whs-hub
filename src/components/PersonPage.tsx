@@ -17,6 +17,7 @@ import { TicketsTab } from './TicketsTab.tsx';
 import { ClaimFile } from './ClaimFile.tsx';
 import { ErrorNote, Field, inputClass } from './Form.tsx';
 import { Pill } from './Pill.tsx';
+import { useSiteScope } from '../hooks/useSiteScope.tsx';
 
 const card = 'bg-white border border-line rounded-xl';
 const btn = 'min-h-10 px-3.5 rounded-lg border border-[#D6D2CC] bg-white text-[13px] font-semibold cursor-pointer disabled:opacity-60';
@@ -24,6 +25,7 @@ const btnPri = 'min-h-10 px-4 rounded-lg border-0 bg-ink text-white text-[13px] 
 
 /** One worker: every incident they were on and every claim, in one place. WHS officer and admin only. */
 export function PersonPage({ id, user }: { id: string; user: WhsUser }) {
+  const { sites } = useSiteScope();
   const [person, setPerson] = useState<Person | null>(null);
   const [rows, setRows] = useState<{ ip: IncidentPerson; incident: Incident | null }[]>([]);
   const [claims, setClaims] = useState<Claim[]>([]);
@@ -99,7 +101,7 @@ export function PersonPage({ id, user }: { id: string; user: WhsUser }) {
       <div className="flex flex-wrap items-start justify-between gap-4">
         <div>
           <h1 className="m-0 text-2xl font-bold">{person.name}</h1>
-          <p className="mt-1 mb-0 text-muted text-[15px]">{[person.position, person.phone, person.start_date ? `started ${formatDay(person.start_date)}` : ''].filter(Boolean).join(' · ') || 'No details yet'}</p>
+          <p className="mt-1 mb-0 text-muted text-[15px]">{[person.position, sites.find(x => x.id === person.site_id)?.name ? `Site: ${sites.find(x => x.id === person.site_id)!.name}` : 'No site set', person.phone, person.start_date ? `started ${formatDay(person.start_date)}` : ''].filter(Boolean).join(' · ') || 'No details yet'}</p>
           {person.emergency_contact && <p className="mt-1 mb-0 text-sm text-muted">Emergency contact: {person.emergency_contact}</p>}
         </div>
         <div className="flex flex-wrap items-center gap-2">
@@ -194,16 +196,18 @@ export function PersonPage({ id, user }: { id: string; user: WhsUser }) {
 }
 
 function PersonEdit({ person, onSaved }: { person: Person; onSaved: () => void }) {
-  const [v, setV] = useState({ name: person.name, position: person.position, phone: person.phone, emergency_contact: person.emergency_contact, start_date: person.start_date ?? '' });
+  const { sites } = useSiteScope();
+  const [v, setV] = useState({ site_id: person.site_id ?? '', name: person.name, position: person.position, phone: person.phone, emergency_contact: person.emergency_contact, start_date: person.start_date ?? '' });
   const [busy, setBusy] = useState(false);
   const [err, setErr] = useState<string | null>(null);
   const f = (k: keyof typeof v, label: string, type = 'text') => <Field label={label} htmlFor={`pe-${k}`} optional={k !== 'name'}><input id={`pe-${k}`} type={type} className={inputClass} value={v[k]} onChange={e => setV({ ...v, [k]: e.target.value })} /></Field>;
   return (
     <section className={`${card} px-4.5 py-4 grid grid-cols-2 sm:grid-cols-3 gap-3`}>
       {f('name', 'Name')}{f('position', 'Position')}{f('phone', 'Phone')}{f('emergency_contact', 'Emergency contact')}{f('start_date', 'Start date', 'date')}
+      <Field label="Site" htmlFor="pe-site" optional><select id="pe-site" className={inputClass} value={v.site_id} onChange={e => setV({ ...v, site_id: e.target.value })}><option value="">Not set</option>{sites.map(x => <option key={x.id} value={x.id}>{x.name}</option>)}</select></Field>
       <div className="col-span-2 sm:col-span-3"><ErrorNote message={err} /><button type="button" disabled={busy || !v.name.trim()} className={btnPri} onClick={async () => {
         setBusy(true);
-        const res = await updatePerson(person.id, { name: v.name.trim(), position: v.position.trim(), phone: v.phone.trim(), emergency_contact: v.emergency_contact.trim(), start_date: v.start_date || null });
+        const res = await updatePerson(person.id, { name: v.name.trim(), position: v.position.trim(), phone: v.phone.trim(), emergency_contact: v.emergency_contact.trim(), start_date: v.start_date || null, site_id: v.site_id || null });
         setBusy(false);
         if (res.error) setErr(res.error); else onSaved();
       }}>Save</button></div>

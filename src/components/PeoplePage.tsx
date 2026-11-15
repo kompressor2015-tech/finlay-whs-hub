@@ -9,6 +9,7 @@ import { claimAttention, claimStatus, daysOffWork, isOpen, isOffWork, STATES, ty
 import type { Person } from '../utils/incidentFile.ts';
 import { ErrorNote, Field, inputClass } from './Form.tsx';
 import { Pill } from './Pill.tsx';
+import { useSiteScope } from '../hooks/useSiteScope.tsx';
 
 const card = 'bg-white border border-line rounded-xl';
 const toneBg: Record<string, string> = { red: 'bg-[#FDE8E8] text-[#9B1218]', amber: 'bg-[#FFF1D6] text-[#7A4B00]', green: 'bg-[#E3F4E6] text-[#1F6B2E]', blue: 'bg-[#E4EEFC] text-[#1C4A8F]', grey: 'bg-[#ECECEC] text-[#4A4A50]' };
@@ -25,6 +26,8 @@ export function PeoplePage({ user: _user }: { user: WhsUser }) {
   const [adding, setAdding] = useState(false);
   const [name, setName] = useState('');
   const [position, setPosition] = useState('');
+  const [newSite, setNewSite] = useState('');
+  const { sites } = useSiteScope();
   const [error, setError] = useState<string | null>(null);
 
   const load = useCallback(async () => {
@@ -76,8 +79,9 @@ export function PeoplePage({ user: _user }: { user: WhsUser }) {
         <div className={`${card} px-4.5 py-4 grid grid-cols-2 gap-3`}>
           <Field label="Name" htmlFor="np-n"><input id="np-n" className={inputClass} value={name} onChange={e => setName(e.target.value)} /></Field>
           <Field label="Position" htmlFor="np-p" optional><input id="np-p" className={inputClass} value={position} onChange={e => setPosition(e.target.value)} /></Field>
+          <Field label="Site" htmlFor="np-s" optional><select id="np-s" className={inputClass} value={newSite} onChange={e => setNewSite(e.target.value)}><option value="">Not set</option>{sites.map(x => <option key={x.id} value={x.id}>{x.name}</option>)}</select></Field>
           <div className="col-span-2"><button type="button" disabled={!name.trim()} className="min-h-10 px-4 rounded-lg border-0 bg-ink text-white text-[13px] font-semibold cursor-pointer disabled:opacity-60" onClick={async () => {
-            const res = await createPerson({ name: name.trim(), position: position.trim() });
+            const res = await createPerson({ name: name.trim(), position: position.trim(), site_id: newSite || null });
             if (res.error || !res.data) return setError(res.error ?? 'Could not add.');
             go({ name: 'person', id: res.data.id });
           }}>Add and open file</button></div>
@@ -92,7 +96,7 @@ export function PeoplePage({ user: _user }: { user: WhsUser }) {
         <ul className={`${card} list-none m-0 p-0 divide-y divide-line-soft`}>
           {rows.map(({ p, mine }) => (
             <li key={p.id} className="px-4.5 py-3 flex flex-wrap items-center gap-x-4 gap-y-1.5">
-              <a href={hrefFor({ name: 'person', id: p.id })} className="min-w-44 font-semibold">{p.name}<span className="block text-[13px] font-normal text-muted">{p.position || 'No position'}</span></a>
+              <a href={hrefFor({ name: 'person', id: p.id })} className="min-w-44 font-semibold">{p.name}<span className="block text-[13px] font-normal text-muted">{p.position || 'No position'} · {sites.find(x => x.id === p.site_id)?.name ?? <span className="text-[#7A4B00]">No site</span>}</span></a>
               <span className="flex flex-wrap gap-1.5">
                 {p.is_first_aider && <Pill tone="blue">First aider</Pill>}
                 {p.is_fire_warden && <Pill tone="blue">Fire warden</Pill>}
