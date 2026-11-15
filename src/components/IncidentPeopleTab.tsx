@@ -167,7 +167,7 @@ function PersonEditor({ p, busy, onSave }: { p: IncidentPerson; busy: boolean; o
   );
 }
 
-function StartClaim({ incident, person, busy, onStart }: { incident: Incident; person: IncidentPerson; busy: boolean; onStart: (state: State, offWork: string) => void }) {
+export function StartClaim({ incident, person, busy, onStart }: { incident: Incident; person: IncidentPerson; busy: boolean; onStart: (state: State, offWork: string) => void }) {
   const [open, setOpen] = useState(false);
   const [state, setState] = useState<State>('QLD');
   const [off, setOff] = useState(person.off_work_from ?? '');
