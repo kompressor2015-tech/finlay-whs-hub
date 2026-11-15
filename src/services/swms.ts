@@ -2,7 +2,7 @@
 
 import { supabase } from './supabase.ts';
 import { uploadPhotos } from './records.ts';
-import type { Swms, SwmsReview, SwmsStep, SwmsVersion } from '../utils/swms.ts';
+import { EMPTY_CONTENT, type Swms, type SwmsReview, type SwmsStep, type SwmsVersion, type VersionContent } from '../utils/swms.ts';
 
 type Result<T> = { data?: T; error?: string };
 
@@ -24,10 +24,8 @@ export async function loadSwms(): Promise<Result<{ swms: Swms[]; versions: SwmsV
   return { data: { swms: (s.data ?? []) as Swms[], versions: (v.data ?? []) as SwmsVersion[], reviews: (r.data ?? []) as SwmsReview[] } };
 }
 
-export type SwmsInput = Pick<Swms, 'title' | 'site_id' | 'owner_name' | 'review_months' | 'document_id'>;
-export type VersionContent = Pick<SwmsVersion, 'work_covered' | 'who_may' | 'steps' | 'ppe' | 'plant' | 'permits' | 'emergency' | 'linked_risk_ids'>;
-
-export const EMPTY_CONTENT: VersionContent = { work_covered: '', who_may: '', steps: [], ppe: '', plant: '', permits: '', emergency: '', linked_risk_ids: [] };
+export type SwmsInput = Pick<Swms, 'title' | 'site_id' | 'owner_name' | 'review_months' | 'document_id' | 'swms_number' | 'risk_register_ref'>;
+export type { VersionContent };
 
 export async function createSwms(input: SwmsInput, content: VersionContent = EMPTY_CONTENT): Promise<Result<Swms>> {
   const { data, error } = await supabase.from('whs_swms').insert(input).select('*').single();
@@ -69,10 +67,10 @@ export async function sendBack(versionId: string, note: string): Promise<Result<
   return error ? { error: friendly(error.message) } : { data: data as SwmsVersion };
 }
 
-export async function approveVersion(versionId: string, signature: File): Promise<Result<SwmsVersion>> {
+export async function approveVersion(versionId: string, signature: File, position: string): Promise<Result<SwmsVersion>> {
   const up = await uploadPhotos([signature]);
   if (up.error || !up.data?.[0]) return { error: up.error ?? 'The signature could not be saved.' };
-  const { data, error } = await supabase.from('whs_swms_versions').update({ status: 'approved', signature_path: up.data[0] }).eq('id', versionId).eq('status', 'awaiting').select('*').single();
+  const { data, error } = await supabase.from('whs_swms_versions').update({ status: 'approved', signature_path: up.data[0], approver_position: position }).eq('id', versionId).eq('status', 'awaiting').select('*').single();
   return error ? { error: friendly(error.message) } : { data: data as SwmsVersion };
 }
 
@@ -91,4 +89,5 @@ export async function removeSwmsReview(id: string): Promise<Result<true>> {
   return error ? { error: friendly(error.message) } : { data: true };
 }
 
+export { EMPTY_CONTENT };
 export type { SwmsStep };

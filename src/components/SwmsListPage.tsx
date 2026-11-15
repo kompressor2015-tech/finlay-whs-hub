@@ -134,7 +134,7 @@ export function SwmsListPage({ user }: { user: WhsUser }) {
 }
 
 function NewSwms({ sites, onCancel }: { sites: { id: string; name: string }[]; onCancel: () => void }) {
-  const [f, setF] = useState({ title: '', site_id: '', owner_name: 'WHS officer', review_months: '12', document_id: '' });
+  const [f, setF] = useState({ title: '', site_id: '', owner_name: 'WHS officer', review_months: '12', document_id: '', swms_number: '', risk_register_ref: '' });
   const [docs, setDocs] = useState<WhsDocument[]>([]);
   const [error, setError] = useState<string | null>(null);
   const [busy, setBusy] = useState(false);
@@ -146,7 +146,7 @@ function NewSwms({ sites, onCancel }: { sites: { id: string; name: string }[]; o
     if (!f.title.trim()) return setError('Give the SWMS a title.');
     if (!Number.isInteger(months) || months < 1 || months > 120) return setError('Review every must be a whole number of months.');
     setBusy(true);
-    const r = await createSwms({ title: f.title.trim(), site_id: f.site_id || null, owner_name: f.owner_name.trim() || 'WHS officer', review_months: months, document_id: f.document_id || null });
+    const r = await createSwms({ title: f.title.trim(), site_id: f.site_id || null, owner_name: f.owner_name.trim() || 'WHS officer', review_months: months, document_id: f.document_id || null, swms_number: f.swms_number.trim(), risk_register_ref: f.risk_register_ref.trim() });
     setBusy(false);
     if (r.data) go({ name: 'swms', id: r.data.id });
     if (r.error) setError(r.error);
@@ -158,6 +158,10 @@ function NewSwms({ sites, onCancel }: { sites: { id: string; name: string }[]; o
       <p className="m-0 text-sm text-muted">Start with the title. You write the steps on the next screen and send it for approval when it is ready.</p>
       <ErrorNote message={error} />
       <Field label="Title" htmlFor="sw-title"><input id="sw-title" value={f.title} onChange={e => setF({ ...f, title: e.target.value })} placeholder="Changing screen mesh on the Powerscreen" className={inputClass} /></Field>
+      <div className="grid grid-cols-2 gap-3">
+        <Field label="SWMS number" optional hint="Your own number, such as 099" htmlFor="sw-num"><input id="sw-num" value={f.swms_number} onChange={e => setF({ ...f, swms_number: e.target.value })} className={inputClass} /></Field>
+        <Field label="Risk register ref" optional hint="Such as FSC76" htmlFor="sw-rr"><input id="sw-rr" value={f.risk_register_ref} onChange={e => setF({ ...f, risk_register_ref: e.target.value })} className={inputClass} /></Field>
+      </div>
       <Field label="Where" htmlFor="sw-site">
         <select id="sw-site" value={f.site_id} onChange={e => setF({ ...f, site_id: e.target.value })} className={inputClass}>
           <option value="">All sites</option>

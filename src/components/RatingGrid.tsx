@@ -1,10 +1,10 @@
-import { CONSEQUENCES, LEVELS, LIKELIHOODS, riskLevel, type RiskLevel } from '../utils/risks.ts';
+import { CONSEQUENCES, LEVELS, LIKELIHOODS, riskLevel, riskScore, type RiskLevel } from '../utils/risks.ts';
 
 const CELL: Record<RiskLevel, string> = {
-  low: 'bg-[#E3F4E6] text-[#1F6B2E]',
-  medium: 'bg-[#E3EEFB] text-[#1D4E89]',
-  high: 'bg-[#FFF1D6] text-[#7A4B00]',
-  extreme: 'bg-[#FDE8E8] text-[#9B1218]',
+  low: 'bg-[#DDF0C8] text-[#2F5A10]',
+  medium: 'bg-[#FFF7B8] text-[#5E5200]',
+  high: 'bg-[#FFD9A0] text-[#7A4000]',
+  extreme: 'bg-[#F9C6C6] text-[#8E1010]',
 };
 
 /** The 5 by 5 grid. Rows are likelihood (top: almost certain), columns are consequence (right: fatal). */
@@ -27,9 +27,9 @@ export function RatingGrid({ label, likelihood, consequence, onChange }: {
           const on = row.n === likelihood && col.n === consequence;
           const cls = `h-8 rounded-[5px] text-[11px] font-bold ${CELL[lv]} ${on ? 'outline outline-[3px] outline-ink outline-offset-1' : ''}`;
           return onChange ? (
-            <button key={`${row.n}-${col.n}`} type="button" aria-pressed={on} aria-label={`${row.label}, ${col.label}: ${LEVELS[lv].label}`} onClick={() => onChange(row.n, col.n)} className={`${cls} cursor-pointer border-0`}>{row.n * col.n}</button>
+            <button key={`${row.n}-${col.n}`} type="button" aria-pressed={on} aria-label={`${row.label}, ${col.label}: ${LEVELS[lv].label}`} onClick={() => onChange(row.n, col.n)} className={`${cls} cursor-pointer border-0`}>{riskScore(row.n, col.n)}</button>
           ) : (
-            <div key={`${row.n}-${col.n}`} className={`${cls} flex items-center justify-center`}>{row.n * col.n}</div>
+            <div key={`${row.n}-${col.n}`} className={`${cls} flex items-center justify-center`}>{riskScore(row.n, col.n)}</div>
           );
         }))}
       </div>

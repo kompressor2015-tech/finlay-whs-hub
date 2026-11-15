@@ -1,22 +1,28 @@
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
-import { afterLevel, beforeLevel, needsAttention, reviewBy, riskIssues, riskLevel, riskPill, riskReviewState, type Risk } from './risks.ts';
+import { afterLevel, beforeLevel, needsAttention, reviewBy, riskIssues, riskCode, riskLevel, riskPill, riskScore, riskReviewState, type Risk } from './risks.ts';
 
 const now = new Date('2026-11-14T04:00:00Z');
 const risk = (o: Partial<Risk> = {}): Risk => ({ id: 'r', ref: 'RSK-0001', title: 't', category: '', site_id: null, description: '', before_likelihood: 4, before_consequence: 4, after_likelihood: 2, after_consequence: 4, owner_name: 'WHS officer', review_months: 12, reviewed_on: '2026-06-01', reviewed_by_name: '', notes: '', status: 'active', created_by_name: '', created_at: '', updated_at: '', ...o });
 const ctl = [{ control_level: 'engineer' as const }];
 
-test('levels follow the score on the 5 by 5 grid', () => {
-  assert.equal(riskLevel(1, 4), 'low');
-  assert.equal(riskLevel(1, 5), 'medium');
-  assert.equal(riskLevel(3, 3), 'medium');
-  assert.equal(riskLevel(2, 5), 'high');
-  assert.equal(riskLevel(4, 4), 'high');
-  assert.equal(riskLevel(4, 5), 'extreme');
+test('levels follow the Finlay matrix', () => {
+  assert.equal(riskScore(1, 1), 1);
+  assert.equal(riskScore(5, 1), 11);
+  assert.equal(riskScore(3, 4), 18);
+  assert.equal(riskScore(1, 5), 15);
+  assert.equal(riskLevel(2, 4), 'medium'); // 14
+  assert.equal(riskLevel(1, 4), 'low'); // 8
+  assert.equal(riskLevel(1, 5), 'medium'); // 15
+  assert.equal(riskLevel(4, 3), 'high'); // 17
+  assert.equal(riskLevel(2, 5), 'high'); // 19
+  assert.equal(riskLevel(5, 3), 'extreme'); // 20
   assert.equal(riskLevel(5, 5), 'extreme');
   assert.equal(riskLevel(null, null), null);
-  assert.equal(beforeLevel(risk()), 'high');
-  assert.equal(afterLevel(risk()), 'medium');
+  assert.equal(riskCode(3, 4), 'H18');
+  assert.equal(riskCode(4, 5), 'E24');
+  assert.equal(riskCode(2, 3), 'M10');
+  assert.equal(riskCode(1, 3), 'L6');
 });
 
 test('review is counted from the last review, flagged 60 days before', () => {

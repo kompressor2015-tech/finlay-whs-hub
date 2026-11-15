@@ -1,9 +1,9 @@
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
-import { currentApproved, emptyStep, highAfterCount, swmsIssues, swmsNeedsAction, swmsPill, versionProblems, type Swms, type SwmsStep } from './swms.ts';
+import { currentApproved, emptyStep, groupSteps, stepCode, highAfterCount, swmsIssues, swmsNeedsAction, swmsPill, versionProblems, type Swms, type SwmsStep } from './swms.ts';
 
 const swms = (o: Partial<Swms> = {}): Swms => ({
-  id: 's', ref: 'SWMS-001', title: 't', site_id: null, owner_name: 'x', review_months: 12, reviewed_on: '2026-01-10', reviewed_by_name: '',
+  id: 's', ref: 'SWMS-001', swms_number: '', risk_register_ref: '', title: 't', site_id: null, owner_name: 'x', review_months: 12, reviewed_on: '2026-01-10', reviewed_by_name: '',
   document_id: null, status: 'active', created_by_name: '', created_at: '', updated_at: '', ...o,
 });
 const good = (): SwmsStep => ({ ...emptyStep(), step: 'Isolate', hazard: 'Stored energy', before: [4, 4], controls: 'Lock out', after: [2, 3], who: 'Operator' });
@@ -24,7 +24,7 @@ test('extreme after controls blocks', () => {
   assert.ok(versionProblems({ steps: [s], work_covered: 'x' }).some(p => /extreme/.test(p)));
 });
 test('high after controls is counted, not blocked', () => {
-  const s = { ...good(), after: [4, 4] as [number, number] };
+  const s = { ...good(), after: [4, 3] as [number, number] };
   assert.equal(highAfterCount([s, good()]), 1);
   assert.deepEqual(versionProblems({ steps: [s], work_covered: 'x' }), []);
 });
@@ -63,4 +63,14 @@ test('home adds to the existing risk count', () => {
   const base = { ...emptyHomeData(), navCounts: { risk: 2 } };
   const home = withSwms(base, [swms()], [], now);
   assert.equal(home.navCounts.risk, 3);
+});
+
+test('steps group under their section headings in order', () => {
+  const g = groupSteps([{ ...good(), section: 'Arrive' }, { ...good(), section: 'Arrive' }, { ...good(), section: 'Service' }]);
+  assert.deepEqual(g.map(x => [x.section, x.steps.length]), [['Arrive', 2], ['Service', 1]]);
+});
+test('step scores print like H18', () => {
+  assert.equal(stepCode({ ...good(), before: [3, 4] }, 'before'), 'H18');
+  assert.equal(stepCode({ ...good(), after: [1, 3] }, 'after'), 'L6');
+  assert.equal(stepCode({ ...good(), after: null }, 'after'), '');
 });

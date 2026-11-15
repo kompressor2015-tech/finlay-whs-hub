@@ -197,6 +197,32 @@ drop trigger if exists whs_swms_review_follow on public.whs_swms_reviews;
 create trigger whs_swms_review_follow after insert or delete on public.whs_swms_reviews
   for each row execute function public.whs_swms_review_follow();
 
+-- The fields on Finlay's own SWMS form. Added with "if not exists" so this file is safe to run again.
+alter table public.whs_swms add column if not exists swms_number text not null default '';
+alter table public.whs_swms add column if not exists risk_register_ref text not null default '';
+
+alter table public.whs_swms_versions add column if not exists site_name text not null default '';
+alter table public.whs_swms_versions add column if not exists site_address text not null default '';
+alter table public.whs_swms_versions add column if not exists legislation text not null default '';
+alter table public.whs_swms_versions add column if not exists high_risk_areas text[] not null default '{}';
+alter table public.whs_swms_versions add column if not exists high_risk_other text not null default '';
+alter table public.whs_swms_versions add column if not exists author_position text not null default '';
+alter table public.whs_swms_versions add column if not exists author_signature_path text;
+alter table public.whs_swms_versions add column if not exists supervisor_name text not null default '';
+alter table public.whs_swms_versions add column if not exists supervisor_position text not null default '';
+alter table public.whs_swms_versions add column if not exists supervisor_contact text not null default '';
+alter table public.whs_swms_versions add column if not exists supervisor_signature_path text;
+alter table public.whs_swms_versions add column if not exists expected_start date;
+alter table public.whs_swms_versions add column if not exists consulted jsonb not null default '[]'::jsonb;     -- [{name, signature_path}]
+alter table public.whs_swms_versions add column if not exists chemicals jsonb not null default '[]'::jsonb;     -- [{name, sds}]
+alter table public.whs_swms_versions add column if not exists review_checks text[] not null default '{}';
+alter table public.whs_swms_versions add column if not exists permit_types text[] not null default '{}';
+alter table public.whs_swms_versions add column if not exists qualifications text not null default '';
+alter table public.whs_swms_versions add column if not exists voc text[] not null default '{}';
+alter table public.whs_swms_versions add column if not exists tools text not null default '';
+alter table public.whs_swms_versions add column if not exists sops text not null default '';
+alter table public.whs_swms_versions add column if not exists approver_position text not null default '';
+
 -- Permissions ----------------------------------------------------------------------
 
 alter table public.whs_swms enable row level security;
