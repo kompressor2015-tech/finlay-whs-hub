@@ -136,7 +136,8 @@ function PhoneHome({ data }: { data: HomeData }) {
 
       <TaskList title="My actions" items={data.phoneToday} empty="Nothing given to you right now." />
       <a href={hrefFor({ name: 'module', id: 'incidents' })} className="no-underline text-ink bg-white border border-line rounded-xl p-3.5 min-h-14 flex items-center text-[15px] font-semibold">My reports</a>
-      <TaskList title="To read and sign" items={data.phoneToSign} empty="Nothing to sign. Documents arrive in step 5." />
+      <TaskList title="To read and sign" items={data.phoneToSign} empty="Nothing to sign on right now." />
+      <a href={hrefFor({ name: 'module', id: 'swms' })} className="no-underline text-ink bg-white border border-line rounded-xl p-3.5 min-h-14 flex items-center text-[15px] font-semibold">SWMS and sign-on</a>
     </>
   );
 }
@@ -150,7 +151,7 @@ function TaskList({ title, items, empty }: { title: string; items: PhoneTask[]; 
           <p className="m-0 p-3.5 text-sm text-muted">{empty}</p>
         ) : (
           items.map(t => (
-            <div key={t.id} className="flex items-center gap-3 p-3.5 min-h-14 border-b border-line-soft last:border-b-0">
+            <a key={t.id} href={t.href} className="no-underline text-ink flex items-center gap-3 p-3.5 min-h-14 border-b border-line-soft last:border-b-0">
               <span className="flex-1 min-w-0">
                 <span className="block text-[15px] font-medium">
                   {t.title} {t.unit && <span className="text-finlay font-bold">{t.unit}</span>}
@@ -158,7 +159,7 @@ function TaskList({ title, items, empty }: { title: string; items: PhoneTask[]; 
                 <span className="block text-[13px] text-muted mt-0.5">{t.detail}</span>
               </span>
               <Pill tone={t.tone}>{t.pill}</Pill>
-            </div>
+            </a>
           ))
         )}
       </div>

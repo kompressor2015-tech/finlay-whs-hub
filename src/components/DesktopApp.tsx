@@ -38,7 +38,7 @@ const GROUPS: { label: string; ids: string[] }[] = [
 ];
 
 export function DesktopApp({ user, data, route, onSignOut, onPhoneLayout }: Props) {
-  const navItems = MODULES.filter(m => canOpenModule(user.access, m.id));
+  const navItems = MODULES.filter(m => !m.hidden && canOpenModule(user.access, m.id));
   const activeId = moduleOf(route);
   const navLink = (active: boolean) =>
     `no-underline flex items-center justify-between px-3 py-2.5 rounded-lg text-sm ${

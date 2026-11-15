@@ -13,6 +13,7 @@ import { documentsComing, withDocuments } from './homeDocuments.ts';
 import type { WhsDocument } from './documents.ts';
 import { withRisks } from './homeRisks.ts';
 import { withSwms } from './homeSwms.ts';
+import { withSignOns, type SignonRaw } from './homeSignon.ts';
 import type { Swms, SwmsVersion } from './swms.ts';
 import type { Risk, RiskControl } from './risks.ts';
 import { withClaims } from './homeClaims.ts';
@@ -43,6 +44,7 @@ export interface HomeRaw {
   /** Claims with their certificates and appointments; empty for anyone but the WHS officer and admins */
   /** null when the risk register tables are not there yet */
   risks?: { risks: Risk[]; controls: RiskControl[] } | null;
+  signon?: SignonRaw | null;
   swms?: { swms: Swms[]; versions: Pick<SwmsVersion, 'swms_id' | 'status'>[] } | null;
   claims?: { claims: Claim[]; certs: Certificate[]; appts: Appointment[]; names: [string, string][] } | null;
   training?: { people: Person[]; tickets: Ticket[]; siteIds: string[] } | null;
@@ -93,5 +95,6 @@ export function buildHomeData(raw: HomeRaw, me: string, site: ScopeSite | null, 
   const sw = raw.swms;
   const withStep11 = sw ? withSwms(withStep10, sw.swms.filter(x => !x.site_id || !site || x.site_id === site.id || x.site_id === site.depotSiteId), sw.versions, now) : withStep10;
   const coming = [...board.coming, ...documentsComing(docs, now), ...(rec ? recurringComing(recChecks, rec.log, rec.sites, now) : [])].sort((a, b) => a.day.localeCompare(b.day)).slice(0, 5);
-  return { ...withStep11, charts, board: { ...board, coming } };
+  const withStep12 = raw.signon ? withSignOns(withStep11, raw.signon, now) : withStep11;
+  return { ...withStep12, charts, board: { ...board, coming } };
 }

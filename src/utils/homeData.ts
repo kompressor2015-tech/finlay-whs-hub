@@ -33,6 +33,8 @@ export interface PhoneTask {
   detail: string;
   pill: string;
   tone: Tone;
+  /** Where tapping it goes */
+  href?: string;
 }
 
 export interface HomeData {
