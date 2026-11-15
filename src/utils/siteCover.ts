@@ -6,6 +6,7 @@
  */
 
 import type { Person } from './incidentFile.ts';
+import { addMonths } from './documents.ts';
 import { CPR_TICKET, FIRE_WARDEN_TICKET, FIRST_AID_TICKET, currentTickets, ticketState, type Ticket } from './tickets.ts';
 
 export const WORKERS_PER_FIRST_AIDER = 25;
@@ -18,6 +19,8 @@ export interface Holder {
   /** First aiders only: the yearly CPR refresher */
   cpr?: Ticket | null;
   cprValid?: boolean;
+  /** The CPR shown comes from the first aid certificate (it includes CPR for 12 months from its issue date) */
+  cprFromFirstAid?: boolean;
 }
 
 export interface SiteCover {
@@ -47,7 +50,13 @@ export function coverFor(siteId: string, people: Person[], tickets: Ticket[], no
   const firstAiders = here.filter(p => p.is_first_aider).map(p => {
     const h = holder(p, FIRST_AID_TICKET, tickets, now);
     const c = holder(p, CPR_TICKET, tickets, now);
-    return { ...h, cpr: c.ticket, cprValid: c.valid, valid: h.valid && c.valid };
+    // A first aid certificate includes CPR, so it counts as CPR for 12 months from the day it was issued
+    // (unless their own CPR ticket runs later).
+    const fromFa: Ticket | null = h.ticket?.issued_on ? { ...h.ticket, name: CPR_TICKET, expires_on: addMonths(h.ticket.issued_on, 12) } : null;
+    const useFa = !!fromFa && ticketState(fromFa, now) !== 'expired' && (!c.valid || (fromFa.expires_on ?? '') > (c.ticket?.expires_on ?? ''));
+    const cpr = useFa ? fromFa : c.ticket;
+    const cprValid = useFa ? true : c.valid;
+    return { ...h, cpr, cprValid, cprFromFirstAid: useFa, valid: h.valid && cprValid };
   });
   const wardens = here.filter(p => p.is_fire_warden).map(p => holder(p, FIRE_WARDEN_TICKET, tickets, now));
   const required = requiredFirstAiders(here.length);
@@ -61,7 +70,7 @@ export function coverFor(siteId: string, people: Person[], tickets: Ticket[], no
   const noFa = firstAiders.filter(h => !h.ticket || ticketState(h.ticket, now) === 'expired').length;
   if (noFa) gaps.push(`${noFa} first aider${noFa === 1 ? '' : 's'} without a current first aid ticket`);
   const noCpr = firstAiders.filter(h => !h.cprValid).length;
-  if (noCpr) gaps.push(`${noCpr} first aider${noCpr === 1 ? '' : 's'} without current CPR (renewed every 12 months)`);
+  if (noCpr) gaps.push(`${noCpr} first aider${noCpr === 1 ? '' : 's'} without current CPR (a first aid certificate covers CPR for 12 months from its issue date; after that a CPR refresher is needed)`);
   return { siteId, headcount: here.length, required, firstAiders, validFirstAiders, wardens, validWardens, chiefWarden, gaps };
 }
 

@@ -8,7 +8,7 @@ import type { Ticket } from './tickets.ts';
 
 const now = new Date('2026-11-14T04:00:00Z');
 const person = (id: string, o: Partial<Person> = {}): Person => ({ id, name: id, position: '', site_id: 's1', phone: '', emergency_contact: '', profile_id: null, start_date: null, notes: '', active: true, is_first_aider: false, is_fire_warden: false, warden_role: '', left_on: null, archived_at: null, archived_by_name: '', created_at: '', updated_at: '', ...o });
-const ticket = (person_id: string, name: string, expires_on: string | null): Ticket => ({ id: person_id + name, person_id, name, number: '', issued_on: '2026-01-01', expires_on, provider: '', file_path: '', file_name: '', notes: '', created_by_name: '', created_at: '2026-01-01' });
+const ticket = (person_id: string, name: string, expires_on: string | null, issued_on: string | null = '2025-01-01'): Ticket => ({ id: person_id + name, person_id, name, number: '', issued_on, expires_on, provider: '', file_path: '', file_name: '', notes: '', created_by_name: '', created_at: '2026-01-01' });
 
 test('one first aider for every 25 workers', () => {
   assert.equal(requiredFirstAiders(0), 0);
@@ -55,4 +55,21 @@ test('a first aider with a lapsed CPR does not count', () => {
   const c = coverFor('s1', [person('a', { is_first_aider: true })], [ticket('a', 'Provide First Aid', '2027-01-01'), ticket('a', 'CPR refresher', '2026-10-01')], now);
   assert.equal(c.validFirstAiders, 0);
   assert.ok(c.gaps.some(g => g.includes('without current CPR')));
+});
+
+test('a first aid certificate covers CPR for 12 months from its issue date', () => {
+  const p = [person('a', { is_first_aider: true })];
+  const fresh = coverFor('s1', p, [ticket('a', 'Provide First Aid', '2029-06-01', '2026-06-01')], now);
+  assert.equal(fresh.firstAiders[0].cprValid, true);
+  assert.equal(fresh.firstAiders[0].cprFromFirstAid, true);
+  assert.equal(fresh.firstAiders[0].cpr?.expires_on, '2027-06-01');
+  assert.equal(fresh.validFirstAiders, 1);
+  const old = coverFor('s1', p, [ticket('a', 'Provide First Aid', '2028-01-01', '2025-01-01')], now);
+  assert.equal(old.firstAiders[0].cprValid, false);
+  assert.equal(old.validFirstAiders, 0);
+  const refreshed = coverFor('s1', p, [ticket('a', 'Provide First Aid', '2028-01-01', '2025-01-01'), ticket('a', 'CPR refresher', '2027-09-01', '2026-09-01')], now);
+  assert.equal(refreshed.firstAiders[0].cprValid, true);
+  assert.equal(refreshed.firstAiders[0].cprFromFirstAid, false);
+  const noDate = coverFor('s1', p, [ticket('a', 'Provide First Aid', '2029-06-01', null)], now);
+  assert.equal(noDate.firstAiders[0].cprValid, false);
 });
