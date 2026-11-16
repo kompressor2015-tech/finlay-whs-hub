@@ -5,7 +5,7 @@ import type { CheckJob } from './checkJobs.ts';
 import type { Booking } from './bookings.ts';
 
 const now = new Date('2026-11-16T03:00:00Z');
-const job = (o: Partial<CheckJob> = {}): CheckJob => ({ id: 'j1', check_id: 'c1', title: 'Rack repairs', supplier: 'Bowen Storage', quote_ref: 'PRM56999', quote_amount: 6098.64, po_number: '', status: 'po_raised', booked_for: null, approved_by_name: '', approved_on: null, notes: '', file_path: null, file_name: null, created_by_name: '', created_at: '2026-11-10T00:00:00Z', ...o });
+const job = (o: Partial<CheckJob> = {}): CheckJob => ({ id: 'j1', check_id: 'c1', title: 'Rack repairs', supplier: 'Bowen Storage', quote_ref: 'PRM56999', quote_amount: 6098.64, po_number: '', status: 'po_raised', booked_for: null, approved_by_name: '', approved_on: null, notes: '', file_path: null, file_name: null, action_id: null, created_by_name: '', created_at: '2026-11-10T00:00:00Z', ...o });
 const base = (o: Partial<Outstanding> = {}): Outstanding => ({
   jobs: [], bookings: [], sites: [{ id: 's1', name: 'Somerton' }], log: [], people: [],
   checks: [{ id: 'c1', site_id: 's1', name: 'Racking inspection', category: '', interval_months: 12, basis: '', rule_confirmed: true, first_due: null, notes: '', active: true, created_at: '2026-01-01T00:00:00Z' }],
