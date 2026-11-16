@@ -6,7 +6,8 @@ import { listBookings } from '../services/bookings.ts';
 import { bookingLabel, openBooking, type Booking } from '../utils/bookings.ts';
 import { BookingBox } from './BookingBox.tsx';
 import { JobsBox } from './JobsBox.tsx';
-import { listCheckJobs } from '../services/checkJobs.ts';
+import { listCheckJobs, listJobActions } from '../services/checkJobs.ts';
+import type { WhsAction } from '../utils/records.ts';
 import { isOpenJob, jobLabel, type CheckJob } from '../utils/checkJobs.ts';
 import { useSiteScope } from '../hooks/useSiteScope.tsx';
 import { isOfficeAccess } from '../utils/access.ts';
@@ -33,6 +34,7 @@ export function RecurringChecksPage({ user }: { user: WhsUser }) {
   const [log, setLog] = useState<CheckLogLine[]>([]);
   const [bookings, setBookings] = useState<Booking[]>([]);
   const [jobs, setJobs] = useState<CheckJob[]>([]);
+  const [jobActions, setJobActions] = useState<WhsAction[]>([]);
   const [error, setError] = useState<string | null>(null);
   const [loaded, setLoaded] = useState(false);
   const [busy, setBusy] = useState(false);
@@ -42,6 +44,7 @@ export function RecurringChecksPage({ user }: { user: WhsUser }) {
     Promise.all([loadChecks(), listBookings(), listCheckJobs()]).then(([r, bk, jb]) => {
       setBookings(bk.data ?? []);
       setJobs(jb.data ?? []);
+      void listJobActions((jb.data ?? []).map(j => j.action_id).filter((x): x is string => !!x)).then(a => setJobActions(a.data ?? []));
       setError(r.error ?? null);
       setSites(r.data?.sites ?? []);
       setChecks(r.data?.checks ?? []);
@@ -163,7 +166,7 @@ export function RecurringChecksPage({ user }: { user: WhsUser }) {
 
       {open && (
         <SidePanel label={open.name} onClose={close}>
-          <CheckPanel key={open.id} bookings={bookings} jobs={jobs.filter(j => j.check_id === open.id)} check={open} siteName={sites.find(s => s.id === open.site_id)?.name ?? ''} log={logOf.get(open.id) ?? []} user={user} office={office} onChanged={() => void load()} onRemoved={() => { close(); void load(); }} />
+          <CheckPanel key={open.id} bookings={bookings} jobs={jobs.filter(j => j.check_id === open.id)} actions={jobActions} check={open} siteName={sites.find(s => s.id === open.site_id)?.name ?? ''} log={logOf.get(open.id) ?? []} user={user} office={office} onChanged={() => void load()} onRemoved={() => { close(); void load(); }} />
         </SidePanel>
       )}
     </div>
@@ -201,7 +204,7 @@ function AddCheckForm({ siteId, onDone, onCancel }: { siteId: string; onDone: ()
   );
 }
 
-function CheckPanel({ bookings, jobs, check, siteName, log, user, office, onChanged, onRemoved }: { bookings: Booking[]; jobs: CheckJob[]; check: RecurringCheck; siteName: string; log: CheckLogLine[]; user: WhsUser; office: boolean; onChanged: () => void; onRemoved: () => void }) {
+function CheckPanel({ bookings, jobs, actions, check, siteName, log, user, office, onChanged, onRemoved }: { bookings: Booking[]; jobs: CheckJob[]; actions: WhsAction[]; check: RecurringCheck; siteName: string; log: CheckLogLine[]; user: WhsUser; office: boolean; onChanged: () => void; onRemoved: () => void }) {
   const [error, setError] = useState<string | null>(null);
   const [busy, setBusy] = useState(false);
   const talk = check.name.trim().toLowerCase() === 'toolbox talk';
@@ -287,7 +290,7 @@ function CheckPanel({ bookings, jobs, check, siteName, log, user, office, onChan
 
       <BookingBox subject={{ type: 'check', checkId: check.id }} booking={openBooking(bookings, { type: 'check', checkId: check.id }, log.map(x => x.done_on))} canEdit={office} providerLabel="Contractor" onChanged={onChanged} />
 
-      <JobsBox checkId={check.id} jobs={jobs} canEdit={office} onChanged={onChanged} />
+      <JobsBox checkId={check.id} label={`${check.name} · ${siteName}`} jobs={jobs} actions={actions} canEdit={office} onChanged={onChanged} />
 
       {office && (
         <form onSubmit={save} className="flex flex-col gap-3 border border-line rounded-xl p-3.5">

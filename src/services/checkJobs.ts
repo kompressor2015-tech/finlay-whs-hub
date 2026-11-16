@@ -2,6 +2,9 @@
 
 import { supabase } from './supabase.ts';
 import { removeFiles, uploadFile } from './files.ts';
+import { createAction, updateAction } from './records.ts';
+import { addDays, brisbaneDay } from '../utils/dates.ts';
+import type { WhsAction } from '../utils/records.ts';
 import type { CheckJob, JobStatus } from '../utils/checkJobs.ts';
 
 type Result<T> = { data?: T; error?: string };
@@ -21,7 +24,32 @@ export async function listCheckJobs(): Promise<Result<CheckJob[]>> {
 
 export interface JobInput { title: string; supplier: string; quote_ref: string; quote_amount: number | null; po_number: string; booked_for: string | null; notes: string }
 
-export async function addCheckJob(checkId: string, input: JobInput, file: File | null): Promise<Result<CheckJob>> {
+/** The action for a job: due on the booked date, or 14 days out until there is one. */
+async function raiseAction(title: string, supplier: string, label: string, booked: string | null): Promise<Result<WhsAction>> {
+  return createAction({ title: supplier ? `${title} (${supplier})` : title, source_type: 'other', source_id: null, source_ref: label, machine_id: null, unit_no: '', owner_id: null, due: booked ?? addDays(brisbaneDay(new Date()), 14) });
+}
+
+/** Link a job that has no action yet to a new one. */
+export async function raiseJobAction(job: CheckJob, label: string): Promise<Result<CheckJob>> {
+  const a = await raiseAction(job.title, job.supplier, label, job.booked_for);
+  if (a.error || !a.data) return { error: a.error };
+  const { data, error } = await supabase.from('whs_check_jobs').update({ action_id: a.data.id }).eq('id', job.id).select('*').single();
+  return error ? { error: friendly(error.message) } : { data: data as CheckJob };
+}
+
+export async function listJobActions(ids: string[]): Promise<Result<WhsAction[]>> {
+  if (!ids.length) return { data: [] };
+  const { data, error } = await supabase.from('whs_actions').select('*').in('id', ids);
+  return error ? { error: friendly(error.message) } : { data: (data ?? []) as WhsAction[] };
+}
+
+export async function addCheckJob(checkId: string, input: JobInput, file: File | null, actionLabel: string | null = null): Promise<Result<CheckJob>> {
+  let actionId: string | null = null;
+  if (actionLabel) {
+    const a = await raiseAction(input.title, input.supplier, actionLabel, input.booked_for);
+    if (a.error || !a.data) return { error: a.error };
+    actionId = a.data.id;
+  }
   let path: string | undefined;
   if (file) {
     const up = await uploadFile('whs-check-files', checkId, file);
@@ -30,7 +58,7 @@ export async function addCheckJob(checkId: string, input: JobInput, file: File |
   }
   const { data, error } = await supabase
     .from('whs_check_jobs')
-    .insert({ check_id: checkId, ...input, file_path: path ?? null, file_name: file?.name ?? null })
+    .insert({ check_id: checkId, ...input, file_path: path ?? null, file_name: file?.name ?? null, action_id: actionId })
     .select('*')
     .single();
   if (error) {
@@ -40,9 +68,20 @@ export async function addCheckJob(checkId: string, input: JobInput, file: File |
   return { data: data as CheckJob };
 }
 
-export async function updateCheckJob(id: string, patch: Partial<Pick<JobInput, 'po_number' | 'booked_for' | 'notes'>> & { status?: JobStatus }): Promise<Result<CheckJob>> {
-  const { data, error } = await supabase.from('whs_check_jobs').update(patch).eq('id', id).select('*').single();
-  return error ? { error: friendly(error.message) } : { data: data as CheckJob };
+export async function updateCheckJob(job: CheckJob, patch: Partial<Pick<JobInput, 'po_number' | 'booked_for' | 'notes'>> & { status?: JobStatus }): Promise<Result<CheckJob>> {
+  const { data, error } = await supabase.from('whs_check_jobs').update(patch).eq('id', job.id).select('*').single();
+  if (error) return { error: friendly(error.message) };
+  // Keep the linked action in step: due date follows the booked date, and Done closes it
+  if (job.action_id) {
+    const change: Partial<WhsAction> = {};
+    if (patch.booked_for) change.due = patch.booked_for;
+    if (patch.status === 'done') { change.status = 'done'; change.done_note = 'Repair job marked done.'; }
+    if (Object.keys(change).length) {
+      const a = await updateAction(job.action_id, change);
+      if (a.error) return { data: data as CheckJob, error: `The job was updated, but its action was not: ${a.error}` };
+    }
+  }
+  return { data: data as CheckJob };
 }
 
 /** Attach or replace the quote file on a job. */

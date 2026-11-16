@@ -19,6 +19,8 @@ export interface CheckJob {
   notes: string;
   file_path: string | null;
   file_name: string | null;
+  /** The action that tracks this job, if any */
+  action_id: string | null;
   created_by_name: string;
   created_at: string;
 }
