@@ -49,6 +49,8 @@ export interface HomeData {
   charts?: HomeCharts;
   /** Tiles, sites and coming-up on the desktop home screen */
   board?: HomeBoard;
+  /** Open quotes and POs, and bookings, for the home tile; absent until those tables exist */
+  work?: { open: number; booked: number; late: number };
 }
 
 export function emptyHomeData(): HomeData {

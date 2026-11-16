@@ -56,7 +56,12 @@ export function outstandingItems(o: Outstanding, now: Date = new Date()): Attent
 
 export function withOutstanding(home: HomeData, o: Outstanding, now: Date = new Date()): HomeData {
   const items = outstandingItems(o, now);
-  return items.length ? { ...home, attention: [...home.attention, ...items] } : home;
+  const work = {
+    open: o.jobs.filter(isOpenJob).length,
+    booked: o.bookings.filter(b => b.status === 'booked' && daysUntil(b.booked_for, now) >= 0).length,
+    late: items.filter(i => i.urgency === 'overdue').length,
+  };
+  return { ...home, attention: [...home.attention, ...items], work };
 }
 
 /** Booked dates in the next 30 days, for the Coming up list. */
