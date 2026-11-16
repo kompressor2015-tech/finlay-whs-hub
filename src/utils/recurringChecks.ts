@@ -58,7 +58,7 @@ const COMMON: Template[] = [
   { name: 'Eyewash and safety shower test', category: 'Emergency', interval_months: 6, basis: 'Interval to confirm.', confirmed: false },
   { name: 'Electrical test and tag', category: 'Electrical', interval_months: 6, basis: 'AS/NZS 3760. Done by a contractor every 6 months at Finlay.', confirmed: true },
   { name: 'Racking inspection', category: 'Storage', interval_months: 12, basis: 'Annual inspection by a racking contractor.', confirmed: true },
-  { name: 'Toolbox talk', category: 'Safety talks', interval_months: 1, basis: 'Monthly site safety talk. Add each talk as a log line: topic in the notes, who gave it, and attach the signed sheet.', confirmed: false },
+  { name: 'Toolbox talk', category: 'Safety talks', interval_months: 2, basis: 'Internal toolbox talk every 2 months, given by our own staff. Record the topic, attach the signed sheet and raise any actions.', confirmed: false },
   { name: 'Spill kit service', category: 'Emergency', interval_months: 12, basis: 'Contractor compliance service of the spill kits. Interval to confirm.', confirmed: false },
   { name: 'Lifting gear and harness inspection', category: 'Plant', interval_months: 6, basis: 'Interval to confirm.', confirmed: false },
 ];

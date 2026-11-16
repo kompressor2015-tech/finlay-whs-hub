@@ -182,8 +182,9 @@ function AddCheckForm({ siteId, onDone, onCancel }: { siteId: string; onDone: ()
 function CheckPanel({ bookings, check, siteName, log, user, office, onChanged, onRemoved }: { bookings: Booking[]; check: RecurringCheck; siteName: string; log: CheckLogLine[]; user: WhsUser; office: boolean; onChanged: () => void; onRemoved: () => void }) {
   const [error, setError] = useState<string | null>(null);
   const [busy, setBusy] = useState(false);
-  const [kind, setKind] = useState<'staff' | 'contractor'>('contractor');
-  const [form, setForm] = useState({ done_on: today(), name: '', company: '', result: 'passed' as 'passed' | 'failed', notes: '' });
+  const talk = check.name.trim().toLowerCase() === 'toolbox talk';
+  const [kind, setKind] = useState<'staff' | 'contractor'>(talk ? 'staff' : 'contractor');
+  const [form, setForm] = useState({ done_on: today(), name: '', company: '', result: 'passed' as 'passed' | 'failed', notes: '', actions: '' });
   const [file, setFile] = useState<File | null>(null);
   const [fileKey, setFileKey] = useState(0);
   const [edit, setEdit] = useState<{ months: string; basis: string } | null>(null);
@@ -194,12 +195,12 @@ function CheckPanel({ bookings, check, siteName, log, user, office, onChanged, o
     e.preventDefault();
     setError(null);
     if (kind === 'contractor' && !form.company.trim()) return setError('Enter the contractor\'s company.');
-    if (kind === 'staff' && !form.name.trim()) return setError('Enter who did the check.');
+    if (kind === 'staff' && !form.name.trim()) return setError(talk ? 'Enter who gave the talk.' : 'Enter who did the check.');
     setBusy(true);
-    const r = await recordCheck(check, siteName, { done_on: form.done_on, done_by_kind: kind, done_by_name: form.name.trim(), company: kind === 'contractor' ? form.company.trim() : '', result: form.result, notes: form.notes.trim() }, file);
+    const r = await recordCheck(check, siteName, { done_on: form.done_on, done_by_kind: kind, done_by_name: form.name.trim(), company: kind === 'contractor' ? form.company.trim() : '', result: form.result, notes: form.notes.trim() }, file, form.actions.split('\n').map(x => x.trim()).filter(Boolean));
     setBusy(false);
     if (r.error) return setError(r.error);
-    setForm({ ...form, notes: '', result: 'passed' });
+    setForm({ ...form, notes: '', actions: '', result: 'passed' });
     setFile(null);
     setFileKey(k => k + 1);
     onChanged();
@@ -259,28 +260,31 @@ function CheckPanel({ bookings, check, siteName, log, user, office, onChanged, o
 
       {office && (
         <form onSubmit={save} className="flex flex-col gap-3 border border-line rounded-xl p-3.5">
-          <h3 className="m-0 text-sm font-bold">Record this check</h3>
+          <h3 className="m-0 text-sm font-bold">{talk ? 'Record this talk' : 'Record this check'}</h3>
           <div className="grid grid-cols-2 gap-3">
             <Field label="Date done" htmlFor="rk-on"><input id="rk-on" type="date" value={form.done_on} max={today()} onChange={e => setForm({ ...form, done_on: e.target.value })} className={inputClass} /></Field>
-            <Field label="Done by" htmlFor="rk-kind">
+            {!talk && <Field label="Done by" htmlFor="rk-kind">
               <select id="rk-kind" value={kind} onChange={e => setKind(e.target.value as 'staff' | 'contractor')} className={inputClass}>
                 <option value="contractor">A contractor</option>
                 <option value="staff">Our staff</option>
               </select>
-            </Field>
+            </Field>}
             {kind === 'contractor' && <Field label="Company" htmlFor="rk-co"><input id="rk-co" value={form.company} onChange={e => setForm({ ...form, company: e.target.value })} className={inputClass} /></Field>}
-            <Field label={kind === 'contractor' ? 'Technician' : 'Who did it'} optional={kind === 'contractor'} htmlFor="rk-nm"><input id="rk-nm" value={form.name} onChange={e => setForm({ ...form, name: e.target.value })} className={inputClass} /></Field>
-            <Field label="Result" htmlFor="rk-res">
+            <Field label={kind === 'contractor' ? 'Technician' : talk ? 'Who gave it' : 'Who did it'} optional={kind === 'contractor'} htmlFor="rk-nm"><input id="rk-nm" value={form.name} onChange={e => setForm({ ...form, name: e.target.value })} className={inputClass} /></Field>
+            {!talk && <Field label="Result" htmlFor="rk-res">
               <select id="rk-res" value={form.result} onChange={e => setForm({ ...form, result: e.target.value as 'passed' | 'failed' })} className={inputClass}>
                 <option value="passed">All passed</option>
                 <option value="failed">Something failed</option>
               </select>
-            </Field>
+            </Field>}
           </div>
-          <Field label="Notes" optional htmlFor="rk-notes" hint={form.result === 'failed' ? 'A failed check adds an action to fix it, due in 14 days.' : undefined}>
+          <Field label={talk ? 'Topic and what was covered' : 'Notes'} optional htmlFor="rk-notes" hint={form.result === 'failed' ? 'A failed check adds an action to fix it, due in 14 days.' : undefined}>
             <textarea id="rk-notes" rows={2} value={form.notes} onChange={e => setForm({ ...form, notes: e.target.value })} className={textareaClass} />
           </Field>
-          <Field label="Certificate or report" optional htmlFor="rk-file"><input key={fileKey} id="rk-file" type="file" onChange={e => setFile(e.target.files?.[0] ?? null)} className="text-sm" /></Field>
+          <Field label="Actions to raise" optional htmlFor="rk-act" hint="One per line. Each is added to Actions, due in 14 days.">
+            <textarea id="rk-act" rows={2} value={form.actions} onChange={e => setForm({ ...form, actions: e.target.value })} className={textareaClass} />
+          </Field>
+          <Field label={talk ? 'Signed sheet or photo' : 'Certificate or report'} optional htmlFor="rk-file"><input key={fileKey} id="rk-file" type="file" onChange={e => setFile(e.target.files?.[0] ?? null)} className="text-sm" /></Field>
           <div><button type="submit" disabled={busy} className={primary}>{busy ? 'Saving…' : 'Save'}</button></div>
         </form>
       )}
