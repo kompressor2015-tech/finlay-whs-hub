@@ -2,6 +2,9 @@ import { useEffect, useMemo, useState, type FormEvent } from 'react';
 import type { WhsUser } from '../services/auth.ts';
 import { addCheck, addTemplates, loadChecks, recordCheck, removeLogLine, updateCheck, type CheckSite } from '../services/recurringChecks.ts';
 import { openFile } from '../services/files.ts';
+import { listBookings } from '../services/bookings.ts';
+import { bookingLabel, openBooking, type Booking } from '../utils/bookings.ts';
+import { BookingBox } from './BookingBox.tsx';
 import { useSiteScope } from '../hooks/useSiteScope.tsx';
 import { isOfficeAccess } from '../utils/access.ts';
 import { formatDay } from '../utils/dates.ts';
@@ -25,13 +28,15 @@ export function RecurringChecksPage({ user }: { user: WhsUser }) {
   const [sites, setSites] = useState<CheckSite[]>([]);
   const [checks, setChecks] = useState<RecurringCheck[]>([]);
   const [log, setLog] = useState<CheckLogLine[]>([]);
+  const [bookings, setBookings] = useState<Booking[]>([]);
   const [error, setError] = useState<string | null>(null);
   const [loaded, setLoaded] = useState(false);
   const [busy, setBusy] = useState(false);
   const [adding, setAdding] = useState<string | null>(null);
 
   const load = () =>
-    loadChecks().then(r => {
+    Promise.all([loadChecks(), listBookings()]).then(([r, bk]) => {
+      setBookings(bk.data ?? []);
       setError(r.error ?? null);
       setSites(r.data?.sites ?? []);
       setChecks(r.data?.checks ?? []);
@@ -120,7 +125,7 @@ export function RecurringChecksPage({ user }: { user: WhsUser }) {
                             <td className={td}>{intervalLabel(c.interval_months)}</td>
                             <td className={td}>{last ? <>{formatDay(last.done_on)}<span className="block text-xs text-muted">{last.done_by_kind === 'contractor' ? last.company || 'Contractor' : last.done_by_name || 'Staff'}</span></> : <span className="text-muted">Never</span>}</td>
                             <td className={td}>{due ? formatDay(due) : <span className="text-muted">—</span>}</td>
-                            <td className={td}><Pill tone={pill.tone}>{pill.label}</Pill></td>
+                            <td className={td}><Pill tone={pill.tone}>{pill.label}</Pill>{(() => { const bk = openBooking(bookings, { type: 'check', checkId: c.id }, l.map(x => x.done_on)); if (!bk) return null; const bl = bookingLabel(bk); return <span className="block mt-1"><Pill tone={bl.tone}>{bl.text}</Pill></span>; })()}</td>
                             <td className={`${td} pr-4 text-muted`}>{c.basis}{!c.rule_confirmed && <span className="ml-1.5"><Pill tone="amber">To confirm</Pill></span>}</td>
                           </tr>
                         );
@@ -136,7 +141,7 @@ export function RecurringChecksPage({ user }: { user: WhsUser }) {
 
       {open && (
         <SidePanel label={open.name} onClose={close}>
-          <CheckPanel key={open.id} check={open} siteName={sites.find(s => s.id === open.site_id)?.name ?? ''} log={logOf.get(open.id) ?? []} user={user} office={office} onChanged={() => void load()} onRemoved={() => { close(); void load(); }} />
+          <CheckPanel key={open.id} bookings={bookings} check={open} siteName={sites.find(s => s.id === open.site_id)?.name ?? ''} log={logOf.get(open.id) ?? []} user={user} office={office} onChanged={() => void load()} onRemoved={() => { close(); void load(); }} />
         </SidePanel>
       )}
     </div>
@@ -174,7 +179,7 @@ function AddCheckForm({ siteId, onDone, onCancel }: { siteId: string; onDone: ()
   );
 }
 
-function CheckPanel({ check, siteName, log, user, office, onChanged, onRemoved }: { check: RecurringCheck; siteName: string; log: CheckLogLine[]; user: WhsUser; office: boolean; onChanged: () => void; onRemoved: () => void }) {
+function CheckPanel({ bookings, check, siteName, log, user, office, onChanged, onRemoved }: { bookings: Booking[]; check: RecurringCheck; siteName: string; log: CheckLogLine[]; user: WhsUser; office: boolean; onChanged: () => void; onRemoved: () => void }) {
   const [error, setError] = useState<string | null>(null);
   const [busy, setBusy] = useState(false);
   const [kind, setKind] = useState<'staff' | 'contractor'>('contractor');
@@ -249,6 +254,8 @@ function CheckPanel({ check, siteName, log, user, office, onChanged, onRemoved }
           </div>
         )}
       </div>
+
+      <BookingBox subject={{ type: 'check', checkId: check.id }} booking={openBooking(bookings, { type: 'check', checkId: check.id }, log.map(x => x.done_on))} canEdit={office} providerLabel="Contractor" onChanged={onChanged} />
 
       {office && (
         <form onSubmit={save} className="flex flex-col gap-3 border border-line rounded-xl p-3.5">
