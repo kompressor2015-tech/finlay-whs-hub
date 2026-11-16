@@ -126,6 +126,16 @@ function DesktopHome({ data }: { data: HomeData }) {
       { label: 'Stocktakes due', value: String(board.stocktakesDue), note: board.stocktakeSites.join(', ') || 'all up to date', bad: board.stocktakesDue > 0, href: hrefFor({ name: 'chem', id: 'stocktake' }) },
     );
   }
+  if (data.work) {
+    const w = data.work;
+    tiles.push({
+      label: 'Open work and bookings',
+      value: String(w.open + w.booked),
+      note: w.late ? `${w.late} overdue · ${w.open} quote${w.open === 1 ? '' : 's'}/PO${w.open === 1 ? '' : 's'} open, ${w.booked} booked` : w.open + w.booked ? `${w.open} quote${w.open === 1 ? '' : 's'}/PO${w.open === 1 ? '' : 's'} open, ${w.booked} booked` : 'nothing outstanding',
+      bad: w.late > 0,
+      href: hrefFor({ name: 'module', id: 'recurring' }),
+    });
+  }
   const card = 'bg-white border border-line rounded-xl overflow-hidden';
   return (
     <div className="flex flex-col gap-5">
@@ -134,7 +144,7 @@ function DesktopHome({ data }: { data: HomeData }) {
         <p className="mt-1.5 mb-0 text-muted text-[15px]">{formatLongDate(now)} · All Finlay sites</p>
       </div>
 
-      <section aria-label="Summary" className="grid grid-cols-2 lg:grid-cols-3 2xl:grid-cols-6 gap-3">
+      <section aria-label="Summary" className="grid grid-cols-2 lg:grid-cols-4 2xl:grid-cols-7 gap-3">
         {tiles.map(s => (
           <a key={s.label} href={s.href} className="no-underline text-ink bg-white border border-line hover:border-[#CFCAC2] rounded-xl p-4">
             <div className="text-muted text-[13px]">{s.label}</div>

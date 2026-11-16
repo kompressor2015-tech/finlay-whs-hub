@@ -37,3 +37,9 @@ test('upcoming bookings and job dates go to coming up', () => {
   const items = bookingsComing(base({ bookings: [booking({ booked_for: '2026-11-20' })], jobs: [job({ booked_for: '2026-11-25' })] }), now);
   assert.equal(items.length, 2);
 });
+
+test('the tile counts open jobs, upcoming bookings and overdue items', async () => {
+  const { withOutstanding } = await import('./homeOutstanding.ts');
+  const home = withOutstanding({ attention: [] } as never, base({ jobs: [job()], bookings: [booking({ booked_for: '2026-11-20' }), booking({ id: 'b2', booked_for: '2026-11-01' })] }), now);
+  assert.deepEqual(home.work, { open: 1, booked: 1, late: 1 });
+});
