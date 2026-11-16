@@ -17,6 +17,7 @@ import { TicketsTab } from './TicketsTab.tsx';
 import { ClaimFile } from './ClaimFile.tsx';
 import { ErrorNote, Field, inputClass } from './Form.tsx';
 import { Pill } from './Pill.tsx';
+import { COMPANY_COURSES } from '../utils/companyCourses.ts';
 import { useSiteScope } from '../hooks/useSiteScope.tsx';
 
 const card = 'bg-white border border-line rounded-xl';
@@ -197,6 +198,7 @@ export function PersonPage({ id, user }: { id: string; user: WhsUser }) {
 
 function PersonEdit({ person, onSaved }: { person: Person; onSaved: () => void }) {
   const { sites } = useSiteScope();
+  const [notReq, setNotReq] = useState<string[]>(person.not_required ?? []);
   const [v, setV] = useState({ site_id: person.site_id ?? '', name: person.name, position: person.position, phone: person.phone, emergency_contact: person.emergency_contact, start_date: person.start_date ?? '' });
   const [busy, setBusy] = useState(false);
   const [err, setErr] = useState<string | null>(null);
@@ -205,9 +207,13 @@ function PersonEdit({ person, onSaved }: { person: Person; onSaved: () => void }
     <section className={`${card} px-4.5 py-4 grid grid-cols-2 sm:grid-cols-3 gap-3`}>
       {f('name', 'Name')}{f('position', 'Position')}{f('phone', 'Phone')}{f('emergency_contact', 'Emergency contact')}{f('start_date', 'Start date', 'date')}
       <Field label="Site" htmlFor="pe-site" optional><select id="pe-site" className={inputClass} value={v.site_id} onChange={e => setV({ ...v, site_id: e.target.value })}><option value="">Not set</option>{sites.map(x => <option key={x.id} value={x.id}>{x.name}</option>)}</select></Field>
+      <fieldset className="col-span-2 sm:col-span-3 border-0 p-0 m-0">
+        <legend className="text-[13px] font-semibold text-muted mb-1">Company-wide courses this person does not need to do</legend>
+        {COMPANY_COURSES.map(c => <label key={c} className="flex items-center gap-2 text-sm cursor-pointer"><input type="checkbox" className="w-5 h-5" checked={notReq.includes(c)} onChange={e => setNotReq(e.target.checked ? [...notReq, c] : notReq.filter(x => x !== c))} /> {c} is not required</label>)}
+      </fieldset>
       <div className="col-span-2 sm:col-span-3"><ErrorNote message={err} /><button type="button" disabled={busy || !v.name.trim()} className={btnPri} onClick={async () => {
         setBusy(true);
-        const res = await updatePerson(person.id, { name: v.name.trim(), position: v.position.trim(), phone: v.phone.trim(), emergency_contact: v.emergency_contact.trim(), start_date: v.start_date || null, site_id: v.site_id || null });
+        const res = await updatePerson(person.id, { name: v.name.trim(), position: v.position.trim(), phone: v.phone.trim(), emergency_contact: v.emergency_contact.trim(), start_date: v.start_date || null, site_id: v.site_id || null, not_required: notReq });
         setBusy(false);
         if (res.error) setErr(res.error); else onSaved();
       }}>Save</button></div>

@@ -32,6 +32,8 @@ export interface Person {
   is_first_aider: boolean;
   is_fire_warden: boolean;
   warden_role: '' | 'chief' | 'warden';
+  /** company-wide courses this person does not need to do */
+  not_required: string[];
   left_on: string | null;
   archived_at: string | null;
   archived_by_name: string;

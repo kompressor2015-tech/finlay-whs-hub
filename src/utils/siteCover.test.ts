@@ -7,7 +7,7 @@ import type { Person } from './incidentFile.ts';
 import type { Ticket } from './tickets.ts';
 
 const now = new Date('2026-11-14T04:00:00Z');
-const person = (id: string, o: Partial<Person> = {}): Person => ({ id, name: id, position: '', site_id: 's1', phone: '', emergency_contact: '', profile_id: null, start_date: null, notes: '', active: true, is_first_aider: false, is_fire_warden: false, warden_role: '', left_on: null, archived_at: null, archived_by_name: '', created_at: '', updated_at: '', ...o });
+const person = (id: string, o: Partial<Person> = {}): Person => ({ id, name: id, position: '', site_id: 's1', phone: '', emergency_contact: '', profile_id: null, start_date: null, notes: '', active: true, is_first_aider: false, is_fire_warden: false, warden_role: '', not_required: [], left_on: null, archived_at: null, archived_by_name: '', created_at: '', updated_at: '', ...o });
 const ticket = (person_id: string, name: string, expires_on: string | null, issued_on: string | null = '2025-01-01'): Ticket => ({ id: person_id + name, person_id, name, number: '', issued_on, expires_on, provider: '', file_path: '', file_name: '', notes: '', created_by_name: '', created_at: '2026-01-01' });
 
 test('one first aider for every 25 workers', () => {

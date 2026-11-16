@@ -8,6 +8,7 @@ import { hrefFor } from '../hooks/useRoute.ts';
 import { formatDay } from '../utils/dates.ts';
 import type { Person } from '../utils/incidentFile.ts';
 import { coverFor, WORKERS_PER_FIRST_AIDER, type Holder } from '../utils/siteCover.ts';
+import { COMPANY_COURSES, courseStatus, outstanding } from '../utils/companyCourses.ts';
 import { currentTickets, ticketPill, ticketState, type Ticket } from '../utils/tickets.ts';
 import { ErrorNote } from './Form.tsx';
 import { Pill } from './Pill.tsx';
@@ -46,6 +47,7 @@ export function TrainingCoverPage({ user: _user }: { user: WhsUser }) {
   );
   const expired = attention.filter(t => ticketState(t) === 'expired').length;
   const soon = attention.length - expired;
+  const courses = useMemo(() => COMPANY_COURSES.map(c => courseStatus(c, people.filter(p => inShown(p)), tickets)), [people, tickets, shown]);
   const shortSites = covers.filter(x => x.c.gaps.length).length;
   const noSite = people.filter(p => p.active && !p.site_id).length;
 
@@ -105,6 +107,37 @@ export function TrainingCoverPage({ user: _user }: { user: WhsUser }) {
           ))}
         </div>
       )}
+
+      {loaded && courses.map(c => {
+        const todo = outstanding(c);
+        return (
+          <section key={c.course} aria-label={c.course} className="bg-white border border-line rounded-xl overflow-hidden">
+            <div className="flex flex-wrap items-center gap-3 px-4 py-3 border-b border-line-soft">
+              <h2 className="m-0 text-base font-bold">{c.course}</h2>
+              <Pill tone="grey">Everyone</Pill>
+              <span className="text-sm text-muted">{c.current} current · {c.dueSoon} due soon · {c.expired} expired · {c.none} not done{c.excused ? ` · ${c.excused} not required` : ''}</span>
+            </div>
+            {todo.length === 0 ? <p className="m-0 px-4 py-4 text-sm text-muted">Everyone who needs this course has a current ticket.</p> : (
+              <div className="overflow-x-auto">
+                <table className="w-full border-collapse text-sm">
+                  <thead><tr><th className={`${th} pl-4`}>Person</th><th className={th}>Last done</th><th className={th}>Expires</th><th className={`${th} pr-4`}>Status</th></tr></thead>
+                  <tbody>
+                    {todo.map(r => (
+                      <tr key={r.person.id}>
+                        <td className={`${td} pl-4 font-semibold`}><a href={hrefFor({ name: 'person', id: r.person.id })}>{r.person.name}</a><span className="block text-xs text-muted font-normal">{sites.find(x => x.id === r.person.site_id)?.name ?? 'No site'}</span></td>
+                        <td className={td}>{r.ticket?.issued_on ? formatDay(r.ticket.issued_on) : '—'}</td>
+                        <td className={td}>{r.ticket?.expires_on ? formatDay(r.ticket.expires_on) : '—'}</td>
+                        <td className={`${td} pr-4`}>{r.ticket ? <Pill tone={ticketPill(r.ticket).tone}>{ticketPill(r.ticket).label}</Pill> : <Pill tone="red">Not done</Pill>}</td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
+            )}
+            <p className="m-0 px-4 py-3 text-xs text-muted border-t border-line-soft">Someone who does not need this course (for example sales staff) can be marked on their file in People &amp; claims.</p>
+          </section>
+        );
+      })}
 
       {loaded && (
         <section aria-label="Tickets needing action" className="bg-white border border-line rounded-xl overflow-hidden">
