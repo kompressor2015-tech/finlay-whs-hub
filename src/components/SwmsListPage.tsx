@@ -8,10 +8,12 @@ import { isOfficeAccess } from '../utils/access.ts';
 import { formatDay } from '../utils/dates.ts';
 import { inScope } from '../utils/siteScope.ts';
 import type { WhsDocument } from '../utils/documents.ts';
-import { currentApproved, swmsIssues, swmsNeedsAction, swmsPill, swmsReviewBy, VERSION_LABEL, type Swms, type SwmsVersion } from '../utils/swms.ts';
+import { currentApproved, swmsIssues, swmsNeedsAction, swmsPill, swmsReviewBy, VERSION_LABEL, type Swms, type SwmsReview, type SwmsVersion } from '../utils/swms.ts';
 import { ErrorNote, Field, inputClass } from './Form.tsx';
 import { Pill } from './Pill.tsx';
 import { SidePanel, rowOpens } from './SidePanel.tsx';
+import { SwmsRegisterPrint } from './SwmsRegisterPrint.tsx';
+import { registerRows } from '../utils/swmsRegister.ts';
 
 const th = 'px-2 py-3 font-semibold border-b border-[#EEEBE6] text-left';
 const td = 'px-2 py-3 border-b border-line-soft align-top';
@@ -28,6 +30,7 @@ export function SwmsListPage({ user }: { user: WhsUser }) {
   const { site, sites } = useSiteScope();
   const [swms, setSwms] = useState<Swms[]>([]);
   const [versions, setVersions] = useState<SwmsVersion[]>([]);
+  const [reviews, setReviews] = useState<SwmsReview[]>([]);
   const [error, setError] = useState<string | null>(null);
   const [loaded, setLoaded] = useState(false);
   const [filter, setFilter] = useState<Filter>('all');
@@ -38,6 +41,7 @@ export function SwmsListPage({ user }: { user: WhsUser }) {
     setError(r.error ?? null);
     setSwms(r.data?.swms ?? []);
     setVersions(r.data?.versions ?? []);
+    setReviews(r.data?.reviews ?? []);
     setLoaded(true);
   });
   useEffect(() => { void load(); }, []);
@@ -55,7 +59,7 @@ export function SwmsListPage({ user }: { user: WhsUser }) {
     .filter(s => (filter === 'retired' ? s.status === 'retired' : s.status === 'active'))
     .filter(s => filter !== 'attention' || swmsNeedsAction(s, vs(s)))
     .filter(s => filter !== 'approved' || Boolean(currentApproved(vs(s))))
-    .filter(s => !q.trim() || `${s.ref} ${s.title} ${s.owner_name}`.toLowerCase().includes(q.trim().toLowerCase()));
+    .filter(s => !q.trim() || `${s.ref} ${s.swms_number} ${s.risk_register_ref} ${s.title} ${s.owner_name}`.toLowerCase().includes(q.trim().toLowerCase()));
 
   const awaiting = active.filter(s => vs(s).some(v => v.status === 'awaiting')).length;
   const notApproved = active.filter(s => !currentApproved(vs(s))).length;
@@ -71,14 +75,19 @@ export function SwmsListPage({ user }: { user: WhsUser }) {
   );
 
   return (
-    <div className="flex gap-5 items-start">
+    <>
+    <SwmsRegisterPrint rows={registerRows(scoped, versions, reviews)} project="Finlay Machine Servicing" />
+    <div className="flex gap-5 items-start print:hidden">
       <div className="flex-1 min-w-0 flex flex-col gap-4">
         <div className="flex flex-wrap items-center gap-3">
           <div>
             <h2 className="m-0 text-[22px] font-bold">Safe work method statements</h2>
             <p className="mt-1 mb-0 text-muted text-[15px]">Write, approve and review SWMS here. Only approved versions are used on site.</p>
           </div>
-          {office && <button type="button" onClick={() => setCreating(true)} className={`${primary} ml-auto`}>+ New SWMS</button>}
+          <span className="ml-auto flex gap-2">
+            <button type="button" onClick={() => window.print()} className={btn}>Print register</button>
+            {office && <button type="button" onClick={() => setCreating(true)} className={primary}>+ New SWMS</button>}
+          </span>
         </div>
         <ErrorNote message={error} />
         <section aria-label="Summary" className="grid grid-cols-2 lg:grid-cols-4 gap-3">
@@ -108,7 +117,7 @@ export function SwmsListPage({ user }: { user: WhsUser }) {
                   const by = swmsReviewBy(s);
                   return (
                     <tr key={s.id} onClick={e => rowOpens(e, () => go({ name: 'swms', id: s.id }))} className="cursor-pointer hover:bg-[#FAF8F6]">
-                      <td className={`${td} pl-4 font-semibold whitespace-nowrap`}>{s.ref}</td>
+                      <td className={`${td} pl-4 font-semibold whitespace-nowrap`}>{s.swms_number || s.ref}{s.risk_register_ref && <span className="block text-xs font-normal text-muted">{s.risk_register_ref}</span>}</td>
                       <td className={td}><span className="font-semibold">{s.title}</span><span className="block text-xs text-muted">{sites.find(x => x.id === s.site_id)?.name ?? 'All sites'}</span></td>
                       <td className={td}>{cur ? `Version ${cur.version}` : <span className="text-muted">None</span>}</td>
                       <td className={td}>{cur ? <>{cur.approved_by_name}<span className="block text-xs text-muted">{cur.approved_at ? formatDay(cur.approved_at.slice(0, 10)) : ''}</span></> : <span className="text-muted">—</span>}</td>
@@ -130,6 +139,7 @@ export function SwmsListPage({ user }: { user: WhsUser }) {
         </SidePanel>
       )}
     </div>
+    </>
   );
 }
 
