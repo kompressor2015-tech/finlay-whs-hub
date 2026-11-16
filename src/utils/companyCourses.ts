@@ -1,0 +1,40 @@
+/** Courses everyone does (unless marked not required on their file): who is current, due, expired or has none. */
+
+import type { Person } from './incidentFile.ts';
+import { currentTickets, ticketState, type Ticket } from './tickets.ts';
+
+export const COMPANY_COURSES = ['Fire extinguisher training'] as const;
+
+export type CourseState = 'current' | 'due_soon' | 'expired' | 'none';
+
+export interface CourseRow { person: Person; ticket: Ticket | null; state: CourseState }
+export interface CourseStatus {
+  course: string;
+  rows: CourseRow[];
+  current: number;
+  dueSoon: number;
+  expired: number;
+  none: number;
+  /** active people marked as not needing it */
+  excused: number;
+}
+
+export function courseStatus(course: string, people: Person[], tickets: Ticket[], now: Date = new Date()): CourseStatus {
+  const key = course.toLowerCase();
+  const active = people.filter(p => p.active);
+  const needed = active.filter(p => !(p.not_required ?? []).some(n => n.toLowerCase() === key));
+  const rows = needed.map<CourseRow>(person => {
+    const t = currentTickets(tickets.filter(x => x.person_id === person.id)).find(x => x.name.trim().toLowerCase() === key) ?? null;
+    if (!t) return { person, ticket: null, state: 'none' };
+    const st = ticketState(t, now);
+    return { person, ticket: t, state: st === 'expired' ? 'expired' : st === 'due_soon' ? 'due_soon' : 'current' };
+  });
+  const count = (s: CourseState) => rows.filter(r => r.state === s).length;
+  return { course, rows, current: count('current'), dueSoon: count('due_soon'), expired: count('expired'), none: count('none'), excused: active.length - needed.length };
+}
+
+/** People who still need to do it, worst first (never done, expired, then due soon). */
+export function outstanding(status: CourseStatus): CourseRow[] {
+  const rank: Record<CourseState, number> = { none: 0, expired: 1, due_soon: 2, current: 3 };
+  return status.rows.filter(r => r.state !== 'current').sort((a, b) => rank[a.state] - rank[b.state] || a.person.name.localeCompare(b.person.name));
+}
