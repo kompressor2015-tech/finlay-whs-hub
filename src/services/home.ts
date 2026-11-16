@@ -17,10 +17,12 @@ import { loadJobs, loadSignOns, myPersonId } from './signon.ts';
 import { listPeople } from './incidentFile.ts';
 import { listTickets } from './tickets.ts';
 import { loadChecks } from './recurringChecks.ts';
+import { listBookings } from './bookings.ts';
+import { listCheckJobs } from './checkJobs.ts';
 
 export async function loadHomeRaw(): Promise<HomeRaw | null> {
-  const [incidents, hazards, actions, flags, checklists, checks, register, stocktakes, documents, recurring, people, tickets, riskData, swmsData, jobData, signonData, mine] = await Promise.all([
-    listIncidents(), listHazards(), listActions(), listFlags(), listChecklists(), listChecks(60), loadRegister(), listStocktakes(), listDocuments(), loadChecks(), listPeople(), listTickets(), loadRisks(), loadSwms(), loadJobs(), loadSignOns(), myPersonId(),
+  const [incidents, hazards, actions, flags, checklists, checks, register, stocktakes, documents, recurring, people, tickets, riskData, swmsData, jobData, signonData, mine, bookingList, jobList] = await Promise.all([
+    listIncidents(), listHazards(), listActions(), listFlags(), listChecklists(), listChecks(60), loadRegister(), listStocktakes(), listDocuments(), loadChecks(), listPeople(), listTickets(), loadRisks(), loadSwms(), loadJobs(), loadSignOns(), myPersonId(), listBookings(), listCheckJobs(),
   ]);
   if (incidents.error || hazards.error || actions.error) return null;
   // Claims are for the WHS officer and admins; anyone else gets nothing back, so the alerts stay off
@@ -40,6 +42,7 @@ export async function loadHomeRaw(): Promise<HomeRaw | null> {
     risks: riskData.error || !riskData.data ? null : riskData.data,
     claims: claimList.error || claimCerts.error || claimAppts.error ? null : { claims: open, certs: claimCerts.data ?? [], appts: claimAppts.data ?? [], names: (people.data ?? []).map(p => [p.id, p.name] as [string, string]) },
     training: people.error || tickets.error || !recurring.data ? null : { people: people.data ?? [], tickets: tickets.data ?? [], siteIds: recurring.data.sites.map(x => x.id) },
+    outstanding: bookingList.error || jobList.error ? null : { jobs: jobList.data ?? [], bookings: bookingList.data ?? [] },
     recurring: recurring.error || !recurring.data ? null : { checks: recurring.data.checks, log: recurring.data.log, sites: recurring.data.sites },
   };
 }
