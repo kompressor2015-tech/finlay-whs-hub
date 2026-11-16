@@ -2,6 +2,8 @@ import { useEffect, useMemo, useState } from 'react';
 import type { WhsUser } from '../services/auth.ts';
 import { listPeople } from '../services/incidentFile.ts';
 import { listTickets } from '../services/tickets.ts';
+import { listBookings } from '../services/bookings.ts';
+import { bookingLabel, openBooking, type Booking } from '../utils/bookings.ts';
 import { loadChecks, type CheckSite } from '../services/recurringChecks.ts';
 import { useSiteScope } from '../hooks/useSiteScope.tsx';
 import { hrefFor } from '../hooks/useRoute.ts';
@@ -23,11 +25,13 @@ export function TrainingCoverPage({ user: _user }: { user: WhsUser }) {
   const [sites, setSites] = useState<CheckSite[]>([]);
   const [people, setPeople] = useState<Person[]>([]);
   const [tickets, setTickets] = useState<Ticket[]>([]);
+  const [bookings, setBookings] = useState<Booking[]>([]);
   const [error, setError] = useState<string | null>(null);
   const [loaded, setLoaded] = useState(false);
 
   useEffect(() => {
-    void Promise.all([listPeople(), listTickets(), loadChecks()]).then(([p, t, c]) => {
+    void Promise.all([listPeople(), listTickets(), loadChecks(), listBookings()]).then(([p, t, c, bk]) => {
+      setBookings(bk.data ?? []);
       setError(p.error ?? t.error ?? c.error ?? null);
       setPeople(p.data ?? []);
       setTickets(t.data ?? []);
@@ -58,6 +62,12 @@ export function TrainingCoverPage({ user: _user }: { user: WhsUser }) {
       <div className="text-xs text-muted">{sub}</div>
     </div>
   );
+  const chip = (personId: string, ticketName: string) => {
+    const bk = openBooking(bookings, { type: 'ticket', personId, ticketName }, tickets.filter(x => x.person_id === personId && x.name.toLowerCase() === ticketName.toLowerCase()).map(x => x.issued_on));
+    if (!bk) return null;
+    const bl = bookingLabel(bk);
+    return <span className="block mt-1"><Pill tone={bl.tone}>{bl.text}</Pill></span>;
+  };
   const holderRow = (h: Holder, extra?: string) => (
     <li key={h.person.id} className="flex flex-wrap items-center gap-2 py-1.5 text-sm">
       <a href={hrefFor({ name: 'person', id: h.person.id })} className="font-semibold">{h.person.name}</a>
@@ -127,7 +137,7 @@ export function TrainingCoverPage({ user: _user }: { user: WhsUser }) {
                         <td className={`${td} pl-4 font-semibold`}><a href={hrefFor({ name: 'person', id: r.person.id })}>{r.person.name}</a><span className="block text-xs text-muted font-normal">{sites.find(x => x.id === r.person.site_id)?.name ?? 'No site'}</span></td>
                         <td className={td}>{r.ticket?.issued_on ? formatDay(r.ticket.issued_on) : '—'}</td>
                         <td className={td}>{r.ticket?.expires_on ? formatDay(r.ticket.expires_on) : '—'}</td>
-                        <td className={`${td} pr-4`}>{r.ticket ? <Pill tone={ticketPill(r.ticket).tone}>{ticketPill(r.ticket).label}</Pill> : <Pill tone="red">Not done</Pill>}</td>
+                        <td className={`${td} pr-4`}>{r.ticket ? <Pill tone={ticketPill(r.ticket).tone}>{ticketPill(r.ticket).label}</Pill> : <Pill tone="red">Not done</Pill>}{chip(r.person.id, c.course)}</td>
                       </tr>
                     ))}
                   </tbody>
@@ -155,7 +165,7 @@ export function TrainingCoverPage({ user: _user }: { user: WhsUser }) {
                         <td className={`${td} pl-4 font-semibold`}><a href={hrefFor({ name: 'person', id: p.id })}>{p.name}</a><span className="block text-xs text-muted font-normal">{sites.find(x => x.id === p.site_id)?.name ?? 'No site'}</span></td>
                         <td className={td}>{t.name}</td>
                         <td className={td}>{formatDay(t.expires_on)}</td>
-                        <td className={`${td} pr-4`}><Pill tone={pill.tone}>{pill.label}</Pill></td>
+                        <td className={`${td} pr-4`}><Pill tone={pill.tone}>{pill.label}</Pill>{chip(p.id, t.name)}</td>
                       </tr>
                     );
                   })}

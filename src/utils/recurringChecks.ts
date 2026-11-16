@@ -57,6 +57,8 @@ const COMMON: Template[] = [
   { name: 'Evacuation drill', category: 'Emergency', interval_months: 12, basis: 'Interval to confirm (6 or 12 months).', confirmed: false },
   { name: 'Eyewash and safety shower test', category: 'Emergency', interval_months: 6, basis: 'Interval to confirm.', confirmed: false },
   { name: 'Electrical test and tag', category: 'Electrical', interval_months: 12, basis: 'AS/NZS 3760. Interval depends on the environment. To confirm.', confirmed: false },
+  { name: 'Racking inspection', category: 'Storage', interval_months: 12, basis: 'Annual inspection by a racking contractor. Interval to confirm against AS 4084.', confirmed: false },
+  { name: 'Spill kit service', category: 'Emergency', interval_months: 12, basis: 'Contractor compliance service of the spill kits. Interval to confirm.', confirmed: false },
   { name: 'Lifting gear and harness inspection', category: 'Plant', interval_months: 6, basis: 'Interval to confirm.', confirmed: false },
 ];
 

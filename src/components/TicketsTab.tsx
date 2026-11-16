@@ -1,6 +1,10 @@
-import { useCallback, useEffect, useState, type FormEvent } from 'react';
+import { useCallback, useEffect, useState, type FormEvent, type ReactNode } from 'react';
 import { addTicket, attachCertificate, listTickets, removeTicket } from '../services/tickets.ts';
 import { openFile } from '../services/files.ts';
+import { listBookings } from '../services/bookings.ts';
+import { bookingLabel, openBooking, type Booking } from '../utils/bookings.ts';
+import { BookingBox } from './BookingBox.tsx';
+import { ticketState } from '../utils/tickets.ts';
 import { updatePerson } from '../services/incidentFile.ts';
 import { today } from '../utils/documents.ts';
 import { formatDay } from '../utils/dates.ts';
@@ -16,19 +20,24 @@ const btnPri = 'min-h-10 px-4 rounded-lg border-0 bg-ink text-white text-[13px] 
 const link = 'bg-transparent border-0 p-0 font-semibold underline cursor-pointer text-[13px]';
 const OTHER = '__other__';
 
+function FragmentRow({ children }: { children: ReactNode }) { return <>{children}</>; }
+
 /** One person's tickets and training, and their site roles (first aider, fire warden). */
 export function TicketsTab({ person, onChanged }: { person: Person; onChanged: () => void }) {
   const [tickets, setTickets] = useState<Ticket[]>([]);
   const [adding, setAdding] = useState<string | null>(null);
   const [showOld, setShowOld] = useState(false);
+  const [bookings, setBookings] = useState<Booking[]>([]);
+  const [booking, setBooking] = useState<string | null>(null);
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const archived = !person.active;
 
   const load = useCallback(async () => {
-    const res = await listTickets(person.id);
+    const [res, bk] = await Promise.all([listTickets(person.id), listBookings()]);
     if (res.error) setError(res.error);
     setTickets(res.data ?? []);
+    setBookings((bk.data ?? []).filter(b => b.person_id === person.id));
   }, [person.id]);
   useEffect(() => { void load(); }, [load]);
 
@@ -75,7 +84,12 @@ export function TicketsTab({ person, onChanged }: { person: Person; onChanged: (
         <td className="px-3.5 py-2.5 whitespace-nowrap">{t.issued_on ? formatDay(t.issued_on) : '—'}</td>
         <td className="px-3.5 py-2.5 whitespace-nowrap">{t.expires_on ? formatDay(t.expires_on) : <span className="text-muted">No expiry</span>}</td>
         <td className="px-3.5 py-2.5 text-muted">{t.provider || '—'}</td>
-        <td className="px-3.5 py-2.5">{old ? <Pill tone="grey">Replaced</Pill> : <Pill tone={pill.tone}>{pill.label}</Pill>}</td>
+        <td className="px-3.5 py-2.5">{old ? <Pill tone="grey">Replaced</Pill> : <Pill tone={pill.tone}>{pill.label}</Pill>}{!old && (() => {
+          const bk = openBooking(bookings, { type: 'ticket', personId: person.id, ticketName: t.name }, tickets.filter(x => x.name.toLowerCase() === t.name.toLowerCase()).map(x => x.issued_on));
+          const needs = ['expired', 'due_soon'].includes(ticketState(t));
+          const bl = bk ? bookingLabel(bk) : null;
+          return <>{bl && <span className="block mt-1"><Pill tone={bl.tone}>{bl.text}</Pill></span>}{!archived && (bk || needs) && <button type="button" className={`${link} block mt-1`} onClick={() => setBooking(booking === t.id ? null : t.id)}>{bk ? 'Booking' : 'Book it'}</button>}</>;
+        })()}</td>
         <td className="px-3.5 py-2.5 whitespace-nowrap">
           {t.file_path ? <button type="button" className={link} onClick={() => void openFile('whs-training-files', t.file_path)}>View</button> : (
             <label className={`${link} inline-block`}>Upload<input type="file" className="sr-only" onChange={e => void certificate(t, e.target.files?.[0] ?? null)} /></label>
@@ -85,6 +99,16 @@ export function TicketsTab({ person, onChanged }: { person: Person; onChanged: (
       </tr>
     );
   };
+  const rowWithBooking = (t: Ticket) => (
+    <>
+      {row(t)}
+      {booking === t.id && (
+        <tr key={`${t.id}-bk`}><td colSpan={7} className="px-3.5 py-3 bg-[#FAF8F6]">
+          <BookingBox subject={{ type: 'ticket', personId: person.id, ticketName: t.name }} booking={openBooking(bookings, { type: 'ticket', personId: person.id, ticketName: t.name }, tickets.filter(x => x.name.toLowerCase() === t.name.toLowerCase()).map(x => x.issued_on))} canEdit={!archived} providerLabel="Training provider" onChanged={() => void load()} />
+        </td></tr>
+      )}
+    </>
+  );
 
   return (
     <div className="flex flex-col gap-4">
@@ -97,7 +121,7 @@ export function TicketsTab({ person, onChanged }: { person: Person; onChanged: (
                 <thead><tr className="text-left text-xs text-muted bg-[#FAF8F6]">
                   {['Ticket or training', 'Number', 'Issued', 'Expires', 'Trained by', 'Status', 'Certificate'].map(h => <th key={h} scope="col" className="px-3.5 py-2.5 font-semibold border-b border-line">{h}</th>)}
                 </tr></thead>
-                <tbody>{current.map(t => row(t))}{showOld && earlier.map(t => row(t, true))}</tbody>
+                <tbody>{current.map(t => <FragmentRow key={t.id}>{rowWithBooking(t)}</FragmentRow>)}{showOld && earlier.map(t => row(t, true))}</tbody>
               </table>
             </div>
             {current.length === 0 && <p className="m-0 px-4 py-6 text-sm text-muted">No tickets on file yet. Add the first one.</p>}
