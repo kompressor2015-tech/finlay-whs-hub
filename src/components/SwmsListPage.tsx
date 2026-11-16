@@ -52,7 +52,10 @@ export function SwmsListPage({ user }: { user: WhsUser }) {
     return m;
   }, [versions]);
 
-  const scoped = swms.filter(s => !s.site_id || inScope(site, { site_id: s.site_id }));
+  // In Finlay's number order (001, 002, 003), then by ref for any without a number
+  const scoped = swms
+    .filter(s => !s.site_id || inScope(site, { site_id: s.site_id }))
+    .sort((a, b) => (a.swms_number || a.ref).localeCompare(b.swms_number || b.ref, 'en', { numeric: true }));
   const active = scoped.filter(s => s.status === 'active');
   const vs = (s: Swms) => byId.get(s.id) ?? [];
   const shown = scoped
