@@ -114,3 +114,16 @@ export async function removeLogLine(line: CheckLogLine): Promise<Result<true>> {
   if (line.file_path) await removeFiles('whs-check-files', [line.file_path]);
   return { data: true };
 }
+
+/** Attach or replace the report on an existing history line. Only the file can change. */
+export async function attachLogFile(line: CheckLogLine, file: File): Promise<Result<CheckLogLine>> {
+  const up = await uploadFile('whs-check-files', line.check_id, file);
+  if (up.error) return { error: up.error };
+  const { data, error } = await supabase.from('whs_recurring_check_log').update({ file_path: up.path, file_name: file.name }).eq('id', line.id).select('*').single();
+  if (error) {
+    await removeFiles('whs-check-files', [up.path as string]);
+    return { error: /permission denied|row-level security/i.test(error.message) ? 'Attaching a file to an old line is not set up yet. Run whs_029_log_attach.sql in Supabase.' : error.message };
+  }
+  if (line.file_path) await removeFiles('whs-check-files', [line.file_path]);
+  return { data: data as CheckLogLine };
+}

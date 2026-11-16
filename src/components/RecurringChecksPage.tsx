@@ -1,6 +1,6 @@
 import { useEffect, useMemo, useState, type FormEvent } from 'react';
 import type { WhsUser } from '../services/auth.ts';
-import { addCheck, addTemplates, loadChecks, recordCheck, removeLogLine, updateCheck, type CheckSite } from '../services/recurringChecks.ts';
+import { addCheck, addTemplates, loadChecks, attachLogFile, recordCheck, removeLogLine, updateCheck, type CheckSite } from '../services/recurringChecks.ts';
 import { openFile } from '../services/files.ts';
 import { listBookings } from '../services/bookings.ts';
 import { bookingLabel, openBooking, type Booking } from '../utils/bookings.ts';
@@ -248,6 +248,13 @@ function CheckPanel({ bookings, jobs, check, siteName, log, user, office, onChan
     else onRemoved();
   }
 
+  async function attachFile(l: CheckLogLine, f: File) {
+    setError(null);
+    const r = await attachLogFile(l, f);
+    if (r.error) setError(r.error);
+    else onChanged();
+  }
+
   async function removeLine(l: CheckLogLine) {
     if (!(await askConfirm({ title: `Remove the ${formatDay(l.done_on)} line?`, body: 'Only do this for a line entered by mistake.', confirmLabel: 'Remove', danger: true }))) return;
     const r = await removeLogLine(l);
@@ -325,6 +332,12 @@ function CheckPanel({ bookings, jobs, check, siteName, log, user, office, onChan
                 {l.notes && <span className="block text-xs text-muted">{l.notes}</span>}
                 {l.file_path && <button type="button" onClick={() => void openFile('whs-check-files', l.file_path as string)} className="mt-1 p-0 border-0 bg-transparent text-xs font-semibold text-finlay cursor-pointer underline">{l.file_name || 'Open the file'}</button>}
               </span>
+              {office && (
+                <label className={`${btn} inline-flex items-center cursor-pointer`}>
+                  {l.file_path ? 'Replace file' : 'Attach file'}
+                  <input type="file" className="sr-only" onChange={e => { const f = e.target.files?.[0]; if (f) void attachFile(l, f); e.target.value = ''; }} />
+                </label>
+              )}
               {user.access === 'admin' && <button type="button" onClick={() => void removeLine(l)} className={btn}>Remove</button>}
             </div>
           ))}
