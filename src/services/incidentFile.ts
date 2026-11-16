@@ -2,6 +2,7 @@
 
 import { supabase } from './supabase.ts';
 import { removeFiles, uploadFile } from './files.ts';
+import { surnameCaps } from '../utils/names.ts';
 import type { Evidence, EvidenceKind, IncidentPerson, Person, PersonRole, Statement, StatementStatus, TimelineEntry, Treatment } from '../utils/incidentFile.ts';
 
 type Result<T> = { data?: T; error?: string };
@@ -26,12 +27,12 @@ export async function listPeople(): Promise<Result<Person[]>> {
 export type PersonInput = Pick<Person, 'name'> & Partial<Pick<Person, 'position' | 'site_id' | 'phone' | 'emergency_contact' | 'start_date' | 'notes' | 'active' | 'is_first_aider' | 'is_fire_warden' | 'warden_role' | 'left_on' | 'not_required'>>;
 
 export async function createPerson(input: PersonInput): Promise<Result<Person>> {
-  const { data, error } = await supabase.from('whs_people').insert(input).select('*').single();
+  const { data, error } = await supabase.from('whs_people').insert({ ...input, name: surnameCaps(input.name) }).select('*').single();
   return error ? { error: friendly(error.message) } : { data: data as Person };
 }
 
 export async function updatePerson(id: string, patch: Partial<PersonInput>): Promise<Result<Person>> {
-  const { data, error } = await supabase.from('whs_people').update(patch).eq('id', id).select('*').single();
+  const { data, error } = await supabase.from('whs_people').update(patch.name ? { ...patch, name: surnameCaps(patch.name) } : patch).eq('id', id).select('*').single();
   return error ? { error: friendly(error.message) } : { data: data as Person };
 }
 
