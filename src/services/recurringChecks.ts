@@ -68,7 +68,7 @@ export interface RecordInput {
 }
 
 /** Records that a check was done. A failed check raises an action so it gets fixed. */
-export async function recordCheck(check: RecurringCheck, siteName: string, input: RecordInput, file: File | null): Promise<Result<CheckLogLine>> {
+export async function recordCheck(check: RecurringCheck, siteName: string, input: RecordInput, file: File | null, extraActions: string[] = []): Promise<Result<CheckLogLine>> {
   let path: string | undefined;
   if (file) {
     const up = await uploadFile('whs-check-files', check.id, file);
@@ -89,6 +89,11 @@ export async function recordCheck(check: RecurringCheck, siteName: string, input
     });
     if (a.error) return { error: a.error };
     actionId = a.data?.id ?? null;
+  }
+  // Actions raised from the check itself (for example from a toolbox talk), one per line
+  for (const title of extraActions) {
+    const a = await createAction({ title, source_type: 'other', source_id: null, source_ref: `${check.name} · ${siteName}`, machine_id: null, unit_no: '', owner_id: null, due: addDays(brisbaneDay(new Date()), 14) });
+    if (a.error) return { error: a.error };
   }
   const { data, error } = await supabase
     .from('whs_recurring_check_log')
