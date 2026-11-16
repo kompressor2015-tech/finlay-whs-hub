@@ -56,20 +56,16 @@ const COMMON: Template[] = [
   { name: 'Emergency and exit lighting test', category: 'Fire safety', interval_months: 6, basis: 'AS 2293. Interval to confirm.', confirmed: false },
   { name: 'Evacuation drill', category: 'Emergency', interval_months: 12, basis: 'Interval to confirm (6 or 12 months).', confirmed: false },
   { name: 'Eyewash and safety shower test', category: 'Emergency', interval_months: 6, basis: 'Interval to confirm.', confirmed: false },
-  { name: 'Electrical test and tag', category: 'Electrical', interval_months: 12, basis: 'AS/NZS 3760. Interval depends on the environment. To confirm.', confirmed: false },
-  { name: 'Racking inspection', category: 'Storage', interval_months: 12, basis: 'Annual inspection by a racking contractor. Interval to confirm against AS 4084.', confirmed: false },
+  { name: 'Electrical test and tag', category: 'Electrical', interval_months: 6, basis: 'AS/NZS 3760. Done by a contractor every 6 months at Finlay.', confirmed: true },
+  { name: 'Racking inspection', category: 'Storage', interval_months: 12, basis: 'Annual inspection by a racking contractor.', confirmed: true },
+  { name: 'Toolbox talk', category: 'Safety talks', interval_months: 1, basis: 'Monthly site safety talk. Add each talk as a log line: topic in the notes, who gave it, and attach the signed sheet.', confirmed: false },
   { name: 'Spill kit service', category: 'Emergency', interval_months: 12, basis: 'Contractor compliance service of the spill kits. Interval to confirm.', confirmed: false },
   { name: 'Lifting gear and harness inspection', category: 'Plant', interval_months: 6, basis: 'Interval to confirm.', confirmed: false },
 ];
 
 /** The starting list for a site in a state. Intervals marked unconfirmed show "to confirm". */
 export function templatesFor(state: string): Template[] {
-  const kit: Template =
-    state === 'QLD'
-      ? { name: 'First aid kit check', category: 'First aid', interval_months: 12, basis: 'Queensland First Aid code of practice: check at least every 12 months, and after use.', confirmed: true }
-      : state === 'NSW'
-        ? { name: 'First aid kit check', category: 'First aid', interval_months: 12, basis: 'NSW First Aid code: check on a regular basis. 12 months is a starting point, to confirm.', confirmed: false }
-        : { name: 'First aid kit check', category: 'First aid', interval_months: 12, basis: 'Interval to confirm for this state.', confirmed: false };
+  const kit: Template = { name: 'First aid supplies service', category: 'First aid', interval_months: 6, basis: 'Contractor checks and restocks the first aid kits every 6 months (Queensland First Aid code: also check after use).', confirmed: true };
   return [COMMON[0], kit, ...COMMON.slice(1)];
 }
 

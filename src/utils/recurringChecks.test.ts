@@ -37,8 +37,9 @@ test('a failed check stays outstanding until it is done again', () => {
 
 test('templates follow the state and flag what is not confirmed', () => {
   const qld = templatesFor('QLD');
-  assert.equal(qld.find(t => t.name === 'First aid kit check')?.confirmed, true);
-  assert.equal(templatesFor('NSW').find(t => t.name === 'First aid kit check')?.confirmed, false);
+  assert.equal(qld.find(t => t.name === 'First aid supplies service')?.confirmed, true);
+  assert.equal(templatesFor('NSW').find(t => t.name === 'First aid supplies service')?.interval_months, 6);
+  assert.equal(qld.find(t => t.name === 'Toolbox talk')?.interval_months, 1);
   assert.equal(qld.find(t => t.name === 'Fire extinguisher inspection')?.interval_months, 6);
   assert.equal(missingTemplates('QLD', [{ name: 'fire extinguisher inspection' }]).length, qld.length - 1);
 });
