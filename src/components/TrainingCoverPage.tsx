@@ -68,13 +68,20 @@ export function TrainingCoverPage({ user: _user }: { user: WhsUser }) {
     const bl = bookingLabel(bk);
     return <span className="block mt-1"><Pill tone={bl.tone}>{bl.text}</Pill></span>;
   };
+  // A booking beside a person's first aid, CPR or warden ticket on the site cover cards
+  const inline = (personId: string, ticketName: string | undefined) => {
+    if (!ticketName) return null;
+    const bk = openBooking(bookings, { type: 'ticket', personId, ticketName }, tickets.filter(x => x.person_id === personId && x.name.toLowerCase() === ticketName.toLowerCase()).map(x => x.issued_on));
+    return bk ? <Pill tone={bookingLabel(bk).tone}>{bookingLabel(bk).text}</Pill> : null;
+  };
   const holderRow = (h: Holder, extra?: string) => (
     <li key={h.person.id} className="flex flex-wrap items-center gap-2 py-1.5 text-sm">
       <a href={hrefFor({ name: 'person', id: h.person.id })} className="font-semibold">{h.person.name}</a>
       {extra && <Pill tone="blue">{extra}</Pill>}
       {h.ticket ? <Pill tone={ticketPill(h.ticket).tone}>{ticketPill(h.ticket).label}</Pill> : <Pill tone="red">No ticket recorded</Pill>}
       {h.ticket?.expires_on && <span className="text-xs text-muted">to {formatDay(h.ticket.expires_on)}</span>}
-      {h.cpr !== undefined && (h.cpr ? <><span className="text-xs text-muted">CPR{h.cprFromFirstAid ? ' (from first aid certificate)' : ''}</span><Pill tone={ticketPill(h.cpr).tone}>{ticketPill(h.cpr).label}</Pill>{h.cpr.expires_on && <span className="text-xs text-muted">to {formatDay(h.cpr.expires_on)}</span>}</> : <><span className="text-xs text-muted">CPR</span><Pill tone="red">None recorded</Pill></>)}
+      {inline(h.person.id, h.ticket?.name)}
+      {h.cpr !== undefined && (h.cpr ? <><span className="text-xs text-muted">CPR{h.cprFromFirstAid ? ' (from first aid certificate)' : ''}</span><Pill tone={ticketPill(h.cpr).tone}>{ticketPill(h.cpr).label}</Pill>{h.cpr.expires_on && <span className="text-xs text-muted">to {formatDay(h.cpr.expires_on)}</span>}{h.cprFromFirstAid ? null : inline(h.person.id, h.cpr.name)}</> : <><span className="text-xs text-muted">CPR</span><Pill tone="red">None recorded</Pill></>)}
     </li>
   );
 
