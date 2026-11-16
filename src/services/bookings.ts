@@ -21,7 +21,7 @@ export async function listBookings(): Promise<Result<Booking[]>> {
 export interface BookingInput { booked_for: string; provider: string; reference: string; notes: string }
 
 export async function addBooking(s: Subject, input: BookingInput): Promise<Result<Booking>> {
-  const row = s.type === 'check'
+  const row: Record<string, unknown> = s.type === 'check'
     ? { subject_type: 'check', check_id: s.checkId, ...input }
     : { subject_type: 'ticket', person_id: s.personId, ticket_name: s.ticketName, ...input };
   const { data, error } = await supabase.from('whs_bookings').insert(row).select('*').single();
