@@ -22,6 +22,9 @@ import { withTickets } from './homeTickets.ts';
 import type { Person } from './incidentFile.ts';
 import type { Ticket } from './tickets.ts';
 import { recurringComing, withRecurring } from './homeRecurring.ts';
+import { bookingsComing, withOutstanding, type Outstanding } from './homeOutstanding.ts';
+import type { CheckJob } from './checkJobs.ts';
+import type { Booking } from './bookings.ts';
 import type { CheckLogLine, RecurringCheck } from './recurringChecks.ts';
 import { actionsInScope, inScope, type ScopeSite } from './siteScope.ts';
 import type { Check, Checklist, PlantFlag } from './checks.ts';
@@ -49,6 +52,8 @@ export interface HomeRaw {
   claims?: { claims: Claim[]; certs: Certificate[]; appts: Appointment[]; names: [string, string][] } | null;
   training?: { people: Person[]; tickets: Ticket[]; siteIds: string[] } | null;
   recurring?: { checks: RecurringCheck[]; log: CheckLogLine[]; sites: { id: string; name: string }[] } | null;
+  /** Open quotes and bookings; null when the tables are not there yet */
+  outstanding?: { jobs: CheckJob[]; bookings: Booking[] } | null;
 }
 
 export function buildHomeData(raw: HomeRaw, me: string, site: ScopeSite | null, now: Date = new Date()): HomeData {
@@ -94,7 +99,19 @@ export function buildHomeData(raw: HomeRaw, me: string, site: ScopeSite | null, 
   const withStep10 = rk ? withRisks(withStep9, rk.risks.filter(r => !r.site_id || !site || r.site_id === site.id || r.site_id === site.depotSiteId), rk.controls, now) : withStep9;
   const sw = raw.swms;
   const withStep11 = sw ? withSwms(withStep10, sw.swms.filter(x => !x.site_id || !site || x.site_id === site.id || x.site_id === site.depotSiteId), sw.versions, now) : withStep10;
-  const coming = [...board.coming, ...documentsComing(docs, now), ...(rec ? recurringComing(recChecks, rec.log, rec.sites, now) : [])].sort((a, b) => a.day.localeCompare(b.day)).slice(0, 5);
-  const withStep12 = raw.signon ? withSignOns(withStep11, raw.signon, now) : withStep11;
+  // Open quotes and bookings, for the checks and people in scope
+  const ot = raw.outstanding && rec
+    ? ({
+        jobs: raw.outstanding.jobs,
+        bookings: raw.outstanding.bookings,
+        checks: recChecks,
+        log: rec.log,
+        sites: rec.sites,
+        people: trPeople.map(p => ({ id: p.id, name: p.name, tickets: (tr?.tickets ?? []).filter(t => t.person_id === p.id).map(t => ({ name: t.name, issued_on: t.issued_on })) })),
+      } satisfies Outstanding)
+    : null;
+  const coming = [...board.coming, ...documentsComing(docs, now), ...(rec ? recurringComing(recChecks, rec.log, rec.sites, now) : []), ...(ot ? bookingsComing(ot, now) : [])].sort((a, b) => a.day.localeCompare(b.day)).slice(0, 5);
+  const withStep12a = raw.signon ? withSignOns(withStep11, raw.signon, now) : withStep11;
+  const withStep12 = ot ? withOutstanding(withStep12a, ot, now) : withStep12a;
   return { ...withStep12, charts, board: { ...board, coming } };
 }
