@@ -62,6 +62,16 @@ export function RecurringChecksPage({ user }: { user: WhsUser }) {
   const count = (s: string) => states.filter(x => x === s).length;
   const toConfirm = shownChecks.filter(c => !c.rule_confirmed).length;
 
+  // Sites folded away; remembered on this device
+  const [folded, setFolded] = useState<string[]>(() => {
+    try { return JSON.parse(localStorage.getItem('whs-checks-folded') ?? '[]') as string[]; } catch { return []; }
+  });
+  const toggleFold = (id: string) => {
+    const next = folded.includes(id) ? folded.filter(x => x !== id) : [...folded, id];
+    setFolded(next);
+    try { localStorage.setItem('whs-checks-folded', JSON.stringify(next)); } catch { /* not remembered */ }
+  };
+
   async function addStandard(s: CheckSite) {
     setBusy(true);
     const r = await addTemplates(s.id, missingTemplates(s.state, checks.filter(c => c.site_id === s.id)));
@@ -97,21 +107,28 @@ export function RecurringChecksPage({ user }: { user: WhsUser }) {
         {loaded && shownSites.map(s => {
           const rows = checks.filter(c => c.site_id === s.id).map(c => ({ c, l: logOf.get(c.id) ?? [] })).map(x => ({ ...x, due: nextDue(x.c, x.l) })).sort((a, b) => (a.due ?? '0000').localeCompare(b.due ?? '0000'));
           const missing = missingTemplates(s.state, checks.filter(c => c.site_id === s.id));
+          const isFolded = folded.includes(s.id) && adding !== s.id;
+          const lateCount = rows.filter(x => ['overdue', 'never'].includes(checkState(x.c, x.l))).length;
           return (
             <section key={s.id} aria-label={s.name} className="bg-white border border-line rounded-xl overflow-hidden">
-              <div className="flex flex-wrap items-center gap-3 px-4 py-3 border-b border-line-soft">
-                <h2 className="m-0 text-base font-bold">{s.name}</h2>
+              <div className={`flex flex-wrap items-center gap-3 px-4 py-3 ${isFolded ? '' : 'border-b border-line-soft'}`}>
+                <button type="button" onClick={() => toggleFold(s.id)} aria-expanded={!isFolded} aria-label={`${isFolded ? 'Show' : 'Hide'} checks for ${s.name}`} className="flex items-center gap-2 bg-transparent border-0 p-0 cursor-pointer text-ink">
+                  <span aria-hidden="true" className={`inline-block text-xs transition-transform ${isFolded ? '' : 'rotate-90'}`}>▶</span>
+                  <h2 className="m-0 text-base font-bold">{s.name}</h2>
+                </button>
                 <Pill tone="grey">{s.state}</Pill>
-                {office && (
+                {isFolded && <span className="text-sm text-muted">{rows.length} check{rows.length === 1 ? '' : 's'}</span>}
+                {isFolded && lateCount > 0 && <Pill tone="red">{lateCount} overdue</Pill>}
+                {office && !isFolded && (
                   <span className="ml-auto flex gap-2">
                     {missing.length > 0 && <button type="button" disabled={busy} onClick={() => void addStandard(s)} className={btn}>{rows.length ? `Add ${missing.length} standard check${missing.length === 1 ? '' : 's'}` : `Start the ${s.state} list`}</button>}
                     <button type="button" onClick={() => setAdding(adding === s.id ? null : s.id)} className={btn}>Add a check</button>
                   </span>
                 )}
               </div>
-              {adding === s.id && <AddCheckForm siteId={s.id} onDone={() => { setAdding(null); void load(); }} onCancel={() => setAdding(null)} />}
-              {rows.length === 0 && adding !== s.id && <p className="m-0 px-4 py-4 text-sm text-muted">No checks set up for this site yet.{office ? ` Use “Start the ${s.state} list” to begin with the usual ones.` : ''}</p>}
-              {rows.length > 0 && (
+              {!isFolded && adding === s.id && <AddCheckForm siteId={s.id} onDone={() => { setAdding(null); void load(); }} onCancel={() => setAdding(null)} />}
+              {!isFolded && rows.length === 0 && adding !== s.id && <p className="m-0 px-4 py-4 text-sm text-muted">No checks set up for this site yet.{office ? ` Use “Start the ${s.state} list” to begin with the usual ones.` : ''}</p>}
+              {!isFolded && rows.length > 0 && (
                 <div className="overflow-x-auto">
                   <table className="w-full border-collapse text-sm">
                     <thead><tr><th className={`${th} pl-4`}>Check</th><th className={th}>How often</th><th className={th}>Last done</th><th className={th}>Next due</th><th className={th}>Status</th><th className={`${th} pr-4`}>Where the rule comes from</th></tr></thead>
