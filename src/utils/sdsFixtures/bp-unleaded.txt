@@ -1,0 +1,107 @@
+                              SAFETY DATA SHEET
+                                                   Unleaded 91
+
+Section 1. Identification
+GHS product identifier            Unleaded 91
+Other means of                    regular unleaded petrol
+identification
+Product code                      0000002733
+SDS no.                           0000002733
+Historic SDS no.                 875; 0000002889
+Relevant identified uses of the substance or mixture and uses advised against
+Use of the substance/            Use only as a motor fuel for spark ignition engines. NOT for aviation use. Should
+mixture                          NOT be used as a solvent nor cleaning agent.
+                                 For specific application advice see appropriate Technical Data Sheet or consult our
+                                 company representative.
+Manufacturer
+Supplier                          BP Australia Pty Ltd
+                                  Level 17, 717 Bourke Street
+                                  Docklands, Victoria 3008
+                                  ABN 53 004 085 616
+
+                                  www.bp.com.au
+
+                                  Technical Helpline Number: 1300 139 700
+EMERGENCY TELEPHONE               1800 638 556
+NUMBER
+
+Section 2. Hazard(s) identification
+Classification of the             FLAMMABLE LIQUIDS - Category 1
+substance or mixture              SKIN CORROSION/IRRITATION - Category 2
+                                  GERM CELL MUTAGENICITY - Category 1B
+                                  CARCINOGENICITY - Category 1B
+                                  SPECIFIC TARGET ORGAN TOXICITY - SINGLE EXPOSURE (Narcotic effects) -
+                                  Category 3
+                                  ASPIRATION HAZARD - Category 1
+
+GHS label elements
+ Hazard pictograms
+
+ Signal word                      DANGER
+ Hazard statements                H224 - Extremely flammable liquid and vapour.
+                                  H304 - May be fatal if swallowed and enters airways.
+                                  H315 - Causes skin irritation.
+                                  H336 - May cause drowsiness or dizziness.
+                                  H340 - May cause genetic defects.
+                                  H350 - May cause cancer.
+ Precautionary statements
+  General                         P102 - Keep out of reach of children.
+                                  P101 - If medical advice is needed, have product container or label at hand.
+
+Product name Unleaded 91                                             Product code 0000002733           Page: 1/17
+Version 5      Date of issue 1/13/2025                      Format Australia               Language ENGLISH
+                                                                     (Australia)                       (ENGLISH)
+Section 2. Hazard(s) identification
+  Prevention                      P201 - Obtain special instructions before use.
+                                  P202 - Do not handle until all safety precautions have been read and understood.
+                                  P280 - Wear protective gloves, protective clothing, eye protection, face protection,
+                                  or hearing protection.
+                                  P210 - Keep away from heat, hot surfaces, sparks, open flames and other ignition
+                                  sources. No smoking.
+                                  P271 - Use only outdoors or in a well-ventilated area.
+                                  P261 - Avoid breathing vapour.
+                                  P264 - Wash hands thoroughly after handling.
+  Response                        P308 + P313 - IF exposed or concerned: Get medical attention.
+                                  P304 + P340, P312 - IF INHALED: Remove person to fresh air and keep
+                                  comfortable for breathing. Call a POISON CENTER or doctor if you feel unwell.
+                                  P301 + P310, P331 - IF SWALLOWED: Immediately call a POISON CENTER or
+                                  physician. Do NOT induce vomiting.
+                                  P303 + P361 + P353 - IF ON SKIN (or hair): Take off immediately all contaminated
+                                  clothing. Rinse skin with water.
+                                  P302 + P352 - IF ON SKIN: Wash with plenty of soap and water.
+                                  P332 + P313 - If skin irritation occurs: Get medical attention.
+  Storage                         P405 - Store locked up.
+                                  P403 + P233 - Store in a well-ventilated place. Keep container tightly closed.
+
+[...]
+                                point (note: flash point must not be regarded as a reliable indicator of the potential
+Flash point                       Closed cup: <-40°C (<-40°F)
+
+[...]
+Section 14. Transport information
+                                   ADG                             IMDG                            IATA
+UN number             UN1203                          UN1203                            UN1203
+
+UN proper             MOTOR SPIRIT or                 MOTOR SPIRIT or                   MOTOR SPIRIT or
+shipping name         GASOLINE or PETROL              GASOLINE or PETROL.               GASOLINE or PETROL
+                                                      Marine pollutant
+Transport hazard      3                               3                                 3
+class(es)
+
+Packing group         II                              II                                II
+Environmental         No.                             Yes.                              Yes. The environmentally
+hazards                                                                                 hazardous substance mark is
+                                                                                        not required.
+Additional            Hazchem code 3YE                The marine pollutant mark is      The environmentally
+information           Initial emergency response      not required when transported     hazardous substance mark
+                      guide 14                        in sizes of ≤5 L or ≤5 kg.        may appear if required by
+                                                      Emergency schedules               other transportation
+                                                      F-E, S-E                          regulations.
+
+Special precautions for user      Not available.
+
+Transport in bulk according       Proper shipping name             MARPOL Annex 1 rules apply for bulk shipments
+to IMO instruments                                                 by sea.
+                                                                   Category: gasoline and spirits
+
+Section 15. Regulatory information

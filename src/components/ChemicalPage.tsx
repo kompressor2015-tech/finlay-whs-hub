@@ -2,9 +2,11 @@ import { useEffect, useState, type FormEvent } from 'react';
 import type { WhsUser } from '../services/auth.ts';
 import { addStock, createChemical, deleteStock, openSds, setStockRetired, updateChemical, updateStock, uploadSds, type ChemicalInput } from '../services/chemicals.ts';
 import { useRegister } from '../hooks/useRegister.ts';
+import { readPdfText } from '../services/pdfText.ts';
+import { parseSdsText, patchFrom, reviewSds, type SdsReview } from '../utils/sdsParse.ts';
 import { go, hrefFor } from '../hooks/useRoute.ts';
 import { isOfficeAccess } from '../utils/access.ts';
-import { formatDay, formatWhen } from '../utils/dates.ts';
+import { brisbaneDay, formatDay, formatWhen } from '../utils/dates.ts';
 import {
   SECTIONS, amountOf, classLabel, classTone, formatAmount, issueDateFromName, sdsPill, sdsValidUntil, type Chemical, type DgClass, type PackingGroup, type Stock,
 } from '../utils/chemicals.ts';
@@ -121,7 +123,7 @@ export function ChemicalPage({ id, user, embedded }: { id: string; user: WhsUser
                 <button type="button" onClick={() => openSds(s.file_path)} className="bg-transparent border-0 text-[13px] font-semibold text-ink underline cursor-pointer whitespace-nowrap min-h-10">Open</button>
               </div>
             ))}
-            {office && <SdsUpload chemId={chem.id} onDone={reg.reload} />}
+            {office && <SdsUpload chem={chem} onDone={reg.reload} />}
           </section>
         </div>
       </div>
@@ -129,31 +131,84 @@ export function ChemicalPage({ id, user, embedded }: { id: string; user: WhsUser
   );
 }
 
-function SdsUpload({ chemId, onDone }: { chemId: string; onDone: () => void }) {
+function SdsUpload({ chem, onDone }: { chem: Chemical; onDone: () => void }) {
   const [file, setFile] = useState<File | null>(null);
   const [date, setDate] = useState('');
   const [busy, setBusy] = useState(false);
+  const [reading, setReading] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [review, setReview] = useState<SdsReview | null>(null);
+  const [readNote, setReadNote] = useState<string | null>(null);
+
+  async function choose(f: File | null) {
+    setFile(f);
+    setReview(null);
+    setReadNote(null);
+    setError(null);
+    if (!f) return;
+    setDate(issueDateFromName(f.name) ?? '');
+    setReading(true);
+    try {
+      const facts = parseSdsText(await readPdfText(f));
+      const r = reviewSds(chem, facts, brisbaneDay(new Date()));
+      setReview(r);
+      if (facts.issueDate) setDate(facts.issueDate);
+      if (!facts.hasTransport && !facts.hStatements.length && !facts.issueDate) setReadNote('Could not read any details from this PDF (it may be a scan). Enter the date and fill the fields by hand.');
+    } catch {
+      setReadNote('Could not read this PDF here, so nothing was filled in. You can still upload it: enter the issue date and fill the fields by hand.');
+    }
+    setReading(false);
+  }
+  function toggle(key: string) {
+    setReview(r => (r ? { ...r, proposals: r.proposals.map(p => (p.key === key ? { ...p, apply: !p.apply } : p)) } : r));
+  }
+  const ticked = review ? review.proposals.filter(p => p.apply).length : 0;
+
   async function submit(e: FormEvent) {
     e.preventDefault();
     if (!file) return setError('Choose the SDS PDF.');
     if (!date) return setError('Enter the issue date printed on the SDS.');
     setBusy(true);
-    const res = await uploadSds(chemId, file, date);
+    const res = await uploadSds(chem.id, file, date);
+    if (res.error) { setBusy(false); return setError(res.error); }
+    if (review && ticked) {
+      const upd = await updateChemical(chem.id, patchFrom(review.proposals));
+      if (upd.error) { setBusy(false); setError(`The SDS was uploaded, but the register could not be updated: ${upd.error}`); onDone(); return; }
+    }
     setBusy(false);
-    if (res.error) return setError(res.error);
     setFile(null);
     setDate('');
+    setReview(null);
+    setReadNote(null);
     setError(null);
     onDone();
   }
   return (
     <form onSubmit={submit} className="px-4.5 py-3.5 flex flex-col gap-2.5 bg-[#FAFAF9]">
       <span className="text-sm font-semibold">Upload a new SDS</span>
-      <input type="file" accept="application/pdf" aria-label="SDS PDF" className="text-sm" onChange={e => { const f = e.target.files?.[0] ?? null; setFile(f); if (f && !date) setDate(issueDateFromName(f.name) ?? ''); }} />
-      <Field label="Issue date (on the SDS)" htmlFor="sds-date"><input id="sds-date" type="date" className={`${inputClass} min-h-10`} value={date} onChange={e => setDate(e.target.value)} /></Field>
+      <input type="file" accept="application/pdf" aria-label="SDS PDF" className="text-sm" onChange={e => choose(e.target.files?.[0] ?? null)} />
+      {reading && <p className="m-0 text-[13px] text-muted">Reading the SDS…</p>}
+      {readNote && <p className="m-0 text-[13px] text-[#7A4A00] bg-[#FFF1D6] rounded-lg px-2.5 py-2">{readNote}</p>}
+      <Field label="Issue date (on the SDS)" htmlFor="sds-date" hint={review?.proposals && date ? 'Filled in from the SDS. Check it.' : undefined}><input id="sds-date" type="date" className={`${inputClass} min-h-10`} value={date} onChange={e => setDate(e.target.value)} /></Field>
+      {review && (
+        <div className="flex flex-col gap-2 rounded-lg border border-line-soft bg-white p-3">
+          <span className="text-sm font-semibold">Check against this SDS</span>
+          {review.warnings.map(w => <p key={w} className="m-0 text-[13px] text-[#7A4A00] bg-[#FFF1D6] rounded-lg px-2.5 py-2">{w}</p>)}
+          {review.proposals.length === 0 && <p className="m-0 text-[13px] text-muted">Nothing to change: the register already matches what could be read from this SDS.</p>}
+          {review.proposals.map(p => (
+            <label key={p.key} className="flex gap-2.5 items-start text-sm cursor-pointer min-h-9">
+              <input type="checkbox" checked={p.apply} onChange={() => toggle(p.key)} className="w-5 h-5 mt-0.5 shrink-0" />
+              <span className="min-w-0">
+                <span className="font-medium">{p.label}</span>
+                <span className="block text-[13px] text-muted break-words">{p.current} → <strong className="text-ink">{p.proposed}</strong></span>
+              </span>
+            </label>
+          ))}
+          {review.proposals.length > 0 && <p className="m-0 text-xs text-muted">Only ticked changes are saved, when you press Upload. Read from the PDF automatically, so check them.</p>}
+        </div>
+      )}
       <ErrorNote message={error} />
-      <button type="submit" disabled={busy} className="self-start min-h-10 px-3.5 rounded-lg border-0 bg-finlay text-white text-sm font-semibold cursor-pointer disabled:opacity-60">{busy ? 'Uploading…' : 'Upload'}</button>
+      <button type="submit" disabled={busy || reading} className="self-start min-h-10 px-3.5 rounded-lg border-0 bg-finlay text-white text-sm font-semibold cursor-pointer disabled:opacity-60">{busy ? 'Uploading…' : ticked ? `Upload and save ${ticked} change${ticked === 1 ? '' : 's'}` : 'Upload'}</button>
     </form>
   );
 }

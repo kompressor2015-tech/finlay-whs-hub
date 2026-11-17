@@ -1,0 +1,99 @@
+Safety Data Sheet
+                                                                                                            Page 1 of 13
+Loctite 545 Thread Sealant
+                                                                                                    SDS No. : 153648
+                                                                                                                 V001.3
+                                                                                              Date of issue: 12.12.2022
+
+           Section 1. Identification of the substance/preparation and of the company/undertaking
+      Product name:                          Loctite 545 Thread Sealant
+
+         Intended use:                       Anaerobic Sealant
+
+      Supplier:
+         Henkel Australia Pty Ltd
+         135-141 Canterbury Road
+         Kilsyth, Victoria, 3137
+         Australia
+
+         Phone:          +61 (3) 9724 6444
+
+      Emergency information:                 24 HOUR EMERGENCY CONTACT NUMBER: 1800 032 379
+
+                                              Section 2. Hazards identification
+      Classification of the substance or mixture
+      Hazardous according to the criteria of Safe Work Australia.
+
+GHS Classification:
+
+          Hazard Class                         Hazard Category                    Target organ
+          Skin irritation                      Category 2
+          Serious eye irritation               Category 2A
+          Skin sensitizer                      Category 1
+          Target Organ Systemic Toxicant -     Category 3                         respiratory tract irritation
+          Single exposure
+          Acute hazards to the aquatic         Category 3
+          environment
+
+          Hazard pictogram:
+
+          Signal word:                       Warning
+SDS No.: 153648                                                                                                           Page 2 of 13
+                                Loctite 545 Thread Sealant
+V001.3
+
+       Hazard statement(s):                    H315 Causes skin irritation.
+                                               H317 May cause an allergic skin reaction.
+                                               H319 Causes serious eye irritation.
+                                               H335 May cause respiratory irritation.
+                                               H402 Harmful to aquatic life.
+       Precautionary Statement(s):
+       Prevention:                             P261 Avoid breathing mist/vapours.
+                                               P264 Wash hands thoroughly after handling.
+                                               P271 Use only outdoors or in a well-ventilated area.
+                                               P272 Contaminated work clothing should not be allowed out of the workplace.
+                                               P273 Avoid release to the environment.
+                                               P280 Wear protective gloves, eye protection, and face protection.
+       Response:                               P302+P352 IF ON SKIN: Wash with plenty of water.
+                                               P304+P340+P312 IF INHALED: Remove victim to fresh air and keep at rest in a position
+                                               comfortable for breathing. Call a POISON CENTER or physician if you feel unwell.
+                                               P305+P351+P338 IF IN EYES: Rinse cautiously with water for several minutes. Remove
+                                               contact lenses, if present and easy to do. Continue rinsing.
+                                               P333+P313 If skin irritation or rash occurs: Get medical advice/attention.
+                                               P337+P313 If eye irritation persists: Get medical advice/attention.
+                                               P362+P364 Take off contaminated clothing and wash it before reuse.
+       Storage:                                P403+P233 Store in a well-ventilated place. Keep container tightly closed.
+                                               P405 Store locked up.
+       Disposal:                               P501 Dispose of contents/container to an appropriate treatment and disposal facility in
+                                               accordance with applicable laws and regulations.
+
+    Dangerous Goods information:
+    Not classified as Dangerous Goods according to the criteria of the Australian Code for the Transport of Dangerous Goods by
+    Road and Rail (ADG Code).
+
+                                   Section 3. Composition / information on ingredients
+    General chemical description:              Mixture
+
+    Identity of ingredients:
+
+                    Chemical ingredients                         CAS-No.                                Proportion
+
+[...]
+      Flash point:                            > 93 °C (> 199.4 °F)
+
+[...]
+                                         Section 14. Transport information
+
+   Road and Rail Transport:
+
+   Dangerous Goods information:                  Not classified as Dangerous Goods according to the criteria of the
+                                                 Australian Code for the Transport of Dangerous Goods by Road and
+                                                 Rail (ADG Code).
+
+   Marine transport IMDG:
+   Not dangerous goods
+
+   Air transport IATA:
+   Not dangerous goods
+
+                                         Section 15. Regulatory information

@@ -1,0 +1,135 @@
+Safety Data Sheet according to (EC) No 1907/2006 as amended
+                                                                                                                   Page 1 of 32
+
+                                                                                                                 SDS No. : 450822
+LOCTITE 638                                                                                                                V012.0
+                                                                                                       Revision: 01.08.2023
+                                                                                                   printing date: 15.08.2023
+                                                                                         Replaces version from: 24.10.2022
+
+         SECTION 1: Identification of the substance/mixture and of the company/undertaking
+   1.1. Product identifier
+       LOCTITE 638
+
+   1.2. Relevant identified uses of the substance or mixture and uses advised against
+       Intended use:
+       Anaerobic Adhesive
+
+   1.3. Details of the supplier of the safety data sheet
+       Henkel Ltd
+       Adhesives
+       Wood Lane End
+       HP2 4RQ        Hemel Hempstead
+
+      Great Britain
+
+      Phone:          +44 (1442) 278000
+
+      SDSinfo.Adhesive@henkel.com
+      For Safety Data Sheet updates please visit our website https://mysds.henkel.com/index.html#/appSelection or www.henkel-
+      adhesives.com.
+
+   1.4. Emergency telephone number
+   24 Hours Emergency Tel: +44 (0)1442 278497
+
+                                          SECTION 2: Hazards identification
+   2.1. Classification of the substance or mixture
+
+   Classification (CLP):
+      Skin irritation                                                                               Category 2
+      H315 Causes skin irritation.
+      Serious eye damage                                                                            Category 1
+      H318 Causes serious eye damage.
+      Skin sensitizer                                                                               Category 1
+      H317 May cause an allergic skin reaction.
+      Specific target organ toxicity - single exposure                                              Category 3
+      H335 May cause respiratory irritation.
+      Target organ: respiratory tract irritation
+      Chronic hazards to the aquatic environment                                                    Category 3
+      H412 Harmful to aquatic life with long lasting effects.
+
+   2.2. Label elements
+
+   Label elements (CLP):
+SDS No.: 450822 V012.0 LOCTITE 638                                                                                         Page 2 of 32
+
+        Hazard pictogram:
+
+        Contains                           3,3,5 Trimethylcyclohexyl methacrylate
+
+                                           2-Hydroxyethyl methacrylate
+
+                                           Acrylic acid
+
+                                           Hydroxypropyl methacrylate
+                                           maleic acid
+
+                                           Acetic acid, 2-phenylhydrazide
+                                           2,2'-Ethylenedioxydiethyl dimethacrylate
+
+                                           2-Propenoic acid, 2-methyl-, 2-(2-hydroxyethoxy)ethyl ester
+
+        Signal word:                       Danger
+
+        Hazard statement:                  H315 Causes skin irritation.
+                                           H317 May cause an allergic skin reaction.
+                                           H318 Causes serious eye damage.
+                                           H335 May cause respiratory irritation.
+                                           H412 Harmful to aquatic life with long lasting effects.
+
+        Precautionary statement:           "***" ***For consumer use only: P101 If medical advice is needed, have product
+                                           container or label at hand. P102 Keep out of reach of children. P501 Dispose of
+                                           contents/container in accordance with national regulation.***
+
+[...]
+       Flash point                                        > 100 °C (> 212 °F)
+
+[...]
+                                         SECTION 14: Transport information
+
+   14.1.           UN number or ID number
+
+                   ADR               Not dangerous goods
+                   RID               Not dangerous goods
+                   ADN               Not dangerous goods
+                   IMDG              Not dangerous goods
+                   IATA              Not dangerous goods
+
+   14.2.           UN proper shipping name
+
+                   ADR               Not dangerous goods
+                   RID               Not dangerous goods
+                   ADN               Not dangerous goods
+                   IMDG              Not dangerous goods
+                   IATA              Not dangerous goods
+
+   14.3.           Transport hazard class(es)
+
+                   ADR               Not dangerous goods
+                   RID               Not dangerous goods
+                   ADN               Not dangerous goods
+                   IMDG              Not dangerous goods
+                   IATA              Not dangerous goods
+
+   14.4.           Packing group
+
+                   ADR               Not dangerous goods
+                   RID               Not dangerous goods
+                   ADN               Not dangerous goods
+                   IMDG              Not dangerous goods
+                   IATA              Not dangerous goods
+
+   14.5.           Environmental hazards
+
+                   ADR               not applicable
+                   RID               not applicable
+SDS No.: 450822 V012.0 LOCTITE 638                                                                         Page 31 of 32
+
+                   ADN              not applicable
+                   IMDG             not applicable
+                   IATA             not applicable
+
+   14.6.           Special precautions for user
+
+                   ADR              not applicable
+                   RID              not applicable

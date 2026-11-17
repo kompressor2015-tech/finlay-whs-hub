@@ -1,0 +1,129 @@
+ Safety Data Sheet
+                                      Hazardous, Dangerous Goods
+
+1. MATERIAL AND SUPPLY COMPANY IDENTIFICATION
+
+Product name:   965-63023 DULUX URETHANE THINNER
+
+ Synonyms                                                         Product Code               Bar Code
+ Protective Coatings Urethane Thinner 4L                          96563023-4L                9300611034922
+ Protective Coatings Urethane Thinner 20L                         96563023-20L               9300611034939
+ Urethane Thinner                                                 96563023-B
+
+Recommended use: Paint thinner.
+Supplier:           Dulux Protective Coatings Australia, a division of DuluxGroup (Australia) Pty
+                    Ltd
+ABN:                67 000 049 427
+Street Address:     1956 Dandenong Road
+                    Clayton VIC 3168
+                    Australia
+Telephone:          13 23 77
+
+Emergency Telephone number:          Australia – 1800 220 770; New Zealand – 0800 220 770
+
+2. HAZARDS IDENTIFICATION
+
+This material is hazardous according to the criteria of Safe Work Australia GHS 7.
+
+Signal Word
+Danger
+
+Hazard Classifications
+Flammable Liquids - Category 2
+Skin Corrosion/Irritation - Category 2
+Eye Damage/Irritation - Category 2A
+Specific Target Organ Toxicity (Single Exposure) - Category 3 Respiratory Tract Irritation
+Specific Target Organ Toxicity (Single Exposure) - Category 3 Narcotic Effects
+Aspiration Hazard - Category 1
+
+Hazard Statements
+ H225          Highly flammable liquid and vapour.
+ H304          May be fatal if swallowed and enters airways.
+ H315          Causes skin irritation.
+ H319          Causes serious eye irritation.
+ H335          May cause respiratory irritation.
+ H336          May cause drowsiness or dizziness.
+
+Prevention Precautionary Statements
+ P102           Keep out of reach of children.
+ P103           Read carefully and follow all instructions.
+ P210           Keep away from heat/sparks/open flames/hot surfaces. No smoking.
+ P233           Keep container tightly closed.
+ P240           Ground and bond container and receiving equipment.
+
+Product Name: 965-63023 DULUX URETHANE THINNER                                Reference No: DLXGHSEN000491
+Issued: 29 August 2024                                 Version: 9.0                                    Page 1 of 8
+ Safety Data Sheet
+ P241             Use explosion-proof electrical, ventilating, lighting and all other equipment.
+ P242             Use non-sparking tools.
+ P243             Take action to prevent static discharges.
+ P261             Avoid breathing dust, fume, gas, mist, vapours or spray.
+ P264             Wash hands, face and all exposed skin thoroughly after handling.
+ P271             Use only outdoors or in a well-ventilated area.
+ P280             Wear protective gloves/protective clothing including eye/face protection.
+
+Response Precautionary Statements
+ P101             If medical advice is needed, have product container or label at hand.
+ P301+P310        IF SWALLOWED: Immediately call a POISON CENTER/doctor.
+ P303+P361+P353 IF ON SKIN (or hair): Take off immediately all contaminated clothing. Rinse skin with
+                  water [or shower].
+ P304+P340        IF INHALED: Remove person to fresh air and keep comfortable for breathing.
+ P305+P351+P338 IF IN EYES: Rinse cautiously with water for several minutes. Remove contact
+                  lenses, if present and easy to do. Continue rinsing.
+ P312             Call a POISON CENTER/doctor if you feel unwell.
+ P331             Do NOT induce vomiting.
+ P332+P313        If skin irritation occurs: Get medical advice/attention.
+ P337+P313        If eye irritation persists: Get medical advice/attention.
+ P362+P364        Take off contaminated clothing and wash it before reuse
+
+Storage Precautionary Statements
+ P403+P233      Store in a well-ventilated place. Keep container tightly closed.
+ P403+P235      Store in a well-ventilated place. Keep cool.
+ P405           Store locked up.
+
+Disposal Precautionary Statement
+ P501           Dispose of contents/container in accordance with local, regional, national and
+
+[...]
+ Flash Point (°C):                            -7 (Methyl ethyl ketone)
+
+[...]
+14. TRANSPORT INFORMATION
+
+ROAD AND RAIL TRANSPORT
+Classified as Dangerous Goods by the criteria of the “Australian Code for the Transport of Dangerous Goods by
+Road & Rail" and the "New Zealand NZS5433: Transport of Dangerous Goods on Land".
+
+ UN No:                                  1263
+ Dangerous Goods Class:                  3
+ Packing Group:                          III
+ Hazchem Code:                           •3Y
+ Emergency Response Guide No:            14
+ Limited Quantities                      5L
+
+ Proper Shipping Name:                   PAINT RELATED MATERIAL
+
+Segregation Dangerous Goods: Not to be loaded with explosives (Class 1), flammable gases (Class 2.1), if
+both are in bulk, toxic gases (Class 2.3), spontaneously combustible substances (Class 4.2), oxidising agents
+(Class 5.1), organic peroxides (Class 5.2), toxic substances (Class 6.1), infectious substances (Class 6.2) or
+radioactive substances (Class 7). Exemptions may apply.
+
+MARINE TRANSPORT
+Classified as Dangerous Goods by the criteria of the International Maritime Dangerous Goods Code (IMDG Code)
+for transport by sea.
+
+ UN No:                                  1263
+ Dangerous Goods Class:                  3
+ Packing Group:                          III
+ Limited Quantities:                     5L
+ Proper Shipping Name:                   PAINT RELATED MATERIAL
+
+Product Name: 965-63023 DULUX URETHANE THINNER                                 Reference No: DLXGHSEN000491
+Issued: 29 August 2024                                 Version: 9.0                                     Page 7 of 8
+ Safety Data Sheet
+AIR TRANSPORT
+Classified as Dangerous Goods by the criteria of the International Air Transport Association (IATA) Dangerous
+Goods Regulations for transport by air.
+
+ UN No:                                 1263
+ Dangerous Goods Class:                 3

@@ -1,0 +1,148 @@
+                                                                  Safety data sheet
+                            This SDS is prepared in English in accordance with COMMISSION REGULATION (EU) 2020/878, without any
+                                                                     country-specific legislation
+
+                                                AIRCOLOR FILLEX FILL-ONE prefill SB
+
+  SECTION 1: IDENTIFICATION OF THE SUBSTANCE/MIXTURE AND OF THE COMPANY/UNDERTAKING
+  1.1    Product identifier:                         AIRCOLOR FILLEX FILL-ONE prefill SB
+         Other means of identification:
+         UFI:                                        7521-80Q8-J00Q-5DVJ
+  1.2    Relevant identified uses of the substance or mixture and uses advised against:
+         Relevant uses (Professional users): Spray paint
+         Relevant uses (Industrial user): Spray paint
+         For Professional users/Industrial user only.
+         Uses advised against: All uses not specified in this section or in section 7.3
+  1.3    Details of the supplier of the safety data sheet:
+         BRIOLF COATINGS S.A.U.
+         Ctra. Nacional II, Km. 706,5
+         17457 Riudellots de la Selva - Gerona - España
+         Phone: +34 972 478060 (8:00-12:45 / 14:15-17:30 h) (GMT +1:00) - Fax: +34972477394
+         regulatory_coatings@briolf.com
+  1.4    Emergency telephone number: +44 (0)1924 431679 / 112 / +34 972 478060 (8:00-12:45 / 14:15-17:30 h) ROBERLO
+                                             (Spain) (GMT + 1:00)
+
+  SECTION 2: HAZARDS IDENTIFICATION **
+  2.1    Classification of the substance or mixture:
+          CLP Regulation (EC) No 1272/2008:
+          Classification of this product has been carried out in accordance with CLP Regulation (EC) No 1272/2008.
+          Aerosol 1: Flammable aerosols, Category 1, H222
+          Aerosol 1: Pressurised container: May burst if heated., H229
+          Eye Irrit. 2: Eye irritation, Category 2, H319
+          STOT SE 3: Specific toxicity causing drowsiness and dizziness, single exposure, Category 3, H336
+   2.2    Label elements:
+         CLP Regulation (EC) No 1272/2008:
+          Danger
+
+          Hazard statements:
+          H222 - Extremely flammable aerosol.
+          H229 - Pressurised container: May burst if heated.
+          H319 - Causes serious eye irritation.
+          H336 - May cause drowsiness or dizziness. Organs affected: Central nervous system.
+          Precautionary statements:
+          P210: Keep away from heat, hot surfaces, sparks, open flames and other ignition sources. No smoking.
+          P211: Do not spray on an open flame or other ignition source.
+          P251: Do not pierce or burn, even after use.
+          P280: Wear protective gloves/face protection/protective clothing/respiratory protection/protective footwear.
+          P305+P351+P338: IF IN EYES: Rinse cautiously with water for several minutes. Remove contact lenses, if present and easy to
+          do. Continue rinsing.
+          P410+P412: Protect from sunlight. Do not expose to temperatures exceeding 50 °C/122°F
+          Supplementary information:
+          EUH066: Repeated exposure may cause skin dryness or cracking.
+          Substances that contribute to the classification
+          acetone; Xylene
+         UFI:      7521-80Q8-J00Q-5DVJ
+  2.3    Other hazards:
+         Product does not meet PBT/vPvB criteria
+         Endocrine-disrupting properties: The product does not meet the criteria.
+** Changes with regards to the previous version
+
+                                                          - CONTINUED ON NEXT PAGE -
+
+Date of compilation: 05/05/2025           Revised: 25/09/2026              Version: 2 (Replaced 1)                                Page 1/13
+                                                                                Safety data sheet
+                                   This SDS is prepared in English in accordance with COMMISSION REGULATION (EU) 2020/878, without any
+                                                                            country-specific legislation
+
+                                                          AIRCOLOR FILLEX FILL-ONE prefill SB
+
+  SECTION 3: COMPOSITION/INFORMATION ON INGREDIENTS
+  3.1    Substance:
+         Not relevant
+  3.2    Mixture:
+         Chemical description: Aerosol
+         Components:
+         In accordance with Annex II of Regulation (EC) No 1907/2006 (point 3), the product contains:
+                  Identification                                                        Chemical name/Classification                                                     Concentration
+         CAS:   115-10-6                   Dimethyl ether⁽¹⁾                                                                                           ATP CLP00
+         EC:    204-065-8
+                                                                                                                                                                         50 - <75%
+         Index: 603-019-00-8
+                                             Regulation 1272/2008    Flam. Gas 1A: H220; Press. Gas: H280 - Danger
+         REACH: 01-2119472128-37-
+                XXXX
+         CAS:   67-64-1                    acetone⁽²⁾                                                                                                  ATP CLP00
+         EC:    200-662-2
+                                                                                                                                                                         25 - <50%
+         Index: 606-001-00-8
+                                             Regulation 1272/2008    Eye Irrit. 2: H319; Flam. Liq. 2: H225; STOT SE 3: H336; EUH066 - Danger
+         REACH: 01-2119471330-49-
+                XXXX
+         CAS:   1330-20-7                  Xylene⁽²⁾                                                                                                   Self-classified
+         EC:    215-535-7
+                                                                     Acute Tox. 4: H312+H332; Aquatic Chronic 3: H412; Asp. Tox. 1: H304; Eye Irrit.                      5 - <10%
+         Index: 601-022-00-9
+
+[...]
+         Flash Point:                                                         -41 ºC (Propellant)
+
+[...]
+  SECTION 14: TRANSPORT INFORMATION
+          Transport of dangerous goods by land:
+           With regard to ADR 2025 and RID 2025:
+                            14.1 UN number or ID number:                  UN1950
+                            14.2 UN proper shipping name:                 AEROSOLS
+                            14.3 Transport hazard class(es):              2
+                                 Labels:                                  2.1
+                            14.4 Packing group:                           N/A
+                            14.5 Environmental hazards:                   No
+                            14.6 Special precautions for user
+                                 Special regulations:                     190, 327, 344, 625
+                                 Tunnel restriction code:                 D
+                                 Physico-Chemical properties:             see section 9
+                                 Limited quantities:                      1L
+                           14.7 Maritime transport in bulk                Not relevant
+                                according to IMO
+                                instruments:
+          Transport of dangerous goods by sea:
+          With regard to IMDG 42-24:
+                           14.1 UN number or ID number:                   UN1950
+                           14.2 UN proper shipping name:                  AEROSOLS
+                           14.3 Transport hazard class(es):               2
+                                Labels:                                   2.1
+                           14.4 Packing group:                            N/A
+                           14.5 Marine pollutant:                         No
+                           14.6 Special precautions for user
+                                Special regulations:                      63, 959, 190, 277, 327, 344
+                                   EmS Codes:                             F-D, S-U
+                                   Physico-Chemical properties:           see section 9
+                                   Limited quantities:                    1L
+                                   Segregation group:                     Not relevant
+                         14.7 Maritime transport in bulk                  Not relevant
+                               according to IMO
+                               instruments:
+          Transport of dangerous goods by air:
+          With regard to IATA/ICAO 2026:
+                           14.1 UN number or ID number:                   UN1950
+                           14.2 UN proper shipping name:                  AEROSOLS, flammable
+                           14.3 Transport hazard class(es):               2
+                                Labels:                                   2.1
+                           14.4 Packing group:                            N/A
+                           14.5 Environmental hazards:                    No
+                           14.6 Special precautions for user
+                                   Physico-Chemical properties:           see section 9
+                           14.7 Maritime transport in bulk                Not relevant
+                                according to IMO
+                                instruments:
+
+  SECTION 15: REGULATORY INFORMATION

@@ -1,0 +1,119 @@
+Safety Data Sheet
+WATTYL KILLRUST SATIN ENAMEL
+AEROSOL CB CLASSIC CREAM
+Conforms to Model Code of Practice - Preparation of Safety Data Sheets for Hazardous Chemicals - Australia
+
+SECTION 1: Identification of the substance/mixture and of the company/undertaking
+1.1 Product identifier
+Product name :                     WATTYL KILLRUST SATIN ENAMEL AEROSOL CB CLASSIC CREAM
+Product identity :                 115301.530
+Product type :                     Paint. (Aerosol paint)
+
+1.2 Relevant identified uses of the substance or mixture and uses advised against
+Field of application :             buildings
+Identified uses :                  Consumer applications, Professional applications, Used by spraying.
+
+1.3 Details of the supplier of the safety data sheet                              1.4 Emergency telephone number
+Company details :                  Hempel (Wattyl) Australia Pty Ltd.             Emergency telephone number (with hours of operation)
+                                   Level 3, 2 Burbank Place
+                                   Norwest, , New South Wales 2153                Poisons Information Centre.
+                                   Australia                                      Tel.: 13 11 26 (24 hour)
+                                   Tel: +(61) 288673333
+                                   Email: wattyl@wattyl.com.au
+Date of Preparation :              29 October 2024
+Date of previous issue             29 October 2024.
+
+SECTION 2: Hazards identification
+
+2.1 Classification of the substance or mixture
+Product definition :               Mixture
+GHS Classification
+AEROSOLS - Category 1
+SKIN CORROSION/IRRITATION - Category 2
+REPRODUCTIVE TOXICITY - Category 1
+SPECIFIC TARGET ORGAN TOXICITY - SINGLE EXPOSURE (Narcotic effects) - Category 2
+SPECIFIC TARGET ORGAN TOXICITY - REPEATED EXPOSURE - Category 2
+
+2.2 Label elements
+Hazard pictograms :
+
+Signal word :                      DANGER
+Hazard statements :                H222 - Extremely flammable aerosol.
+                                   H315 - Causes skin irritation.
+                                   H336 - May cause drowsiness or dizziness.
+                                   H360 - May damage fertility or the unborn child.
+                                   H373 - May cause damage to organs through prolonged or repeated exposure. (central nervous system
+                                   (CNS))
+Precautionary statements :
+ General :                         Keep out of reach of children. If medical advice is needed, have product container or label at hand.
+ Prevention :                      Obtain special instructions before use. Wear protective gloves, protective clothing, eye protection, face
+                                   protection, or hearing protection. Keep away from heat, hot surfaces, sparks, open flames and other
+                                   ignition sources. No smoking. Do not spray on an open flame or other ignition source. Use only
+                                   outdoors or in a well-ventilated area. Do not breathe dust or mist. Wash thoroughly after handling. Do
+                                   not pierce or burn, even after use.
+ Response :                        IF exposed or concerned: Get medical advice or attention. IF INHALED: Call a POISON CENTER or
+                                   doctor if you feel unwell.
+ Storage :                         Store locked up. Protect from sunlight. Do not expose to temperatures exceeding 50 °C/122 °F. Store
+                                   in a well-ventilated place. Keep container tightly closed.
+ Disposal :                        Dispose of contents and container in accordance with all local, regional, national and international
+                                   regulations.
+Supplemental label elements :      Not applicable.
+
+Version: 0.02                                                   Page: 1/10
+Safety Data Sheet
+WATTYL KILLRUST SATIN ENAMEL
+AEROSOL CB CLASSIC CREAM
+SECTION 2: Hazards identification
+2.3 Other hazards
+Other hazards which do not result       None known.
+in classification :
+
+SECTION 3: Composition/information on ingredients
+
+                                             Product/ingredient name                                                 Identifiers            %
+
+ Petroleum gases, liquefied                                                                                     68476-85-7             ≥10 - ≤30
+ methylcyclohexane                                                                                              108-87-2               ≤10
+ stoddard solvent                                                                                               8052-41-3              <10
+ solvent naphtha (petroleum), light aliph.                                                                      64742-89-8             ≤5
+ xylene                                                                                                         1330-20-7              ≤5
+ toluene                                                                                                        108-88-3               ≤5
+ n-butyl acetate                                                                                                123-86-4               ≤3
+ ethylbenzene                                                                                                   100-41-4               ≤3
+
+[...]
+Flash point :                          Closed cup: -22°C (-7.6°F)
+
+[...]
+SECTION 14: Transport information
+
+Transport may take place according to national regulation NZS for transport by road and train, IMDG for transport by sea, IATA for transport
+by air.
+            14.1         14.2                                   14.3                               14.4   14.5
+            UN no.       Proper shipping name                   Transport hazard class(es)         PG*    Env* Additional information
+
+ ADG        UN1950       AEROSOLS                                2.1                                 -    No.   -
+ Class
+
+ IMDG       UN1950       AEROSOLS. (methylcyclohexane)           2.1                                 -    Yes. The marine pollutant mark is
+ Class                                                                                                         not required when
+                                                                                                               transported in sizes of ≤5 L
+                                                                                                               or ≤5 kg.
+                                                                                                               Emergency schedules F-D,
+                                                                                                               S-U
+
+ IATA       UN1950       AEROSOLS                                2.1                                 -    No.   The environmentally
+ Class                                                                                                          hazardous substance mark
+                                                                                                                may appear if required by
+                                                                                                                other transportation
+                                                                                                                regulations.
+PG* : Packing group
+Env.* : Environmental hazards
+
+14.6 Special precautions for user
+Transport within user’s premises: always transport in closed containers that are upright and secure. Ensure that persons transporting the
+product know what to do in the event of an accident or spillage.
+14.7 Transport in bulk according to IMO instruments
+Not applicable.
+
+SECTION 15: Regulatory information
