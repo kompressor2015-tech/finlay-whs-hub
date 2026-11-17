@@ -1,6 +1,6 @@
 import { useEffect, useState, type FormEvent } from 'react';
 import type { WhsUser } from '../services/auth.ts';
-import { addStock, createChemical, deleteStock, openSds, updateChemical, updateStock, uploadSds, type ChemicalInput } from '../services/chemicals.ts';
+import { addStock, createChemical, deleteStock, openSds, setStockRetired, updateChemical, updateStock, uploadSds, type ChemicalInput } from '../services/chemicals.ts';
 import { useRegister } from '../hooks/useRegister.ts';
 import { go, hrefFor } from '../hooks/useRoute.ts';
 import { isOfficeAccess } from '../utils/access.ts';
@@ -73,7 +73,7 @@ export function ChemicalPage({ id, user, embedded }: { id: string; user: WhsUser
 
       <div className="flex flex-wrap gap-5 items-start">
         <div className="flex-[2_1_560px] min-w-0 flex flex-col gap-5">
-          <StockPanel chem={chem} stock={stock} sites={reg.sites} allStock={reg.stock} office={office} officer={officer} onChanged={reg.reload} />
+          <StockPanel chem={chem} stock={stock} retired={(reg.retired ?? []).filter(s => s.chemical_id === chem.id)} sites={reg.sites} allStock={reg.stock} office={office} officer={officer} onChanged={reg.reload} />
 
           <section className={`${card} px-4.5 py-4 flex flex-col gap-2.5`}>
             <h2 className="m-0 text-[17px] font-semibold">Hazards (from the SDS)</h2>
@@ -158,8 +158,8 @@ function SdsUpload({ chemId, onDone }: { chemId: string; onDone: () => void }) {
   );
 }
 
-function StockPanel({ chem, stock, sites, allStock, office, officer, onChanged }: {
-  chem: Chemical; stock: Stock[]; sites: { id: string; name: string; state: string }[]; allStock: Stock[]; office: boolean; officer: boolean; onChanged: () => void;
+function StockPanel({ chem, stock, retired, sites, allStock, office, officer, onChanged }: {
+  chem: Chemical; stock: Stock[]; retired: Stock[]; sites: { id: string; name: string; state: string }[]; allStock: Stock[]; office: boolean; officer: boolean; onChanged: () => void;
 }) {
   const [adding, setAdding] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -191,12 +191,20 @@ function StockPanel({ chem, stock, sites, allStock, office, officer, onChanged }
       <p className="m-0 px-4.5 py-3 text-xs text-muted border-b border-line-soft">Quantity = number of containers × container size. For gas cylinders, enter the cylinder's water capacity in litres (stamped on the cylinder or from the supplier).</p>
       <ul className="m-0 p-0 list-none">
         {stock.map(s => (
-          <StockRow key={s.id} s={s} site={sites.find(x => x.id === s.site_id)} office={office} officer={officer} onChanged={onChanged}
+          <StockRow key={s.id} s={s} chem={chem} isLastActive={stock.length === 1} site={sites.find(x => x.id === s.site_id)} office={office} officer={officer} onChanged={onChanged}
             siteLocations={Array.from(new Set(allStock.filter(x => x.site_id === s.site_id).map(x => x.location))).sort()}
             taken={stock.filter(x => x.site_id === s.site_id && x.id !== s.id).map(x => `${x.location.toLowerCase()}|${x.container_size ?? ''}`)} />
         ))}
       </ul>
-      {stock.length === 0 && <p className="m-0 px-4.5 py-4 text-sm text-muted">Not stored at any site yet.</p>}
+      {stock.length === 0 && <p className="m-0 px-4.5 py-4 text-sm text-muted">{retired.length ? 'Not kept at any site now.' : 'Not stored at any site yet.'}</p>}
+      {retired.length > 0 && (
+        <div className="border-t border-line-soft bg-[#FAFAF9]">
+          <h3 className="m-0 px-4.5 pt-3 pb-1 text-[13px] font-semibold text-muted">Not kept here now</h3>
+          <ul className="m-0 p-0 list-none">
+            {retired.map(s => <RetiredRow key={s.id} s={s} site={sites.find(x => x.id === s.site_id)} office={office} officer={officer} onChanged={onChanged} />)}
+          </ul>
+        </div>
+      )}
       {adding && (
         <form onSubmit={add} className="px-4.5 py-4 border-t border-line-soft bg-[#FAFAF9] grid grid-cols-2 lg:grid-cols-3 gap-3">
           <Field label="Site" htmlFor="st-site">
@@ -231,8 +239,38 @@ function StockPanel({ chem, stock, sites, allStock, office, officer, onChanged }
   );
 }
 
-function StockRow({ s, site, office, officer, onChanged, siteLocations, taken }: {
-  s: Stock; site?: { name: string; state: string }; office: boolean; officer: boolean; onChanged: () => void; siteLocations: string[]; taken: string[];
+function RetiredRow({ s, site, office, officer, onChanged }: { s: Stock; site?: { name: string; state: string }; office: boolean; officer: boolean; onChanged: () => void }) {
+  const [error, setError] = useState<string | null>(null);
+  async function back() {
+    const res = await setStockRetired(s.id, false);
+    if (res.error) return setError(res.error);
+    onChanged();
+  }
+  async function del() {
+    if (!(await askConfirm({ title: `Delete ${s.location}?`, body: 'This deletes the line and its count history for good.', confirmLabel: 'Delete', danger: true }))) return;
+    const res = await deleteStock(s.id);
+    if (res.error) return setError(res.error);
+    onChanged();
+  }
+  return (
+    <li className="px-4.5 py-2.5 border-b border-line-soft last:border-b-0 flex flex-wrap justify-between items-center gap-x-4 gap-y-1">
+      <div className="min-w-0 text-sm">
+        <span className="font-medium">{s.location}</span>{' '}
+        <span className="text-muted">{site?.name ?? s.site_id} {site?.state} · stopped {s.retired_at ? formatDay(s.retired_at) : ''}{s.last_counted_at ? ` · last counted ${formatDay(s.last_counted_at)}` : ''}</span>
+        {error && <span className="block text-[#8E0F15] text-xs">{error}</span>}
+      </div>
+      {office && (
+        <span className="flex gap-3 items-center">
+          <button type="button" onClick={back} className="bg-transparent border-0 p-0 text-[13px] font-semibold text-ink underline cursor-pointer min-h-9">Keep here again</button>
+          {officer && <button type="button" onClick={del} className="bg-transparent border-0 p-0 text-[13px] text-finlay underline cursor-pointer min-h-9">Delete</button>}
+        </span>
+      )}
+    </li>
+  );
+}
+
+function StockRow({ s, chem, isLastActive, site, office, officer, onChanged, siteLocations, taken }: {
+  s: Stock; chem: Chemical; isLastActive: boolean; site?: { name: string; state: string }; office: boolean; officer: boolean; onChanged: () => void; siteLocations: string[]; taken: string[];
 }) {
   const [edit, setEdit] = useState(false);
   const [location, setLocation] = useState(s.location);
@@ -251,10 +289,14 @@ function StockRow({ s, site, office, officer, onChanged, siteLocations, taken }:
     setEdit(false);
     onChanged();
   }
-  async function remove() {
-    if (!(await askConfirm({ title: `Remove ${s.location}?`, body: 'This takes the line off this chemical. Its count history goes too.', confirmLabel: 'Remove', danger: true }))) return;
-    const res = await deleteStock(s.id);
+  async function retire() {
+    if (!(await askConfirm({ title: `No longer kept at ${s.location}?`, body: 'This takes the line off the site register and stocktakes. Its count history is kept and you can bring it back later.', confirmLabel: 'No longer kept here' }))) return;
+    const res = await setStockRetired(s.id, true);
     if (res.error) return setError(res.error);
+    if (isLastActive && chem.active && (await askConfirm({ title: 'Nothing is stored anywhere now', body: `${chem.name} has no storage line left at any site. Mark it as no longer used?`, confirmLabel: 'Mark as no longer used' }))) {
+      const upd = await updateChemical(chem.id, { active: false });
+      if (upd.error) setError(upd.error);
+    }
     onChanged();
   }
 
@@ -287,7 +329,7 @@ function StockRow({ s, site, office, officer, onChanged, siteLocations, taken }:
             ) : (
               <>
                 <button type="button" onClick={() => setEdit(true)} className="bg-transparent border-0 p-0 text-[13px] font-semibold text-ink underline cursor-pointer min-h-9">Edit</button>
-                {officer && <button type="button" onClick={remove} className="bg-transparent border-0 p-0 text-[13px] text-finlay underline cursor-pointer min-h-9">Remove</button>}
+                <button type="button" onClick={retire} className="bg-transparent border-0 p-0 text-[13px] text-finlay underline cursor-pointer min-h-9">No longer kept here</button>
               </>
             )}
           </span>
@@ -402,8 +444,9 @@ function ChemicalForm({ chem, onDone, onCancel }: { chem: Chemical | null; onDon
           <input type="checkbox" checked={f.aerosol} disabled={!f.dg_class?.startsWith('2')} onChange={e => set({ aerosol: e.target.checked })} className="w-5 h-5" /> Aerosol
         </label>
         <label className="flex gap-2.5 items-center text-sm min-h-11 cursor-pointer self-end">
-          <input type="checkbox" checked={f.active} onChange={e => set({ active: e.target.checked })} className="w-5 h-5" /> Still used
+          <input type="checkbox" checked={f.active} onChange={e => set({ active: e.target.checked })} className="w-5 h-5" /> Still used by Finlay (all sites)
         </label>
+        <p className="col-span-full m-0 -mt-1 text-xs text-muted">Untick only when no site uses this product any more. To take it off one site, use "No longer kept here" on that site's storage line.</p>
         <label className={`col-span-2 sm:col-span-4 flex gap-2.5 items-center text-sm min-h-11 cursor-pointer rounded-lg px-3 ${f.class_confirmed ? '' : 'bg-[#FFF1D6]'}`}>
           <input type="checkbox" checked={f.class_confirmed} onChange={e => set({ class_confirmed: e.target.checked })} className="w-5 h-5" />
           Class checked against the SDS (section 14), including "not a DG"

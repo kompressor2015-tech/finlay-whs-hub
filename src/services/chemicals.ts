@@ -11,7 +11,7 @@ function friendly(message: string | undefined): string {
   if (/^(A count|That storage|You do not|Authorising a stocktake|This stocktake)/.test(message)) return message;
   if (/duplicate key.*whs_chemicals_name/i.test(message)) return 'There is already a chemical with that name.';
   if (/row-level security|permission denied/i.test(message)) return 'You do not have permission to do that.';
-  if (/does not exist|class_confirmed|whs_stocktakes/i.test(message)) return 'The chemical tables are not up to date. Run the latest step 4 SQL in Supabase.';
+  if (/does not exist|class_confirmed|retired_at|whs_stocktakes/i.test(message)) return 'The chemical tables are not up to date. Run the latest step 4 SQL in Supabase.';
   return message;
 }
 
@@ -19,6 +19,8 @@ export interface Register {
   sites: Site[];
   chemicals: Chemical[];
   stock: Stock[];
+  /** Storage lines marked "no longer kept here" (history kept). */
+  retired?: Stock[];
   sds: Sds[];
 }
 
@@ -32,11 +34,13 @@ export async function loadRegister(): Promise<Result<Register>> {
   ]);
   const err = sites.error ?? chemicals.error ?? stock.error ?? sds.error;
   if (err) return { error: friendly(err.message) };
+  const all = ((stock.data ?? []) as Stock[]).map(s => ({ ...s, container_size: s.container_size === null ? null : Number(s.container_size), count: s.count === null ? null : Number(s.count), max_count: s.max_count === null ? null : Number(s.max_count) }));
   return {
     data: {
       sites: (sites.data ?? []) as Site[],
       chemicals: (chemicals.data ?? []) as Chemical[],
-      stock: ((stock.data ?? []) as Stock[]).map(s => ({ ...s, container_size: s.container_size === null ? null : Number(s.container_size), count: s.count === null ? null : Number(s.count), max_count: s.max_count === null ? null : Number(s.max_count) })),
+      stock: all.filter(s => !s.retired_at),
+      retired: all.filter(s => !!s.retired_at),
       sds: (sds.data ?? []) as Sds[],
     },
   };
@@ -63,6 +67,12 @@ export async function addStock(input: StockInput): Promise<Result<Stock>> {
 
 export async function updateStock(id: string, patch: Partial<StockInput>): Promise<Result<Stock>> {
   const { data, error } = await supabase.from('whs_chem_stock').update(patch).eq('id', id).select('*').single();
+  return error ? { error: friendly(error.message) } : { data: data as Stock };
+}
+
+/** Mark a storage line as no longer kept here (keeps its count history), or bring it back. */
+export async function setStockRetired(id: string, retired: boolean): Promise<Result<Stock>> {
+  const { data, error } = await supabase.from('whs_chem_stock').update({ retired_at: retired ? new Date().toISOString() : null }).eq('id', id).select('*').single();
   return error ? { error: friendly(error.message) } : { data: data as Stock };
 }
 

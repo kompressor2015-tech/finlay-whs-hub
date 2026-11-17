@@ -62,6 +62,8 @@ export interface Stock {
   max_count: number | null;
   last_counted_at: string | null;
   last_counted_by_name: string;
+  /** Set when the line is retired ("no longer kept here"); null while it is in use. */
+  retired_at?: string | null;
 }
 
 export interface Sds {
