@@ -266,12 +266,12 @@ export interface FileAttention {
 }
 
 export function incidentAttention(
-  incident: Pick<Incident, 'status' | 'investigation_due'>,
+  incident: Pick<Incident, 'status' | 'investigation_due' | 'investigation_waived'>,
   statements: Pick<Statement, 'status' | 'name'>[],
   now: Date = new Date()
 ): FileAttention[] {
   const out: FileAttention[] = [];
-  if (incident.status === 'investigating' && incident.investigation_due) {
+  if (incident.status === 'investigating' && incident.investigation_due && !incident.investigation_waived) {
     const d = daysUntil(incident.investigation_due, now);
     if (d < 0) out.push({ id: 'inv', tone: 'red', when: 'Overdue', what: `Investigation was due ${-d} ${-d === 1 ? 'day' : 'days'} ago` });
     else if (d <= 7) out.push({ id: 'inv', tone: 'amber', when: d === 0 ? 'Today' : `In ${d} ${d === 1 ? 'day' : 'days'}`, what: 'Investigation is due' });

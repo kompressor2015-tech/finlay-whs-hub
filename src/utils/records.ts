@@ -203,8 +203,9 @@ export function hazardFixBy(hazard: Pick<Hazard, 'severity' | 'created_at'>): st
 // ---------------------------------------------------------------------------------
 
 /** The status to show: once every action is done an incident in the actions stage is ready to close. */
-export function incidentStatusFor(incident: Pick<Incident, 'status'>, actions: Pick<WhsAction, 'status'>[]): { label: string; tone: Tone } {
+export function incidentStatusFor(incident: Pick<Incident, 'status'> & { investigation_waived?: boolean }, actions: Pick<WhsAction, 'status'>[]): { label: string; tone: Tone } {
   if (incident.status === 'actions' && actions.every(a => a.status === 'done')) return { label: 'Ready to close', tone: 'green' };
+  if (incident.status === 'investigating' && incident.investigation_waived) return { label: 'No investigation needed', tone: 'amber' };
   return incidentStatus(incident.status);
 }
 
@@ -298,11 +299,13 @@ export function incidentSteps(incident: Incident, actions: Pick<WhsAction, 'stat
   const done = actions.filter(a => a.status === 'done').length;
   return [
     { label: 'Reported', sub: formatDay(brisbaneDay(incident.created_at)), state: 'done' },
-    {
-      label: 'Investigating',
-      sub: incident.investigation_due ? `Due ${formatDay(incident.investigation_due)}` : 'No due date yet',
-      state: at === 0 ? 'todo' : state(1),
-    },
+    incident.investigation_waived
+      ? { label: 'Investigation', sub: 'Not required', state: at === 0 ? 'todo' : 'done' }
+      : {
+        label: 'Investigating',
+        sub: incident.investigation_due ? `Due ${formatDay(incident.investigation_due)}` : 'No due date yet',
+        state: at === 0 ? 'todo' : state(1),
+      },
     { label: 'Actions', sub: `${done} of ${actions.length} done`, state: state(2) },
     {
       label: 'Closed',
@@ -348,7 +351,7 @@ export function buildHome(
     });
   }
   for (const i of openIncidents) {
-    if (i.status === 'investigating' && i.investigation_due) {
+    if (i.status === 'investigating' && i.investigation_due && !i.investigation_waived) {
       const u = urgencyForDue(i.investigation_due, now);
       if (u) {
         attention.push({ id: `i-${i.id}`, urgency: u, title: `Investigation due: ${i.description.slice(0, 60) || i.ref}`, unit: i.unit_no || undefined, detail: i.ref, due: i.investigation_due, moduleId: 'incidents', href: `#/incidents/${i.id}` });
@@ -381,7 +384,7 @@ export function buildHome(
 
   return {
     summary: [
-      { id: 'incidents', label: 'Open incidents', value: openIncidents.length, sub: notifiableThisYear ? `${notifiableThisYear} notifiable this year` : `${incidents.filter(i => i.status === 'investigating').length} under investigation` },
+      { id: 'incidents', label: 'Open incidents', value: openIncidents.length, sub: notifiableThisYear ? `${notifiableThisYear} notifiable this year` : `${incidents.filter(i => i.status === 'investigating' && !i.investigation_waived).length} under investigation` },
       { id: 'actions', label: 'Overdue actions', value: counts.overdue, sub: `of ${counts.open} open`, alert: true },
       { id: 'hazards', label: 'Hazards to review', value: hazards.filter(h => h.status === 'new').length, sub: `${openHazards.length} open` },
       { id: 'plant', label: 'Plant flagged', value: null, sub: 'Arrives with pre-starts (step 3)' },

@@ -1,7 +1,7 @@
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
 import {
-  actionCounts, actionPill, actionState, buildHome, canClose, dueWords, hazardFixBy, incidentSteps,
+  actionCounts, actionPill, actionState, buildHome, canClose, dueWords, hazardFixBy, incidentSteps, incidentStatusFor,
   keepRecordUntil, notifiableSummary, riskFor, sortActions,
   type Hazard, type Incident, type WhsAction,
 } from './records.ts';
@@ -119,4 +119,12 @@ test('due words', () => {
   assert.equal(dueWords('2026-11-09', now), '1 day late');
   assert.equal(dueWords('2026-11-05', now), '5 days late');
   assert.equal(dueWords(null, now), 'No due date');
+});
+
+test('an incident with no investigation needed shows no investigation step, status or due prompt', () => {
+  const w = incident({ status: 'investigating', investigation_due: '2026-11-13', investigation_waived: true });
+  const steps = incidentSteps(w, []);
+  assert.deepEqual([steps[1].label, steps[1].sub, steps[1].state], ['Investigation', 'Not required', 'done']);
+  assert.equal(incidentStatusFor(w, []).label, 'No investigation needed');
+  assert.equal(incidentStatusFor(incident({ status: 'investigating' }), []).label, 'Investigating');
 });

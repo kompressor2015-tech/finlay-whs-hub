@@ -89,3 +89,8 @@ test('an open claim is named in the close blockers', () => {
   assert.deepEqual(closeBlockers(inj, [], [{ status: 'lodged', label: "John Doe's WorkCover Queensland claim" }]), ["John Doe's WorkCover Queensland claim is still open (close or reject it in People and claims)"]);
   assert.deepEqual(closeBlockers(inj, [], [{ status: 'lodged' }, { status: 'accepted' }]), ['2 claims are still open']);
 });
+
+test('no investigation-due prompt when the investigation is not required', () => {
+  const now = new Date('2026-11-12T00:00:00+10:00');
+  assert.deepEqual(incidentAttention({ status: 'investigating', investigation_due: '2026-11-10', investigation_waived: true }, [], now), []);
+});
