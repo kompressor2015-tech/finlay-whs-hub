@@ -1,12 +1,13 @@
 import { useCallback, useEffect, useMemo, useState } from 'react';
 import type { WhsUser } from '../services/auth.ts';
 import { listAppointmentsFor, listCertificates, listClaims } from '../services/claims.ts';
-import { createPerson, listPeople } from '../services/incidentFile.ts';
+import { createPerson, listPeople, updatePerson } from '../services/incidentFile.ts';
 import { listTickets } from '../services/tickets.ts';
 import { ticketsNeedingAction, ticketState, type Ticket } from '../utils/tickets.ts';
 import { go, hrefFor } from '../hooks/useRoute.ts';
 import { claimAttention, claimStatus, daysOffWork, isOpen, isOffWork, STATES, type Certificate, type Claim, type ClaimAttention } from '../utils/claims.ts';
 import type { Person } from '../utils/incidentFile.ts';
+import { matchEmails } from '../utils/emailMatch.ts';
 import { ErrorNote, Field, inputClass } from './Form.tsx';
 import { Pill } from './Pill.tsx';
 import { useSiteScope } from '../hooks/useSiteScope.tsx';
@@ -27,6 +28,10 @@ export function PeoplePage({ user: _user }: { user: WhsUser }) {
   const [name, setName] = useState('');
   const [position, setPosition] = useState('');
   const [newSite, setNewSite] = useState('');
+  const [newEmail, setNewEmail] = useState('');
+  const [bulk, setBulk] = useState(false);
+  const [paste, setPaste] = useState('');
+  const [saving, setSaving] = useState(false);
   const { sites } = useSiteScope();
   const [error, setError] = useState<string | null>(null);
 
@@ -72,16 +77,44 @@ export function PeoplePage({ user: _user }: { user: WhsUser }) {
           <h1 className="m-0 text-2xl font-bold">People &amp; claims</h1>
           <p className="mt-1.5 mb-0 text-muted text-[15px]">Each worker&apos;s incidents, claim, tickets and training, certificates, return to work and correspondence. Visible to the WHS officer and admins only.</p>
         </div>
-        <button type="button" className="min-h-10 px-4 rounded-lg border border-[#D6D2CC] bg-white text-[13px] font-semibold cursor-pointer" onClick={() => setAdding(!adding)}>+ Add a person</button>
+        <div className="flex gap-2">
+          <button type="button" className="min-h-10 px-4 rounded-lg border border-[#D6D2CC] bg-white text-[13px] font-semibold cursor-pointer" onClick={() => setBulk(!bulk)}>Paste emails</button>
+          <button type="button" className="min-h-10 px-4 rounded-lg border border-[#D6D2CC] bg-white text-[13px] font-semibold cursor-pointer" onClick={() => setAdding(!adding)}>+ Add a person</button>
+        </div>
       </div>
       <ErrorNote message={error} />
+      {bulk && (
+        <div className={`${card} px-4.5 py-4 flex flex-col gap-3`}>
+          <Field label="Names and emails, one person per line" htmlFor="bulk-e" optional><textarea id="bulk-e" rows={6} className={inputClass} placeholder={'John Smith, john.smith@company.com.au\nMary Jones  mary@company.com.au'} value={paste} onChange={e => setPaste(e.target.value)} /></Field>
+          {paste.trim() && (() => {
+            const ms = matchEmails(paste, people);
+            const ok = ms.filter(m => m.person);
+            return (
+              <>
+                <ul className="list-none m-0 p-0 text-sm divide-y divide-line-soft border border-line-soft rounded-lg">
+                  {ms.map((m, i) => <li key={i} className="px-3 py-2 flex flex-wrap gap-x-3 gap-y-1">{m.person ? <><span className="font-semibold">{m.person.name}</span><span>{m.email}</span>{m.note && <span className="text-xs text-muted">{m.note}</span>}</> : <><span className="text-muted">{m.line}</span><Pill tone="red">{m.note}</Pill></>}</li>)}
+                </ul>
+                <div><button type="button" disabled={ok.length === 0 || saving} className="min-h-10 px-4 rounded-lg border-0 bg-ink text-white text-[13px] font-semibold cursor-pointer disabled:opacity-60" onClick={async () => {
+                  setSaving(true);
+                  const res = await Promise.all(ok.map(m => updatePerson((m.person as Person).id, { email: m.email })));
+                  setSaving(false);
+                  const bad = res.find(r => r.error);
+                  if (bad) return setError(bad.error ?? 'Could not save.');
+                  setError(null); setPaste(''); setBulk(false); await load();
+                }}>{saving ? 'Saving…' : `Save ${ok.length} email${ok.length === 1 ? '' : 's'}`}</button></div>
+              </>
+            );
+          })()}
+        </div>
+      )}
       {adding && (
         <div className={`${card} px-4.5 py-4 grid grid-cols-2 gap-3`}>
           <Field label="Name" htmlFor="np-n"><input id="np-n" className={inputClass} value={name} onChange={e => setName(e.target.value)} /></Field>
           <Field label="Position" htmlFor="np-p" optional><input id="np-p" className={inputClass} value={position} onChange={e => setPosition(e.target.value)} /></Field>
+          <Field label="Email" htmlFor="np-e" optional><input id="np-e" type="email" className={inputClass} value={newEmail} onChange={e => setNewEmail(e.target.value)} /></Field>
           <Field label="Site" htmlFor="np-s" optional><select id="np-s" className={inputClass} value={newSite} onChange={e => setNewSite(e.target.value)}><option value="">Not set</option>{sites.map(x => <option key={x.id} value={x.id}>{x.name}</option>)}</select></Field>
           <div className="col-span-2"><button type="button" disabled={!name.trim()} className="min-h-10 px-4 rounded-lg border-0 bg-ink text-white text-[13px] font-semibold cursor-pointer disabled:opacity-60" onClick={async () => {
-            const res = await createPerson({ name: name.trim(), position: position.trim(), site_id: newSite || null });
+            const res = await createPerson({ name: name.trim(), position: position.trim(), email: newEmail.trim(), site_id: newSite || null });
             if (res.error || !res.data) return setError(res.error ?? 'Could not add.');
             go({ name: 'person', id: res.data.id });
           }}>Add and open file</button></div>

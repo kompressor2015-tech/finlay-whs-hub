@@ -29,6 +29,7 @@ export function TrainingCoverPage({ user: _user }: { user: WhsUser }) {
   const [bookings, setBookings] = useState<Booking[]>([]);
   const [reminders, setReminders] = useState<CourseReminder[]>([]);
   const [hideSent, setHideSent] = useState(false);
+  const [copied, setCopied] = useState<string | null>(null);
   const [busy, setBusy] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [loaded, setLoaded] = useState(false);
@@ -143,6 +144,9 @@ export function TrainingCoverPage({ user: _user }: { user: WhsUser }) {
         const online = deliveryOf(c.course) === 'online';
         const all = outstanding(c);
         const counts = reminderCounts(all, c.course, reminders);
+        const unsent = all.filter(r => !reminderFor(r, c.course, reminders));
+        const addrs = unsent.map(r => (r.person.email ?? '').trim()).filter(Boolean);
+        const noEmail = unsent.length - addrs.length;
         const todo = online && hideSent ? all.filter(r => !reminderFor(r, c.course, reminders)) : all;
         return (
           <section key={c.course} aria-label={c.course} className="bg-white border border-line rounded-xl overflow-hidden">
@@ -152,6 +156,12 @@ export function TrainingCoverPage({ user: _user }: { user: WhsUser }) {
               <Pill tone={online ? 'blue' : 'grey'}>{online ? 'Online' : 'In person'}</Pill>
               <span className="text-sm text-muted">{c.current} current · {c.dueSoon} due soon · {c.expired} expired · {c.none} not done{c.excused ? ` · ${c.excused} not required` : ''}</span>
               {online && all.length > 0 && <span className="text-sm text-muted">· Reminder sent to {counts.sent} of {all.length}</span>}
+              {online && unsent.length > 0 && (
+                <button type="button" disabled={addrs.length === 0} className="min-h-9 px-3 rounded-lg border border-[#D6D2CC] bg-white text-[13px] font-semibold cursor-pointer disabled:opacity-60" onClick={() => { void navigator.clipboard?.writeText(addrs.join('; ')).then(() => { setCopied(c.course); setTimeout(() => setCopied(null), 3000); }); }}>
+                  {copied === c.course ? 'Copied' : `Copy ${addrs.length} email${addrs.length === 1 ? '' : 's'} not yet reminded`}
+                </button>
+              )}
+              {online && noEmail > 0 && <span className="text-xs text-[#7A4B00]">{noEmail} with no email on file</span>}
               {online && counts.sent > 0 && <label className="ml-auto flex items-center gap-2 text-sm"><input type="checkbox" checked={hideSent} onChange={e => setHideSent(e.target.checked)} />Hide those reminded</label>}
             </div>
             {todo.length === 0 ? <p className="m-0 px-4 py-4 text-sm text-muted">{all.length > 0 ? 'Everyone still outstanding has been sent a reminder.' : 'Everyone who needs this course has a current ticket.'}</p> : (
@@ -163,7 +173,7 @@ export function TrainingCoverPage({ user: _user }: { user: WhsUser }) {
                       const rm = reminderFor(r, c.course, reminders);
                       return (
                       <tr key={r.person.id}>
-                        <td className={`${td} pl-4 font-semibold`}><a href={hrefFor({ name: 'person', id: r.person.id })}>{r.person.name}</a><span className="block text-xs text-muted font-normal">{sites.find(x => x.id === r.person.site_id)?.name ?? 'No site'}</span></td>
+                        <td className={`${td} pl-4 font-semibold`}><a href={hrefFor({ name: 'person', id: r.person.id })}>{r.person.name}</a><span className="block text-xs text-muted font-normal">{sites.find(x => x.id === r.person.site_id)?.name ?? 'No site'}{online && r.person.email ? ` · ${r.person.email}` : ''}</span></td>
                         <td className={td}>{r.ticket?.issued_on ? formatDay(r.ticket.issued_on) : '—'}</td>
                         <td className={td}>{r.ticket?.expires_on ? formatDay(r.ticket.expires_on) : '—'}</td>
                         <td className={td}>{r.ticket ? <Pill tone={ticketPill(r.ticket).tone}>{ticketPill(r.ticket).label}</Pill> : <Pill tone="red">Not done</Pill>}{!online && chip(r.person.id, c.course)}</td>

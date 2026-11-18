@@ -5,7 +5,7 @@ import type { Person } from './incidentFile.ts';
 import type { Ticket } from './tickets.ts';
 
 const now = new Date('2026-11-16T00:00:00+10:00');
-const person = (id: string, o: Partial<Person> = {}): Person => ({ id, name: id, position: '', site_id: 's1', phone: '', emergency_contact: '', profile_id: null, start_date: null, notes: '', active: true, is_first_aider: false, is_fire_warden: false, warden_role: '', not_required: [], left_on: null, archived_at: null, archived_by_name: '', created_at: '', updated_at: '', ...o });
+const person = (id: string, o: Partial<Person> = {}): Person => ({ id, name: id, position: '', site_id: 's1', phone: '', email: '', emergency_contact: '', profile_id: null, start_date: null, notes: '', active: true, is_first_aider: false, is_fire_warden: false, warden_role: '', not_required: [], left_on: null, archived_at: null, archived_by_name: '', created_at: '', updated_at: '', ...o });
 const ticket = (person_id: string, expires_on: string, name = 'Fire extinguisher training'): Ticket => ({ id: person_id + expires_on, person_id, name, number: '', issued_on: '2026-01-01', expires_on, provider: '', file_path: '', file_name: '', notes: '', created_by_name: '', created_at: '2026-01-01' });
 
 test('counts current, due soon, expired and none, leaving out archived and not-required people', () => {

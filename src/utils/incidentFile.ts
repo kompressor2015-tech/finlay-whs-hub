@@ -24,6 +24,7 @@ export interface Person {
   position: string;
   site_id: string | null;
   phone: string;
+  email: string;
   emergency_contact: string;
   profile_id: string | null;
   start_date: string | null;
