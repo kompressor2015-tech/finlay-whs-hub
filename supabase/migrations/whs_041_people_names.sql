@@ -5,10 +5,10 @@
 begin;
 
 create or replace function public.whs_people_names()
-returns table (id uuid, name text, position text, site_id text)
+returns table (id uuid, name text, "position" text, site_id text)
 language sql stable security definer set search_path = public
 as $$
-  select p.id, p.name, p.position, p.site_id
+  select p.id, p.name, p."position", p.site_id
   from public.whs_people p
   where p.active and p.archived_at is null and public.whs_is_member()
   order by p.name

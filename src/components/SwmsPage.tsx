@@ -1,6 +1,5 @@
 import { useCallback, useEffect, useMemo, useState, type ReactNode } from 'react';
 import { NameInput } from './NameInput.tsx';
-import { NameInput } from './NameInput.tsx';
 import type { WhsUser } from '../services/auth.ts';
 import { addSwmsReview, approveVersion, deleteSwms, discardDraft, loadSwms, removeSwmsReview, saveDraft, sendBack, startVersion, submitVersion, updateSwms, type VersionContent } from '../services/swms.ts';
 import { loadRisks } from '../services/risks.ts';
