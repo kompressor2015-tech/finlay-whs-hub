@@ -132,12 +132,19 @@ export function InvestigationTab({ incident, user, actions, people, canEdit, off
       {!waived && canEdit && canWaiveInvestigation(incident) && (
         <div className="text-sm">
           {!waiving ? <button type="button" className="bg-transparent border-0 p-0 text-[13px] font-semibold underline cursor-pointer min-h-8" onClick={() => setWaiving(true)}>This incident doesn&apos;t need an investigation</button> : (
-            <section className={`${card} px-4.5 py-4 flex flex-wrap items-end gap-3`}>
-              <div className="min-w-[260px] flex-1"><Field label="Why isn't an investigation needed?" htmlFor="inv-waive" hint="This is kept on the incident.">
-                <input id="inv-waive" className={inputClass} value={reason} onChange={e => setReason(e.target.value)} placeholder="e.g. Minor cut, first aid only, cause obvious and already fixed" />
-              </Field></div>
-              <button type="button" disabled={busy || !reason.trim()} className={btnPri} onClick={async () => { if (await run(() => updateIncident(incident.id, { investigation_waived: true, investigation_waived_reason: reason.trim(), ...(incident.status === 'investigating' ? { status: 'actions' as const } : {}) }))) setWaiving(false); }}>Not required</button>
-              <button type="button" className={btn} onClick={() => setWaiving(false)}>Cancel</button>
+            <section ref={el => { if (el && !el.dataset.seen) { el.dataset.seen = '1'; el.scrollIntoView({ block: 'center', behavior: 'smooth' }); } }} aria-label="Reason the investigation is not needed" className="rounded-xl border-2 border-[#E0A526] bg-[#FFF6DD] px-4.5 py-4 flex flex-col gap-3 shadow-[0_0_0_4px_rgba(224,165,38,0.18)]">
+              <div>
+                <div className="text-[15px] font-bold text-[#7A4B00]">One more step: write the reason</div>
+                <div className="text-sm text-[#5A3A00]">An investigation is only marked not required once you say why. The reason is kept on the incident.</div>
+              </div>
+              <Field label="Why isn't an investigation needed?" htmlFor="inv-waive">
+                <input id="inv-waive" autoFocus className={`${inputClass} border-[#E0A526]`} value={reason} onChange={e => setReason(e.target.value)} placeholder="e.g. Minor cut, first aid only, cause obvious and already fixed" />
+              </Field>
+              <div className="flex flex-wrap items-center gap-3">
+                <button type="button" disabled={busy || !reason.trim()} className={`${btnPri} disabled:opacity-50`} onClick={async () => { if (await run(() => updateIncident(incident.id, { investigation_waived: true, investigation_waived_reason: reason.trim(), ...(incident.status === 'investigating' ? { status: 'actions' as const } : {}) }))) setWaiving(false); }}>Save: investigation not required</button>
+                <button type="button" className={btn} onClick={() => setWaiving(false)}>Cancel</button>
+                {!reason.trim() && <span className="text-xs font-semibold text-[#7A4B00]">Type the reason to turn on the button.</span>}
+              </div>
             </section>
           )}
         </div>
