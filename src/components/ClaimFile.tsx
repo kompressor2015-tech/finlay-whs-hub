@@ -1,7 +1,7 @@
 import { useCallback, useEffect, useState, type ReactNode } from 'react';
 import {
   addAppointment, addCertificate, addClaimDoc, addContact, addLog, listAppointments, removeAppointment, updateAppointment, listCertificates, listClaimDocs, listClaimHistory, listContacts, listLog, listStages,
-  removeCertificate, updateCertificate, removeClaimDoc, removeContact, removeLog, removeStage, saveStage, toggleStep, updateClaim, logAccess,
+  removeCertificate, editCertificate, removeClaimDoc, removeContact, removeLog, removeStage, saveStage, toggleStep, updateClaim, logAccess,
 } from '../services/claims.ts';
 import { openFile } from '../services/files.ts';
 import { hrefFor } from '../hooks/useRoute.ts';
@@ -45,6 +45,7 @@ const atNoon = (day: string) => new Date(`${day}T12:00:00+10:00`).toISOString();
 export function ClaimFile({ claim: initial, incidentRef, incidentAt, user, onChanged }: { claim: Claim; incidentRef: string; incidentAt: string; user: WhsUser; onChanged: () => void }) {
   const [claim, setClaim] = useState(initial);
   const [certs, setCerts] = useState<Certificate[]>([]);
+  const [editCert, setEditCert] = useState<string | null>(null);
   const [stages, setStages] = useState<RtwStage[]>([]);
   const [contacts, setContacts] = useState<ClaimContact[]>([]);
   const [log, setLog] = useState<LogEntry[]>([]);
@@ -155,27 +156,31 @@ export function ClaimFile({ claim: initial, incidentRef, incidentAt, user, onCha
         <ul className="list-none m-0 p-0 flex flex-col divide-y divide-line-soft">
           {certs.map(c => {
             const cap = capacityLabel(c.capacity);
+            if (editCert === c.id) return <li key={c.id} className="py-2.5"><CertificateForm busy={busy} defaultFrom={c.from_date} initial={c} onClose={() => setEditCert(null)} onSave={(i, f) => run(() => editCertificate(c, i, f))} /></li>;
             return (
               <li key={c.id} className="py-2.5 flex flex-wrap items-center gap-x-3 gap-y-1 text-sm">
-                <span className="font-semibold">{formatDay(c.from_date)} to {formatDay(c.to_date)}</span>
+                <span className="font-semibold">{c.seen_on ? `Seen ${formatDay(c.seen_on)}` : `${formatDay(c.from_date)} to ${formatDay(c.to_date)}`}</span>
                 <Pill tone={cap.tone}>{cap.label}</Pill>
                 <span className="text-muted">{c.doctor_name}</span>
-                {c.next_appointment_on && !c.no_further_visits && <span className="text-[13px] text-muted">Back to the doctor {formatDay(c.next_appointment_on)}</span>}
                 {c.no_further_visits && <Pill tone="green">Last certificate</Pill>}
-                {(c.no_further_visits || (cs.latest && cs.latest.from_date === c.from_date && cs.latest.to_date === c.to_date)) && (
-                  <label className="basis-full flex items-center gap-2 text-[13px] cursor-pointer min-h-9">
-                    <input type="checkbox" className="w-5 h-5 accent-[#1E6B3A]" checked={Boolean(c.no_further_visits)} disabled={busy} onChange={e => void run(() => updateCertificate(c.id, { no_further_visits: e.target.checked }))} />
-                    No further doctor visits needed (stops the reminders for the next certificate)
-                  </label>
-                )}
                 <FileLink path={c.file_path} name={c.file_name} />
-                <button type="button" className={`${linkBtn} ml-auto`} onClick={() => askConfirm('Delete this certificate?').then(ok => ok && run(() => removeCertificate(c)))}>Delete</button>
-                {c.restrictions && <span className="basis-full text-[13px] text-[#3A3A3F]">{c.restrictions}</span>}
+                <span className="ml-auto flex items-center gap-4">
+                  <button type="button" className={linkBtn} onClick={() => setEditCert(c.id)}>Edit</button>
+                  <button type="button" className={linkBtn} onClick={() => askConfirm('Delete this certificate?').then(ok => ok && run(() => removeCertificate(c)))}>Delete</button>
+                </span>
+                <span className="basis-full text-[13px] text-muted">
+                  Treatment {formatDay(c.from_date)} to {formatDay(c.to_date)}
+                  {c.duties_from ? ` · ${c.capacity === 'unfit' ? 'No capacity until' : 'Suitable duties from'} ${formatDay(c.duties_from)}` : ''}
+                  {c.next_appointment_on && !c.no_further_visits ? ` · Review again ${formatDay(c.next_appointment_on)}` : ''}
+                </span>
+                {c.diagnosis && <span className="basis-full text-[13px]"><span className="text-muted">Diagnosis:</span> {c.diagnosis}</span>}
+                {c.treatment && <span className="basis-full text-[13px]"><span className="text-muted">Treatment:</span> {c.treatment}</span>}
+                {c.restrictions && <span className="basis-full text-[13px] text-[#3A3A3F]"><span className="text-muted">Restrictions:</span> {c.restrictions}</span>}
               </li>
             );
           })}
         </ul>
-        <CertificateForm busy={busy} defaultFrom={cs.latest ? addDays(cs.latest.to_date, 1) : claim.off_work_from ?? brisbaneDay(new Date())} onAdd={(i, f) => run(() => addCertificate(claim.id, i, f))} />
+        <CertificateForm busy={busy} defaultFrom={cs.latest ? addDays(cs.latest.to_date, 1) : claim.off_work_from ?? brisbaneDay(new Date())} onSave={(i, f) => run(() => addCertificate(claim.id, i, f))} />
       </Section>}
 
       {tab === 'appointments' && (
@@ -279,42 +284,55 @@ function ClaimDetails({ claim, busy, onSave }: { claim: Claim; busy: boolean; on
   );
 }
 
-function CertificateForm({ busy, defaultFrom, onAdd }: { busy: boolean; defaultFrom: string; onAdd: (i: { from_date: string; to_date: string; doctor_name: string; capacity: Capacity; restrictions: string; next_appointment_on: string | null; no_further_visits: boolean }, f: File | null) => Promise<boolean> }) {
-  const [open, setOpen] = useState(false);
-  const [from, setFrom] = useState(defaultFrom);
-  const [to, setTo] = useState('');
-  const [doctor, setDoctor] = useState('');
-  const [cap, setCap] = useState<Capacity>('unfit');
-  const [rest, setRest] = useState('');
-  const [nextAppt, setNextAppt] = useState('');
-  const [final, setFinal] = useState(false);
+type CertInput = { from_date: string; to_date: string; doctor_name: string; capacity: Capacity; restrictions: string; next_appointment_on: string | null; no_further_visits: boolean; seen_on: string | null; diagnosis: string; treatment: string; duties_from: string | null };
+
+/** Add a certificate (behind a button) or change one already on file. The fields follow the Work capacity certificate. */
+function CertificateForm({ busy, defaultFrom, initial, onSave, onClose }: { busy: boolean; defaultFrom: string; initial?: Certificate; onSave: (i: CertInput, f: File | null) => Promise<boolean>; onClose?: () => void }) {
+  const [open, setOpen] = useState(Boolean(initial));
+  const [seen, setSeen] = useState(initial?.seen_on ?? '');
+  const [from, setFrom] = useState(initial?.from_date ?? defaultFrom);
+  const [to, setTo] = useState(initial?.to_date ?? '');
+  const [doctor, setDoctor] = useState(initial?.doctor_name ?? '');
+  const [diag, setDiag] = useState(initial?.diagnosis ?? '');
+  const [cap, setCap] = useState<Capacity>(initial?.capacity ?? 'partial');
+  const [dutiesFrom, setDutiesFrom] = useState(initial?.duties_from ?? '');
+  const [rest, setRest] = useState(initial?.restrictions ?? '');
+  const [treat, setTreat] = useState(initial?.treatment ?? '');
+  const [nextAppt, setNextAppt] = useState(initial?.next_appointment_on ?? '');
+  const [final, setFinal] = useState(Boolean(initial?.no_further_visits));
   const [file, setFile] = useState<File | null>(null);
   const [err, setErr] = useState<string | null>(null);
+  const close = () => { setOpen(false); onClose?.(); };
   if (!open) return <button type="button" className={`${btn} self-start`} onClick={() => { setFrom(defaultFrom); setOpen(true); }}>+ Add a certificate</button>;
   return (
     <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 bg-[#FAFAF9] rounded-lg p-3.5">
-      <Field label="From" htmlFor="ce-from"><input id="ce-from" type="date" className={inputClass} value={from} onChange={e => setFrom(e.target.value)} /></Field>
-      <Field label="To" htmlFor="ce-to"><input id="ce-to" type="date" className={inputClass} value={to} onChange={e => setTo(e.target.value)} /></Field>
-      <Field label="Doctor" htmlFor="ce-doc" optional><input id="ce-doc" className={inputClass} value={doctor} onChange={e => setDoctor(e.target.value)} /></Field>
-      <Field label="Capacity" htmlFor="ce-cap"><select id="ce-cap" className={inputClass} value={cap} onChange={e => setCap(e.target.value as Capacity)}>{CAPACITIES.map(c => <option key={c.id} value={c.id}>{c.label}</option>)}</select></Field>
-      <Field label="Back to the doctor on" htmlFor="ce-next" optional hint="Gives you a prompt if there is no new certificate by then."><input id="ce-next" type="date" className={inputClass} value={nextAppt} onChange={e => setNextAppt(e.target.value)} /></Field>
-      <label className="col-span-2 flex items-center gap-2 text-sm cursor-pointer min-h-11"><input type="checkbox" className="w-5 h-5 accent-[#1E6B3A]" checked={final} onChange={e => setFinal(e.target.checked)} /> No further doctor visits needed (last certificate)</label>
+      <div className="col-span-2 sm:col-span-4 text-sm font-semibold">{initial ? 'Change this certificate' : 'Add a certificate'} <span className="font-normal text-muted">(the fields follow the Work capacity certificate)</span></div>
+      <Field label="Date seen by the doctor" htmlFor="ce-seen" hint="Date of examination, on the certificate."><input id="ce-seen" type="date" className={inputClass} value={seen} onChange={e => setSeen(e.target.value)} /></Field>
+      <div className="col-span-2"><Field label="Doctor" htmlFor="ce-doc" optional><input id="ce-doc" className={inputClass} value={doctor} onChange={e => setDoctor(e.target.value)} placeholder="e.g. Dr Omid Gouranourimy" /></Field></div>
+      <div className="col-span-2 sm:col-span-4"><Field label="Diagnosis" htmlFor="ce-diag" optional><input id="ce-diag" className={inputClass} value={diag} onChange={e => setDiag(e.target.value)} placeholder="e.g. Strain of right shoulder" /></Field></div>
+      <Field label="Treatment required from" htmlFor="ce-from"><input id="ce-from" type="date" className={inputClass} value={from} onChange={e => setFrom(e.target.value)} /></Field>
+      <Field label="Treatment required to" htmlFor="ce-to"><input id="ce-to" type="date" className={inputClass} value={to} onChange={e => setTo(e.target.value)} /></Field>
+      <Field label="Capacity for work" htmlFor="ce-cap"><select id="ce-cap" className={inputClass} value={cap} onChange={e => setCap(e.target.value as Capacity)}>{CAPACITIES.map(c => <option key={c.id} value={c.id}>{c.label}</option>)}</select></Field>
+      {cap !== 'fit' && <Field label={cap === 'unfit' ? 'No capacity until' : 'Suitable duties from'} htmlFor="ce-duties" optional hint="Only if different from the treatment dates."><input id="ce-duties" type="date" className={inputClass} value={dutiesFrom} onChange={e => setDutiesFrom(e.target.value)} /></Field>}
       <div className="col-span-2 sm:col-span-4"><Field label="Restrictions" htmlFor="ce-res" optional><input id="ce-res" className={inputClass} value={rest} onChange={e => setRest(e.target.value)} placeholder="e.g. No lifting over 5 kg, no overhead work" /></Field></div>
-      <div className="col-span-2 sm:col-span-4"><Field label="Scan or photo of the certificate" htmlFor="ce-file" optional><input id="ce-file" type="file" accept="image/*,.pdf" onChange={e => setFile(e.target.files?.[0] ?? null)} /></Field></div>
+      <div className="col-span-2 sm:col-span-4"><Field label="Treatment and referrals" htmlFor="ce-treat" optional><input id="ce-treat" className={inputClass} value={treat} onChange={e => setTreat(e.target.value)} placeholder="e.g. Rest and analgesia, ultrasound, physio" /></Field></div>
+      <Field label="Review again on" htmlFor="ce-next" optional hint="Gives you a prompt if there is no new certificate by then."><input id="ce-next" type="date" className={inputClass} value={nextAppt} onChange={e => setNextAppt(e.target.value)} /></Field>
+      <label className="col-span-2 flex items-center gap-2 text-sm cursor-pointer min-h-11"><input type="checkbox" className="w-5 h-5 accent-[#1E6B3A]" checked={final} onChange={e => setFinal(e.target.checked)} /> No further review needed (last certificate)</label>
+      <div className="col-span-2 sm:col-span-4"><Field label={initial?.file_name ? 'Replace the scan or photo' : 'Scan or photo of the certificate'} htmlFor="ce-file" optional hint={initial?.file_name ? `Now: ${initial.file_name}. Leave empty to keep it.` : undefined}><input id="ce-file" type="file" accept="image/*,.pdf" onChange={e => setFile(e.target.files?.[0] ?? null)} /></Field></div>
       <div className="col-span-2 sm:col-span-4"><ErrorNote message={err} /></div>
       <div className="col-span-2 sm:col-span-4 flex gap-2">
         <button type="button" disabled={busy} className={btnPri} onClick={async () => {
-          if (!from || !to) return setErr('Enter both dates.');
+          if (!from || !to) return setErr('Enter both treatment dates.');
           if (to < from) return setErr('The end date is before the start date.');
           setErr(null);
-          if (await onAdd({ from_date: from, to_date: to, doctor_name: doctor.trim(), capacity: cap, restrictions: rest.trim(), next_appointment_on: final ? null : nextAppt || null, no_further_visits: final }, file)) { setOpen(false); setTo(''); setRest(''); setNextAppt(''); setFinal(false); setFile(null); }
-        }}>Save certificate</button>
-        <button type="button" className={btn} onClick={() => setOpen(false)}>Cancel</button>
+          const ok = await onSave({ from_date: from, to_date: to, doctor_name: doctor.trim(), capacity: cap, restrictions: rest.trim(), next_appointment_on: final ? null : nextAppt || null, no_further_visits: final, seen_on: seen || null, diagnosis: diag.trim(), treatment: treat.trim(), duties_from: cap !== 'fit' && dutiesFrom ? dutiesFrom : null }, file);
+          if (ok) { close(); if (!initial) { setSeen(''); setTo(''); setDiag(''); setDutiesFrom(''); setRest(''); setTreat(''); setNextAppt(''); setFinal(false); setFile(null); } }
+        }}>{initial ? 'Save changes' : 'Save certificate'}</button>
+        <button type="button" className={btn} onClick={close}>Cancel</button>
       </div>
     </div>
   );
 }
-
 function RtwPlan({ claim, stages, busy, onSave, onStage, onRemoveStage }: {
   claim: Claim; stages: RtwStage[]; busy: boolean; onSave: (p: Partial<Claim>) => void;
   onStage: (s: { stage_no: number; duties: string; hours: string; starts_on: string | null; status: RtwStage['status'] }) => Promise<boolean>; onRemoveStage: (id: string) => Promise<boolean>;

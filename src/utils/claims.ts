@@ -57,7 +57,14 @@ export interface Certificate {
   doctor_name: string;
   capacity: Capacity;
   restrictions: string;
-  /** When they next see the doctor, if known */
+  /** Date the worker saw the doctor (date of examination) */
+  seen_on?: string | null;
+  diagnosis?: string;
+  /** Treatment and referrals set out by the doctor */
+  treatment?: string;
+  /** Date the capacity applies from (e.g. suitable duties from), if different from the start of treatment */
+  duties_from?: string | null;
+  /** When they next see the doctor (review again on), if known */
   next_appointment_on?: string | null;
   /** The doctor has said no more visits are needed: this is the last certificate */
   no_further_visits?: boolean;
@@ -278,9 +285,9 @@ export function rtwStatus(status: RtwStatus): { label: string; tone: Tone } {
 }
 
 export const CAPACITIES: { id: Capacity; label: string; tone: Tone }[] = [
-  { id: 'unfit', label: 'Unfit for all work', tone: 'red' },
-  { id: 'partial', label: 'Fit for some duties', tone: 'amber' },
-  { id: 'fit', label: 'Fit for normal duties', tone: 'green' },
+  { id: 'unfit', label: 'No capacity for any work', tone: 'red' },
+  { id: 'partial', label: 'Suitable duties (some form of work)', tone: 'amber' },
+  { id: 'fit', label: 'Fit for pre-injury duties', tone: 'green' },
 ];
 
 export function capacityLabel(c: Capacity): { label: string; tone: Tone } {

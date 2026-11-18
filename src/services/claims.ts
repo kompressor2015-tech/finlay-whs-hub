@@ -71,9 +71,15 @@ export async function listCertificatesFor(claimIds: string[]): Promise<Result<Ce
 
 export const listCertificates = (claimId: string) => many<Certificate>('whs_claim_certificates', claimId, 'from_date', false);
 
+export interface CertificateInput {
+  from_date: string; to_date: string; doctor_name: string; capacity: Certificate['capacity']; restrictions: string;
+  next_appointment_on?: string | null; no_further_visits?: boolean;
+  seen_on?: string | null; diagnosis?: string; treatment?: string; duties_from?: string | null;
+}
+
 export async function addCertificate(
   claimId: string,
-  input: { from_date: string; to_date: string; doctor_name: string; capacity: Certificate['capacity']; restrictions: string; next_appointment_on?: string | null; no_further_visits?: boolean },
+  input: CertificateInput,
   file: File | null
 ): Promise<Result<Certificate>> {
   let file_path = '';
@@ -92,9 +98,27 @@ export async function addCertificate(
   return { data: data as Certificate };
 }
 
-export async function updateCertificate(id: string, patch: { no_further_visits?: boolean; next_appointment_on?: string | null }): Promise<Result<Certificate>> {
+export async function updateCertificate(id: string, patch: Partial<CertificateInput>): Promise<Result<Certificate>> {
   const { data, error } = await supabase.from('whs_claim_certificates').update(patch).eq('id', id).select('*').single();
   return error ? { error: friendly(error.message) } : { data: data as Certificate };
+}
+
+/** Change a certificate's details, and optionally put a new scan or photo in place of the old one. */
+export async function editCertificate(c: Certificate, patch: Partial<CertificateInput>, file: File | null): Promise<Result<Certificate>> {
+  const extra: { file_path?: string; file_name?: string } = {};
+  if (file) {
+    const up = await uploadFile(BUCKET, c.claim_id, file);
+    if (up.error || !up.path) return { error: up.error ?? 'Upload failed.' };
+    extra.file_path = up.path;
+    extra.file_name = file.name;
+  }
+  const { data, error } = await supabase.from('whs_claim_certificates').update({ ...patch, ...extra }).eq('id', c.id).select('*').single();
+  if (error) {
+    if (extra.file_path) await removeFiles(BUCKET, [extra.file_path]);
+    return { error: friendly(error.message) };
+  }
+  if (extra.file_path && c.file_path) await removeFiles(BUCKET, [c.file_path]);
+  return { data: data as Certificate };
 }
 
 export async function removeCertificate(c: Certificate): Promise<Result<true>> {
