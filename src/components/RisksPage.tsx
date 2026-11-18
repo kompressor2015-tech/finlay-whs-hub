@@ -1,4 +1,5 @@
 import { useEffect, useMemo, useState, type FormEvent } from 'react';
+import { NameInput } from './NameInput.tsx';
 import type { WhsUser } from '../services/auth.ts';
 import { addControl, addReview, createRisk, deleteRisk, loadRisks, removeControl, removeReview, updateRisk, type RiskInput } from '../services/risks.ts';
 import { listHistory } from '../services/records.ts';
@@ -227,7 +228,7 @@ function RiskForm({ risk, sites, onSaved, onCancel }: { risk?: Risk; sites: { id
         </div>
       )}
       <div className="grid grid-cols-2 gap-3">
-        <Field label="Owner" htmlFor="rk-own"><input id="rk-own" value={f.owner_name} onChange={e => setF({ ...f, owner_name: e.target.value })} className={inputClass} /></Field>
+        <Field label="Owner" htmlFor="rk-own"><NameInput id="rk-own" value={f.owner_name} onChange={t => setF({ ...f, owner_name: t })} /></Field>
         <Field label="Review every (months)" htmlFor="rk-rev"><input id="rk-rev" type="number" min={1} max={120} value={f.review_months} onChange={e => setF({ ...f, review_months: e.target.value })} className={inputClass} /></Field>
       </div>
       <div className="flex gap-2"><button type="submit" disabled={busy} className={primary}>{busy ? 'Saving…' : 'Save'}</button><button type="button" onClick={onCancel} className={btn}>Cancel</button></div>

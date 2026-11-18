@@ -1,4 +1,5 @@
 import { useEffect, useState, type FormEvent } from 'react';
+import { NameInput } from './NameInput.tsx';
 import type { WhsUser } from '../services/auth.ts';
 import { addReview, deleteDocument, deleteReview, getDocument, listReviews, openDocumentFile, updateDocument, updateVersion, uploadVersion } from '../services/documents.ts';
 import { hrefFor } from '../hooks/useRoute.ts';
@@ -272,7 +273,7 @@ export function DocumentDetail({ id, user, embedded, onChanged }: { id: string; 
             <Field label="Category (heading in the list)" optional htmlFor="d-cat">
               <CategoryField id="d-cat" value={form.category} onChange={v => set('category', v)} />
             </Field>
-            <Field label="Owner" htmlFor="d-owner"><input id="d-owner" value={form.owner_name} onChange={e => set('owner_name', e.target.value)} className={inputClass} /></Field>
+            <Field label="Owner" htmlFor="d-owner"><NameInput id="d-owner" value={form.owner_name} onChange={t => set('owner_name', t)} /></Field>
             <Field label="Last reviewed" optional htmlFor="d-rev">
               <input id="d-rev" type="date" value={lastReviewed} max={today()} onChange={e => setLastReviewed(e.target.value)} className={inputClass} />
             </Field>

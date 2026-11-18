@@ -1,4 +1,6 @@
 import { useCallback, useEffect, useMemo, useState, type ReactNode } from 'react';
+import { NameInput } from './NameInput.tsx';
+import { NameInput } from './NameInput.tsx';
 import type { WhsUser } from '../services/auth.ts';
 import { addSwmsReview, approveVersion, deleteSwms, discardDraft, loadSwms, removeSwmsReview, saveDraft, sendBack, startVersion, submitVersion, updateSwms, type VersionContent } from '../services/swms.ts';
 import { loadRisks } from '../services/risks.ts';
@@ -267,7 +269,7 @@ export function SwmsPage({ id, user }: { id: string; user: WhsUser }) {
                 </div>
                 <div className="flex flex-col gap-2">
                   <div className="text-sm font-semibold">Supervisor of the work</div>
-                  <Field label="Name" optional htmlFor="s-name"><input id="s-name" value={draft.supervisor_name} onChange={e => patch({ supervisor_name: e.target.value })} className={inputClass} /></Field>
+                  <Field label="Name" optional htmlFor="s-name"><NameInput id="s-name" value={draft.supervisor_name} onChange={t => patch({ supervisor_name: t })} /></Field>
                   <div className="grid grid-cols-2 gap-2">
                     <Field label="Position" optional htmlFor="s-pos"><input id="s-pos" value={draft.supervisor_position} onChange={e => patch({ supervisor_position: e.target.value })} className={inputClass} /></Field>
                     <Field label="Contact details" optional htmlFor="s-con"><input id="s-con" value={draft.supervisor_contact} onChange={e => patch({ supervisor_contact: e.target.value })} className={inputClass} /></Field>
@@ -289,7 +291,7 @@ export function SwmsPage({ id, user }: { id: string; user: WhsUser }) {
               <div key={i} className="flex flex-wrap items-start gap-3 border-t border-line-soft pt-3 first:border-0 first:pt-0">
                 {editing && draft ? (
                   <>
-                    <div className="w-56"><Field label="Name" htmlFor={`c-${i}`}><input id={`c-${i}`} value={c.name} onChange={e => patch({ consulted: draft.consulted.map((x, j) => (j === i ? { ...x, name: e.target.value } : x)) })} className={inputClass} /></Field></div>
+                    <div className="w-56"><Field label="Name" htmlFor={`c-${i}`}><NameInput id={`c-${i}`} value={c.name} onChange={t => patch({ consulted: draft.consulted.map((x, j) => (j === i ? { ...x, name: t } : x)) })} /></Field></div>
                     <SignBox title={`${c.name || 'Person'} signature`} path={c.signature_path} urls={urls} editable onSigned={p => patch({ consulted: draft.consulted.map((x, j) => (j === i ? { ...x, signature_path: p } : x)) })} />
                     <button type="button" className={`${btn} ml-auto`} onClick={() => patch({ consulted: draft.consulted.filter((_, j) => j !== i) })}>Remove</button>
                   </>

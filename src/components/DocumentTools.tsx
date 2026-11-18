@@ -1,4 +1,5 @@
 import { useState, type FormEvent } from 'react';
+import { NameInput } from './NameInput.tsx';
 import { createDocument, uploadVersion } from '../services/documents.ts';
 import { useSiteScope } from '../hooks/useSiteScope.tsx';
 import { DOC_TYPES, fileKind, parseDocFile, type DocType, type WhsDocument } from '../utils/documents.ts';
@@ -85,7 +86,7 @@ export function AddDocumentForm({ onDone, onCancel }: { onDone: (id: string) => 
             {sites.map(s => <option key={s.id} value={s.id}>{s.name}</option>)}
           </select>
         </Field>
-        <Field label="Owner" htmlFor="n-owner"><input id="n-owner" value={owner} onChange={e => setOwner(e.target.value)} className={inputClass} /></Field>
+        <Field label="Owner" htmlFor="n-owner"><NameInput id="n-owner" value={owner} onChange={setOwner} /></Field>
       </div>
       <ErrorNote message={error} />
       <div className="flex gap-2">
