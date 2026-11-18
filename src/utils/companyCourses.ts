@@ -2,8 +2,14 @@
 
 import type { Person } from './incidentFile.ts';
 import { currentTickets, ticketState, type Ticket } from './tickets.ts';
+import { addDays, brisbaneDay } from './dates.ts';
 
 export const COMPANY_COURSES = ['Fire extinguisher training'] as const;
+
+/** Online courses are chased with a "reminder sent" tick; in-person ones are booked for a date. */
+export type CourseDelivery = 'online' | 'in_person';
+export const COURSE_DELIVERY: Record<string, CourseDelivery> = { 'Fire extinguisher training': 'online' };
+export const deliveryOf = (course: string): CourseDelivery => COURSE_DELIVERY[course] ?? 'in_person';
 
 export type CourseState = 'current' | 'due_soon' | 'expired' | 'none';
 
@@ -37,4 +43,26 @@ export function courseStatus(course: string, people: Person[], tickets: Ticket[]
 export function outstanding(status: CourseStatus): CourseRow[] {
   const rank: Record<CourseState, number> = { none: 0, expired: 1, due_soon: 2, current: 3 };
   return status.rows.filter(r => r.state !== 'current').sort((a, b) => rank[a.state] - rank[b.state] || a.person.name.localeCompare(b.person.name));
+}
+
+export interface CourseReminder { id: string; person_id: string; course: string; sent_at: string; sent_by_name: string }
+
+/**
+ * The reminder that still counts for this row. A reminder sent before the current ticket came
+ * within 60 days of expiring belongs to an earlier round, so it is ignored.
+ */
+export function reminderFor(row: CourseRow, course: string, reminders: CourseReminder[]): CourseReminder | null {
+  const key = course.toLowerCase();
+  const r = reminders.find(x => x.person_id === row.person.id && x.course.toLowerCase() === key);
+  if (!r) return null;
+  if (row.ticket?.expires_on) {
+    const window = addDays(row.ticket.expires_on, -60);
+    if (brisbaneDay(r.sent_at) < window) return null;
+  }
+  return r;
+}
+
+export function reminderCounts(rows: CourseRow[], course: string, reminders: CourseReminder[]): { sent: number; notSent: number } {
+  const sent = rows.filter(r => reminderFor(r, course, reminders)).length;
+  return { sent, notSent: rows.length - sent };
 }

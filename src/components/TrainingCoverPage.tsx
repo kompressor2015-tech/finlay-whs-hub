@@ -7,10 +7,11 @@ import { bookingLabel, openBooking, type Booking } from '../utils/bookings.ts';
 import { loadChecks, type CheckSite } from '../services/recurringChecks.ts';
 import { useSiteScope } from '../hooks/useSiteScope.tsx';
 import { hrefFor } from '../hooks/useRoute.ts';
-import { formatDay } from '../utils/dates.ts';
+import { brisbaneDay, formatDay } from '../utils/dates.ts';
 import type { Person } from '../utils/incidentFile.ts';
 import { coverFor, WORKERS_PER_FIRST_AIDER, type Holder } from '../utils/siteCover.ts';
-import { COMPANY_COURSES, courseStatus, outstanding } from '../utils/companyCourses.ts';
+import { COMPANY_COURSES, courseStatus, deliveryOf, outstanding, reminderCounts, reminderFor, type CourseReminder } from '../utils/companyCourses.ts';
+import { clearCourseReminder, listCourseReminders, setCourseReminder } from '../services/courseReminders.ts';
 import { currentTickets, ticketPill, ticketState, type Ticket } from '../utils/tickets.ts';
 import { ErrorNote } from './Form.tsx';
 import { Pill } from './Pill.tsx';
@@ -26,13 +27,17 @@ export function TrainingCoverPage({ user: _user }: { user: WhsUser }) {
   const [people, setPeople] = useState<Person[]>([]);
   const [tickets, setTickets] = useState<Ticket[]>([]);
   const [bookings, setBookings] = useState<Booking[]>([]);
+  const [reminders, setReminders] = useState<CourseReminder[]>([]);
+  const [hideSent, setHideSent] = useState(false);
+  const [busy, setBusy] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [loaded, setLoaded] = useState(false);
 
   useEffect(() => {
-    void Promise.all([listPeople(), listTickets(), loadChecks(), listBookings()]).then(([p, t, c, bk]) => {
+    void Promise.all([listPeople(), listTickets(), loadChecks(), listBookings(), listCourseReminders()]).then(([p, t, c, bk, rm]) => {
       setBookings(bk.data ?? []);
-      setError(p.error ?? t.error ?? c.error ?? null);
+      setReminders(rm.data ?? []);
+      setError(p.error ?? t.error ?? c.error ?? rm.error ?? null);
       setPeople(p.data ?? []);
       setTickets(t.data ?? []);
       setSites(c.data?.sites ?? []);
@@ -54,6 +59,15 @@ export function TrainingCoverPage({ user: _user }: { user: WhsUser }) {
   const courses = useMemo(() => COMPANY_COURSES.map(c => courseStatus(c, people.filter(p => inShown(p)), tickets)), [people, tickets, shown]);
   const shortSites = covers.filter(x => x.c.gaps.length).length;
   const noSite = people.filter(p => p.active && !p.site_id).length;
+
+  const toggleReminder = async (personId: string, course: string, existing: CourseReminder | null) => {
+    setBusy(personId + course);
+    const r = existing ? await clearCourseReminder(existing.id) : await setCourseReminder(personId, course);
+    setBusy(null);
+    if (r.error) { setError(r.error); return; }
+    setError(null);
+    setReminders(prev => existing ? prev.filter(x => x.id !== existing.id) : [...prev.filter(x => !(x.person_id === personId && x.course === course)), (r as { data: CourseReminder }).data]);
+  };
 
   const stat = (label: string, value: number, sub: string, tone: keyof typeof TILE) => (
     <div className={`border rounded-xl p-4 ${value ? TILE[tone] : TILE.grey}`}>
@@ -126,27 +140,44 @@ export function TrainingCoverPage({ user: _user }: { user: WhsUser }) {
       )}
 
       {loaded && courses.map(c => {
-        const todo = outstanding(c);
+        const online = deliveryOf(c.course) === 'online';
+        const all = outstanding(c);
+        const counts = reminderCounts(all, c.course, reminders);
+        const todo = online && hideSent ? all.filter(r => !reminderFor(r, c.course, reminders)) : all;
         return (
           <section key={c.course} aria-label={c.course} className="bg-white border border-line rounded-xl overflow-hidden">
             <div className="flex flex-wrap items-center gap-3 px-4 py-3 border-b border-line-soft">
               <h2 className="m-0 text-base font-bold">{c.course}</h2>
               <Pill tone="grey">Everyone</Pill>
+              <Pill tone={online ? 'blue' : 'grey'}>{online ? 'Online' : 'In person'}</Pill>
               <span className="text-sm text-muted">{c.current} current · {c.dueSoon} due soon · {c.expired} expired · {c.none} not done{c.excused ? ` · ${c.excused} not required` : ''}</span>
+              {online && all.length > 0 && <span className="text-sm text-muted">· Reminder sent to {counts.sent} of {all.length}</span>}
+              {online && counts.sent > 0 && <label className="ml-auto flex items-center gap-2 text-sm"><input type="checkbox" checked={hideSent} onChange={e => setHideSent(e.target.checked)} />Hide those reminded</label>}
             </div>
-            {todo.length === 0 ? <p className="m-0 px-4 py-4 text-sm text-muted">Everyone who needs this course has a current ticket.</p> : (
+            {todo.length === 0 ? <p className="m-0 px-4 py-4 text-sm text-muted">{all.length > 0 ? 'Everyone still outstanding has been sent a reminder.' : 'Everyone who needs this course has a current ticket.'}</p> : (
               <div className="overflow-x-auto">
                 <table className="w-full border-collapse text-sm">
-                  <thead><tr><th className={`${th} pl-4`}>Person</th><th className={th}>Last done</th><th className={th}>Expires</th><th className={`${th} pr-4`}>Status</th></tr></thead>
+                  <thead><tr><th className={`${th} pl-4`}>Person</th><th className={th}>Last done</th><th className={th}>Expires</th><th className={th}>Status</th><th className={`${th} pr-4`}>{online ? 'Reminder sent' : 'Booking'}</th></tr></thead>
                   <tbody>
-                    {todo.map(r => (
+                    {todo.map(r => {
+                      const rm = reminderFor(r, c.course, reminders);
+                      return (
                       <tr key={r.person.id}>
                         <td className={`${td} pl-4 font-semibold`}><a href={hrefFor({ name: 'person', id: r.person.id })}>{r.person.name}</a><span className="block text-xs text-muted font-normal">{sites.find(x => x.id === r.person.site_id)?.name ?? 'No site'}</span></td>
                         <td className={td}>{r.ticket?.issued_on ? formatDay(r.ticket.issued_on) : '—'}</td>
                         <td className={td}>{r.ticket?.expires_on ? formatDay(r.ticket.expires_on) : '—'}</td>
-                        <td className={`${td} pr-4`}>{r.ticket ? <Pill tone={ticketPill(r.ticket).tone}>{ticketPill(r.ticket).label}</Pill> : <Pill tone="red">Not done</Pill>}{chip(r.person.id, c.course)}</td>
+                        <td className={td}>{r.ticket ? <Pill tone={ticketPill(r.ticket).tone}>{ticketPill(r.ticket).label}</Pill> : <Pill tone="red">Not done</Pill>}{!online && chip(r.person.id, c.course)}</td>
+                        <td className={`${td} pr-4`}>
+                          {online ? (
+                            <label className="flex items-start gap-2 cursor-pointer">
+                              <input type="checkbox" className="mt-0.5 h-5 w-5" checked={!!rm} disabled={busy === r.person.id + c.course} onChange={() => void toggleReminder(r.person.id, c.course, rm)} aria-label={`Reminder sent to ${r.person.name}`} />
+                              <span className="text-xs text-muted">{rm ? `Sent ${formatDay(brisbaneDay(rm.sent_at))}${rm.sent_by_name ? ` by ${rm.sent_by_name}` : ''}` : 'Not yet'}</span>
+                            </label>
+                          ) : <a href={hrefFor({ name: 'person', id: r.person.id })} className="text-xs font-semibold">Book it on their file</a>}
+                        </td>
                       </tr>
-                    ))}
+                      );
+                    })}
                   </tbody>
                 </table>
               </div>
