@@ -30,6 +30,7 @@ export interface TicketInput {
   expires_on: string | null;
   provider: string;
   notes: string;
+  classes?: string[];
 }
 
 export async function addTicket(personId: string, input: TicketInput, file: File | null): Promise<Result<Ticket>> {
