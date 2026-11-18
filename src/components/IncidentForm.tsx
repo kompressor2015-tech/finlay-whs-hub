@@ -1,3 +1,4 @@
+import { NameInput } from './NameInput.tsx';
 import { useEffect, useState, type FormEvent } from 'react';
 import { createIncident, uploadPhotos } from '../services/records.ts';
 import type { WhsUser } from '../services/auth.ts';
@@ -93,7 +94,7 @@ export function IncidentForm({ user }: { user: WhsUser }) {
       <MachinePicker machines={machines} machineId={machine.id} unitNo={machine.unitNo} onChange={(id, unitNo) => setMachine({ id, unitNo })} />
 
       <Field label="Who was involved?" htmlFor="inc-people">
-        <input id="inc-people" placeholder="Names, or visitor / contractor" className={inputClass} value={people} onChange={e => setPeople(e.target.value)} />
+        <NameInput id="inc-people" multi placeholder="Start typing a name, or write visitor / contractor" value={people} onChange={setPeople} />
       </Field>
 
       <Field label="Describe what happened" htmlFor="inc-what">

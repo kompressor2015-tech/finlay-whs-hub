@@ -1,4 +1,5 @@
 import { useCallback, useEffect, useMemo, useState, type FormEvent } from 'react';
+import { NameInput } from './NameInput.tsx';
 import type { WhsUser } from '../services/auth.ts';
 import { listPeople } from '../services/incidentFile.ts';
 import { listTickets } from '../services/tickets.ts';
@@ -160,7 +161,7 @@ function JobForm({ job, sites, onSaved, onCancel }: { job?: Job; sites: { id: st
       </Field>
       <div className="grid grid-cols-2 gap-3">
         <Field label="Client" optional htmlFor="j-cl"><input id="j-cl" value={f.client} onChange={e => setF({ ...f, client: e.target.value })} className={inputClass} /></Field>
-        <Field label="Supervisor" optional htmlFor="j-sup"><input id="j-sup" value={f.supervisor_name} onChange={e => setF({ ...f, supervisor_name: e.target.value })} className={inputClass} /></Field>
+        <Field label="Supervisor" optional htmlFor="j-sup"><NameInput id="j-sup" value={f.supervisor_name} onChange={t => setF({ ...f, supervisor_name: t })} /></Field>
       </div>
       <Field label="Address or location" optional htmlFor="j-loc"><input id="j-loc" value={f.location} onChange={e => setF({ ...f, location: e.target.value })} className={inputClass} /></Field>
       <div className="grid grid-cols-2 gap-3">

@@ -1,4 +1,5 @@
 import { useEffect, useMemo, useState, type FormEvent } from 'react';
+import { NameInput } from './NameInput.tsx';
 import type { WhsUser } from '../services/auth.ts';
 import { createSwms, loadSwms } from '../services/swms.ts';
 import { listDocuments } from '../services/documents.ts';
@@ -182,7 +183,7 @@ function NewSwms({ sites, onCancel }: { sites: { id: string; name: string }[]; o
         </select>
       </Field>
       <div className="grid grid-cols-2 gap-3">
-        <Field label="Owner" htmlFor="sw-own"><input id="sw-own" value={f.owner_name} onChange={e => setF({ ...f, owner_name: e.target.value })} className={inputClass} /></Field>
+        <Field label="Owner" htmlFor="sw-own"><NameInput id="sw-own" value={f.owner_name} onChange={t => setF({ ...f, owner_name: t })} /></Field>
         <Field label="Review every (months)" htmlFor="sw-rev"><input id="sw-rev" type="number" min={1} max={120} value={f.review_months} onChange={e => setF({ ...f, review_months: e.target.value })} className={inputClass} /></Field>
       </div>
       <Field label="Existing SWMS file in Documents" optional hint="Link the file this replaces, if there is one." htmlFor="sw-doc">

@@ -1,3 +1,5 @@
+import { NameInput } from './NameInput.tsx';
+import { exactMatch } from '../utils/nameSuggest.ts';
 import { useCallback, useEffect, useState } from 'react';
 import { createClaim } from '../services/claims.ts';
 import { addIncidentPerson, createPerson, listPeople, removeIncidentPerson, updateIncidentPerson } from '../services/incidentFile.ts';
@@ -204,19 +206,16 @@ function AddPerson({ staff, busy, onAdd, onCancel }: {
   const [treat, setTreat] = useState<Treatment>('');
   const [off, setOff] = useState('');
   const [err, setErr] = useState<string | null>(null);
-  const chosen = staff.find(s => s.id === pick);
+  const typedMatch = exactMatch(staff.map(s => ({ id: s.id, name: s.name })), name);
+  const chosen = staff.find(s => s.id === pick) ?? staff.find(s => s.id === typedMatch?.id);
   return (
     <section className={`${card} px-4.5 py-4 grid grid-cols-2 sm:grid-cols-4 gap-3`}>
       <div className="col-span-2 sm:col-span-4 text-sm font-semibold">Add a person to this incident</div>
       <div className="col-span-2">
-        <Field label="Worker" htmlFor="ap-pick" hint="Pick a worker already on file, or type a new one below.">
-          <select id="ap-pick" className={inputClass} value={pick} onChange={e => setPick(e.target.value)}>
-            <option value="">A new person</option>
-            {staff.map(s => <option key={s.id} value={s.id}>{s.name}{s.position ? `, ${s.position}` : ''}</option>)}
-          </select>
+        <Field label="Name" htmlFor="ap-name" hint={chosen ? `On file: ${chosen.name}${chosen.position ? `, ${chosen.position}` : ''}. Their record is linked.` : 'Start typing to pick a worker on file, or type a name that is not on file (a new person record is made).'}>
+          <NameInput id="ap-name" value={name} onChange={t => { setName(t); if (pick && staff.find(s => s.id === pick)?.name !== t) setPick(''); }} onPick={m => setPick(m.id)} />
         </Field>
       </div>
-      {!chosen && <Field label="Name" htmlFor="ap-name"><input id="ap-name" className={inputClass} value={name} onChange={e => setName(e.target.value)} /></Field>}
       {!chosen && <Field label="Position" htmlFor="ap-pos" optional><input id="ap-pos" className={inputClass} value={position} onChange={e => setPosition(e.target.value)} placeholder="e.g. Fitter" /></Field>}
       <Field label="Role on this incident" htmlFor="ap-role"><select id="ap-role" className={inputClass} value={role} onChange={e => setRole(e.target.value as PersonRole)}>{PERSON_ROLES.map(r => <option key={r.id} value={r.id}>{r.label}</option>)}</select></Field>
       {role === 'injured' && (
