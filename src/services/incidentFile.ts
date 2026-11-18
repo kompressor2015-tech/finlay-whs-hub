@@ -24,7 +24,7 @@ export async function listPeople(): Promise<Result<Person[]>> {
   return error ? { error: friendly(error.message) } : { data: (data ?? []) as Person[] };
 }
 
-export type PersonInput = Pick<Person, 'name'> & Partial<Pick<Person, 'position' | 'site_id' | 'phone' | 'emergency_contact' | 'start_date' | 'notes' | 'active' | 'is_first_aider' | 'is_fire_warden' | 'warden_role' | 'left_on' | 'not_required'>>;
+export type PersonInput = Pick<Person, 'name'> & Partial<Pick<Person, 'position' | 'site_id' | 'phone' | 'email' | 'emergency_contact' | 'start_date' | 'notes' | 'active' | 'is_first_aider' | 'is_fire_warden' | 'warden_role' | 'left_on' | 'not_required'>>;
 
 export async function createPerson(input: PersonInput): Promise<Result<Person>> {
   const { data, error } = await supabase.from('whs_people').insert({ ...input, name: surnameCaps(input.name) }).select('*').single();

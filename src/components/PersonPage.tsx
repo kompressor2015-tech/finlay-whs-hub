@@ -102,7 +102,7 @@ export function PersonPage({ id, user }: { id: string; user: WhsUser }) {
       <div className="flex flex-wrap items-start justify-between gap-4">
         <div>
           <h1 className="m-0 text-2xl font-bold">{person.name}</h1>
-          <p className="mt-1 mb-0 text-muted text-[15px]">{[person.position, sites.find(x => x.id === person.site_id)?.name ? `Site: ${sites.find(x => x.id === person.site_id)!.name}` : 'No site set', person.phone, person.start_date ? `started ${formatDay(person.start_date)}` : ''].filter(Boolean).join(' · ') || 'No details yet'}</p>
+          <p className="mt-1 mb-0 text-muted text-[15px]">{[person.position, sites.find(x => x.id === person.site_id)?.name ? `Site: ${sites.find(x => x.id === person.site_id)!.name}` : 'No site set', person.phone, person.email, person.start_date ? `started ${formatDay(person.start_date)}` : ''].filter(Boolean).join(' · ') || 'No details yet'}</p>
           {person.emergency_contact && <p className="mt-1 mb-0 text-sm text-muted">Emergency contact: {person.emergency_contact}</p>}
         </div>
         <div className="flex flex-wrap items-center gap-2">
@@ -199,13 +199,13 @@ export function PersonPage({ id, user }: { id: string; user: WhsUser }) {
 function PersonEdit({ person, onSaved }: { person: Person; onSaved: () => void }) {
   const { sites } = useSiteScope();
   const [notReq, setNotReq] = useState<string[]>(person.not_required ?? []);
-  const [v, setV] = useState({ site_id: person.site_id ?? '', name: person.name, position: person.position, phone: person.phone, emergency_contact: person.emergency_contact, start_date: person.start_date ?? '' });
+  const [v, setV] = useState({ site_id: person.site_id ?? '', name: person.name, position: person.position, phone: person.phone, email: person.email ?? '', emergency_contact: person.emergency_contact, start_date: person.start_date ?? '' });
   const [busy, setBusy] = useState(false);
   const [err, setErr] = useState<string | null>(null);
   const f = (k: keyof typeof v, label: string, type = 'text') => <Field label={label} htmlFor={`pe-${k}`} optional={k !== 'name'}><input id={`pe-${k}`} type={type} className={inputClass} value={v[k]} onChange={e => setV({ ...v, [k]: e.target.value })} /></Field>;
   return (
     <section className={`${card} px-4.5 py-4 grid grid-cols-2 sm:grid-cols-3 gap-3`}>
-      {f('name', 'Name')}{f('position', 'Position')}{f('phone', 'Phone')}{f('emergency_contact', 'Emergency contact')}{f('start_date', 'Start date', 'date')}
+      {f('name', 'Name')}{f('position', 'Position')}{f('phone', 'Phone')}{f('email', 'Email', 'email')}{f('emergency_contact', 'Emergency contact')}{f('start_date', 'Start date', 'date')}
       <Field label="Site" htmlFor="pe-site" optional><select id="pe-site" className={inputClass} value={v.site_id} onChange={e => setV({ ...v, site_id: e.target.value })}><option value="">Not set</option>{sites.map(x => <option key={x.id} value={x.id}>{x.name}</option>)}</select></Field>
       <fieldset className="col-span-2 sm:col-span-3 border-0 p-0 m-0">
         <legend className="text-[13px] font-semibold text-muted mb-1">Company-wide courses this person does not need to do</legend>
@@ -213,7 +213,7 @@ function PersonEdit({ person, onSaved }: { person: Person; onSaved: () => void }
       </fieldset>
       <div className="col-span-2 sm:col-span-3"><ErrorNote message={err} /><button type="button" disabled={busy || !v.name.trim()} className={btnPri} onClick={async () => {
         setBusy(true);
-        const res = await updatePerson(person.id, { name: v.name.trim(), position: v.position.trim(), phone: v.phone.trim(), emergency_contact: v.emergency_contact.trim(), start_date: v.start_date || null, site_id: v.site_id || null, not_required: notReq });
+        const res = await updatePerson(person.id, { name: v.name.trim(), position: v.position.trim(), phone: v.phone.trim(), email: v.email.trim(), emergency_contact: v.emergency_contact.trim(), start_date: v.start_date || null, site_id: v.site_id || null, not_required: notReq });
         setBusy(false);
         if (res.error) setErr(res.error); else onSaved();
       }}>Save</button></div>
