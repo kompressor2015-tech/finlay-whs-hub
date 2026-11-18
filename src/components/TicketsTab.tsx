@@ -9,7 +9,7 @@ import { updatePerson } from '../services/incidentFile.ts';
 import { today } from '../utils/documents.ts';
 import { formatDay } from '../utils/dates.ts';
 import type { Person } from '../utils/incidentFile.ts';
-import { TICKET_PRESETS, FIRST_AID_TICKET, FIRE_WARDEN_TICKET, currentTickets, expiryFromIssue, presetFor, ticketPill, type Ticket } from '../utils/tickets.ts';
+import { TICKET_PRESETS, HRW_CLASSES, HRW_TICKET, FIRST_AID_TICKET, FIRE_WARDEN_TICKET, currentTickets, expiryFromIssue, presetFor, ticketPill, type Ticket } from '../utils/tickets.ts';
 import { askConfirm } from './ConfirmHost.tsx';
 import { ErrorNote, Field, inputClass } from './Form.tsx';
 import { Pill } from './Pill.tsx';
@@ -79,7 +79,7 @@ export function TicketsTab({ person, onChanged }: { person: Person; onChanged: (
     const pill = ticketPill(t);
     return (
       <tr key={t.id} className="border-b border-line-soft last:border-b-0 align-top">
-        <td className="px-3.5 py-2.5"><b className={old ? 'font-semibold text-muted' : ''}>{t.name}</b>{t.notes && <span className="block text-xs text-muted">{t.notes}</span>}</td>
+        <td className="px-3.5 py-2.5"><b className={old ? 'font-semibold text-muted' : ''}>{t.name}</b>{(t.classes ?? []).length > 0 && <span className="flex flex-wrap gap-1 mt-1">{(t.classes ?? []).map(c => <Pill key={c} tone="blue">{c}</Pill>)}</span>}{t.notes && <span className="block text-xs text-muted">{t.notes}</span>}</td>
         <td className="px-3.5 py-2.5 text-muted">{t.number || '—'}</td>
         <td className="px-3.5 py-2.5 whitespace-nowrap">{t.issued_on ? formatDay(t.issued_on) : '—'}</td>
         <td className="px-3.5 py-2.5 whitespace-nowrap">{t.expires_on ? formatDay(t.expires_on) : <span className="text-muted">No expiry</span>}</td>
@@ -168,6 +168,8 @@ function AddTicket({ personId, start, onDone }: { personId: string; start: strin
   const [touched, setTouched] = useState(false);
   const [provider, setProvider] = useState('');
   const [notes, setNotes] = useState('');
+  const [classes, setClasses] = useState<string[]>([]);
+  const [otherClass, setOtherClass] = useState('');
   const [file, setFile] = useState<File | null>(null);
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -180,9 +182,10 @@ function AddTicket({ personId, start, onDone }: { personId: string; start: strin
   async function save(e: FormEvent) {
     e.preventDefault();
     if (!name) return setError('Pick a ticket or type its name.');
+    if (name.toLowerCase() === HRW_TICKET.toLowerCase() && classes.length === 0 && !otherClass.trim()) return setError('Tick at least one class on the licence.');
     setBusy(true);
     setError(null);
-    const res = await addTicket(personId, { name, number: number.trim(), issued_on: issued || null, expires_on: expiry || null, provider: provider.trim(), notes: notes.trim() }, file);
+    const res = await addTicket(personId, { name, number: number.trim(), issued_on: issued || null, expires_on: expiry || null, provider: provider.trim(), notes: notes.trim(), ...(name.toLowerCase() === HRW_TICKET.toLowerCase() ? { classes: [...classes, ...(otherClass.trim() ? [otherClass.trim()] : [])] } : {}) }, file);
     setBusy(false);
     if (res.error) return setError(res.error);
     onDone();
@@ -197,6 +200,15 @@ function AddTicket({ personId, start, onDone }: { personId: string; start: strin
         </select>
       </Field>
       {pick === OTHER && <Field label="Name" htmlFor="tk-custom"><input id="tk-custom" className={inputClass} value={custom} onChange={e => setCustom(e.target.value)} placeholder="e.g. Confined space entry" /></Field>}
+      {name.toLowerCase() === HRW_TICKET.toLowerCase() && (
+        <fieldset className="col-span-2 sm:col-span-3 border border-line-soft rounded-xl p-3 m-0">
+          <legend className="px-1.5 text-sm font-medium">Classes on this licence <span className="text-muted font-normal">(tick every class on the card)</span></legend>
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-x-4">
+            {HRW_CLASSES.map(c => <label key={c} className="flex items-center gap-2 min-h-11 text-sm cursor-pointer"><input type="checkbox" className="w-5 h-5" checked={classes.includes(c)} onChange={e => setClasses(e.target.checked ? [...classes, c] : classes.filter(x => x !== c))} /> {c}</label>)}
+          </div>
+          <div className="mt-1"><Field label="Another class" optional htmlFor="tk-oc"><input id="tk-oc" className={inputClass} value={otherClass} onChange={e => setOtherClass(e.target.value)} placeholder="e.g. Boom-type elevating work platform" /></Field></div>
+        </fieldset>
+      )}
       <Field label="Number" optional htmlFor="tk-no"><input id="tk-no" className={inputClass} value={number} onChange={e => setNumber(e.target.value)} /></Field>
       <Field label="Issued" htmlFor="tk-iss"><input id="tk-iss" type="date" className={inputClass} value={issued} max={today()} onChange={e => { setIssued(e.target.value); }} /></Field>
       <Field label={`Expires${preset?.months ? ` (usually ${preset.months} months)` : ''}`} optional htmlFor="tk-exp"><input id="tk-exp" type="date" className={inputClass} value={expiry} onChange={e => { setExpires(e.target.value); setTouched(true); }} /></Field>

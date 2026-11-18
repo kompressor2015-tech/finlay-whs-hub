@@ -12,7 +12,7 @@ import type { Person } from '../utils/incidentFile.ts';
 import { coverFor, WORKERS_PER_FIRST_AIDER, type Holder } from '../utils/siteCover.ts';
 import { COMPANY_COURSES, courseStatus, deliveryOf, outstanding, reminderCounts, reminderFor, type CourseReminder } from '../utils/companyCourses.ts';
 import { clearCourseReminder, listCourseReminders, setCourseReminder } from '../services/courseReminders.ts';
-import { currentTickets, ticketPill, ticketState, type Ticket } from '../utils/tickets.ts';
+import { classHolders, currentTickets, ticketPill, ticketState, type Ticket } from '../utils/tickets.ts';
 import { ErrorNote } from './Form.tsx';
 import { Pill } from './Pill.tsx';
 
@@ -58,6 +58,7 @@ export function TrainingCoverPage({ user: _user }: { user: WhsUser }) {
   const expired = attention.filter(t => ticketState(t) === 'expired').length;
   const soon = attention.length - expired;
   const courses = useMemo(() => COMPANY_COURSES.map(c => courseStatus(c, people.filter(p => inShown(p)), tickets)), [people, tickets, shown]);
+  const licences = useMemo(() => classHolders(tickets.filter(t => active.has(t.person_id) && inShown(active.get(t.person_id) as Person)), new Map([...active].map(([id, p]) => [id, p.name]))), [tickets, active, shown]);
   const shortSites = covers.filter(x => x.c.gaps.length).length;
   const noSite = people.filter(p => p.active && !p.site_id).length;
 
@@ -196,6 +197,22 @@ export function TrainingCoverPage({ user: _user }: { user: WhsUser }) {
           </section>
         );
       })}
+
+      {loaded && licences.length > 0 && (
+        <section aria-label="High risk work licences" className="bg-white border border-line rounded-xl overflow-hidden">
+          <h2 className="m-0 px-4 py-3 text-base font-bold border-b border-line-soft">High risk work licences <span className="font-normal text-sm text-muted">· who holds each class</span></h2>
+          <ul className="list-none m-0 p-0 divide-y divide-line-soft">
+            {licences.map(l => (
+              <li key={l.cls} className="px-4 py-3 flex flex-wrap items-start gap-x-4 gap-y-1.5">
+                <span className="w-56 font-semibold text-sm">{l.cls} <span className="font-normal text-muted">· {l.holders.length}</span></span>
+                <span className="flex flex-wrap gap-x-4 gap-y-1 text-sm flex-1">
+                  {l.holders.map(h => <span key={h.personId}><a href={hrefFor({ name: 'person', id: h.personId })} className="font-semibold">{h.name}</a> <span className={h.expired ? 'text-[#9B1218] font-semibold' : 'text-muted'}>{h.expires_on ? `${h.expired ? 'expired' : 'to'} ${formatDay(h.expires_on)}` : ''}</span></span>)}
+                </span>
+              </li>
+            ))}
+          </ul>
+        </section>
+      )}
 
       {loaded && (
         <section aria-label="Tickets needing action" className="bg-white border border-line rounded-xl overflow-hidden">

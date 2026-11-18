@@ -1,6 +1,6 @@
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
-import { currentTickets, expiryFromIssue, ticketPill, ticketState, ticketsNeedingAction, type Ticket } from './tickets.ts';
+import { classHolders, currentTickets, expiryFromIssue, ticketPill, ticketState, ticketsNeedingAction, type Ticket } from './tickets.ts';
 
 const now = new Date('2026-11-14T08:00:00+10:00');
 const t = (over: Partial<Ticket>): Ticket => ({ id: 'x', person_id: 'p', name: 'Provide First Aid', number: '', issued_on: '2024-01-01', expires_on: '2027-01-01', provider: '', file_path: '', file_name: '', notes: '', created_by_name: '', created_at: '2026-01-01T00:00:00Z', ...over });
@@ -30,4 +30,12 @@ test('a renewal replaces the older ticket of the same name', () => {
   const cur = currentTickets([old, renewed, cpr]);
   assert.deepEqual(cur.map(x => x.id).sort(), ['cpr', 'new']);
   assert.deepEqual(ticketsNeedingAction([old, renewed, cpr], now).map(x => x.id), ['cpr']);
+});
+
+test('one high risk licence lists every class against the person, and an expired one is flagged', () => {
+  const t = (id: string, person_id: string, expires_on: string | null, classes: string[], name = 'High risk work licence') => ({ id, person_id, name, number: '', issued_on: '2026-01-01', expires_on, provider: '', file_path: '', file_name: '', notes: '', classes, created_by_name: '', created_at: '2026-01-01' });
+  const names = new Map([['a', 'Alex DYER'], ['b', 'Ben ADAMS']]);
+  const r = classHolders([t('1', 'a', '2031-01-01', ['Forklift (LF)', 'Dogging (DG)']), t('2', 'b', '2026-01-01', ['Forklift (LF)']), t('3', 'a', '2030-01-01', ['Scaffolding'], 'White card'), t('4', 'zz', null, ['Crane'])], names, new Date('2026-11-18T00:00:00+10:00'));
+  assert.deepEqual(r.map(x => x.cls), ['Dogging (DG)', 'Forklift (LF)']);
+  assert.deepEqual(r[1].holders.map(h => [h.name, h.expired]), [['Alex DYER', false], ['Ben ADAMS', true]]);
 });
