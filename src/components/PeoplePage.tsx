@@ -3,7 +3,7 @@ import type { WhsUser } from '../services/auth.ts';
 import { listAppointmentsFor, listCertificates, listClaims } from '../services/claims.ts';
 import { createPerson, listPeople, updatePerson } from '../services/incidentFile.ts';
 import { listTickets } from '../services/tickets.ts';
-import { ticketsNeedingAction, ticketState, type Ticket } from '../utils/tickets.ts';
+import { currentTickets, HRW_TICKET, ticketsNeedingAction, ticketState, type Ticket } from '../utils/tickets.ts';
 import { go, hrefFor } from '../hooks/useRoute.ts';
 import { claimAttention, claimStatus, daysOffWork, isOpen, isOffWork, STATES, type Certificate, type Claim, type ClaimAttention } from '../utils/claims.ts';
 import type { Person } from '../utils/incidentFile.ts';
@@ -66,6 +66,16 @@ export function PeoplePage({ user: _user }: { user: WhsUser }) {
     for (const p of people) {
       const list = ticketsNeedingAction(tickets.filter(t => t.person_id === p.id));
       if (list.length) m.set(p.id, { red: list.filter(t => ticketState(t) === 'expired').length, amber: list.filter(t => ticketState(t) === 'due_soon').length });
+    }
+    return m;
+  }, [people, tickets]);
+
+  /** Classes on each person's current high risk work licence */
+  const licences = useMemo(() => {
+    const m = new Map<string, { classes: string[]; expired: boolean }>();
+    for (const p of people) {
+      const t = currentTickets(tickets.filter(x => x.person_id === p.id && x.name.trim().toLowerCase() === HRW_TICKET.toLowerCase()))[0];
+      if (t && (t.classes ?? []).length) m.set(p.id, { classes: t.classes ?? [], expired: ticketState(t) === 'expired' });
     }
     return m;
   }, [people, tickets]);
@@ -135,6 +145,7 @@ export function PeoplePage({ user: _user }: { user: WhsUser }) {
                 {p.is_fire_warden && <Pill tone="blue">Fire warden</Pill>}
                 {needs.get(p.id)?.red ? <Pill tone="red">{needs.get(p.id)?.red} ticket{needs.get(p.id)?.red === 1 ? '' : 's'} expired</Pill> : null}
                 {needs.get(p.id)?.amber ? <Pill tone="amber">{needs.get(p.id)?.amber} due soon</Pill> : null}
+                {licences.get(p.id)?.classes.map(c => <Pill key={c} tone={licences.get(p.id)?.expired ? 'grey' : 'blue'}>{c.replace(/\s*\(.*\)$/, '')}</Pill>)}
               </span>
               <div className="flex flex-wrap items-center gap-2 flex-1 min-w-0">
                 {mine.map(c => {

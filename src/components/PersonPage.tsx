@@ -36,7 +36,12 @@ export function PersonPage({ id, user }: { id: string; user: WhsUser }) {
   const [archiving, setArchiving] = useState<string | null>(null);
   const [busy, setBusy] = useState(false);
   const [tab, setTabState] = useState<'file' | 'tickets'>(() => {
-    try { return sessionStorage.getItem(`whsPersonTab-${id}`) === 'tickets' ? 'tickets' : 'file'; } catch { return 'file'; }
+    // Tickets & training first (the most used); the incident file when arriving from an incident, or where they were last
+    try {
+      const saved = sessionStorage.getItem(`whsPersonTab-${id}`);
+      if (saved === 'file' || saved === 'tickets') return saved;
+      return sessionStorage.getItem('whsBack') ? 'file' : 'tickets';
+    } catch { return 'tickets'; }
   });
   const setTab = (t: 'file' | 'tickets') => {
     setTabState(t);
@@ -128,7 +133,7 @@ export function PersonPage({ id, user }: { id: string; user: WhsUser }) {
         </section>
       )}
       <div role="tablist" aria-label="Person file" className="flex flex-wrap gap-2">
-        {([['file', 'Incidents & claim'], ['tickets', 'Tickets & training']] as const).map(([k, label]) => (
+        {([['tickets', 'Tickets & training'], ['file', 'Incidents & claim']] as const).map(([k, label]) => (
           <button key={k} type="button" role="tab" aria-selected={tab === k} onClick={() => setTab(k)}
             className={`min-h-10 px-3.5 rounded-full text-[13px] font-semibold cursor-pointer border ${tab === k ? 'bg-ink text-white border-ink' : 'bg-white text-muted border-[#D6D2CC]'}`}>{label}</button>
         ))}
