@@ -128,3 +128,11 @@ test('an incident with no investigation needed shows no investigation step, stat
   assert.equal(incidentStatusFor(w, []).label, 'No investigation needed');
   assert.equal(incidentStatusFor(incident({ status: 'investigating' }), []).label, 'Investigating');
 });
+
+test('Ready to close only when nothing is left to do', () => {
+  const a = incident({ status: 'actions' });
+  assert.equal(incidentStatusFor(a, [], []).label, 'Ready to close');
+  assert.equal(incidentStatusFor(a, [], ["Zachary's claim is still open"]).label, 'Actions open');
+  assert.equal(incidentStatusFor(a, []).label, 'Actions done');
+  assert.equal(incidentStatusFor(a, [action()], []).label, 'Actions open');
+});

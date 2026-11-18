@@ -12,7 +12,7 @@ import {
 import { listClaims } from '../services/claims.ts';
 import { listIncidentPeople } from '../services/incidentFile.ts';
 import { claimAttention, STATES, type Claim } from '../utils/claims.ts';
-import { closeBlockers, incidentAttention, investigationProgress, type IncidentPerson } from '../utils/incidentFile.ts';
+import { closeBlockers, incidentAttention, investigationProgress, needsFullInvestigation, type IncidentPerson } from '../utils/incidentFile.ts';
 import { ActionsPanel } from './ActionsPanel.tsx';
 import { IncidentPeopleTab } from './IncidentPeopleTab.tsx';
 import { DocumentsTab, TimelineTab, useFileData } from './IncidentFileTabs.tsx';
@@ -96,9 +96,9 @@ export function IncidentPage({ id, user, embedded, onDeleted }: { id: string; us
     return error ? <ErrorNote message={error} /> : <p className="text-muted text-sm">Loading…</p>;
   }
 
-  const status = incidentStatusFor(incident, actions);
   const steps = incidentSteps(incident, actions);
   const blockers = closeBlockers(incident, actions, officer ? claims.map(c => ({ status: c.status, label: `${ipeople.find(p => p.person_id === c.person_id)?.name ?? 'A worker'}'s ${STATES[c.state].scheme} claim` })) : null);
+  const status = incidentStatusFor(incident, actions, officer ? blockers : needsFullInvestigation(incident) ? null : blockers);
   async function closeClicked() {
     if (blockers.length) {
       await askConfirm({ title: `${incident!.ref} can't be closed yet`, body: 'Still to do:', items: blockers, infoOnly: true });
