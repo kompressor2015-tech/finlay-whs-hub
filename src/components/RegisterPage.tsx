@@ -1,4 +1,6 @@
 import { useEffect, useMemo, useState } from 'react';
+import { listClaims } from '../services/claims.ts';
+import { closeBlockers, needsFullInvestigation } from '../utils/incidentFile.ts';
 import { listActions, listHazards, listIncidents } from '../services/records.ts';
 import { hrefFor } from '../hooks/useRoute.ts';
 import { formatDate, formatDay } from '../utils/dates.ts';
@@ -33,6 +35,15 @@ export function RegisterPage({ tab, user }: { tab: Tab; user: WhsUser }) {
   const [loaded, setLoaded] = useState(false);
   const [q, setQ] = useState('');
   const [filter, setFilter] = useState<Filter>('open');
+  const officer = user.access === 'admin' || user.access === 'whs_officer';
+  const [claims, setClaims] = useState<{ incident_id: string; status: string }[]>([]);
+  useEffect(() => { if (officer) void listClaims().then(r => setClaims((r.data ?? []).map(c => ({ incident_id: c.incident_id, status: c.status })))); }, [officer]);
+  /** The status pill: Ready to close only when nothing is left (actions, investigation parts, open claims). */
+  const statusOf = (i: Incident) => {
+    const acts = actions.filter(a => a.source_id === i.id);
+    const unknown = !officer && needsFullInvestigation(i);
+    return incidentStatusFor(i, acts, unknown ? null : closeBlockers(i, acts, claims.filter(c => c.incident_id === i.id)));
+  };
 
   const load = () =>
     Promise.all([listIncidents(), listHazards(), listActions()]).then(([i, h, a]) => {
@@ -83,7 +94,7 @@ export function RegisterPage({ tab, user }: { tab: Tab; user: WhsUser }) {
     if (tab === 'incidents') {
       downloadCsv('incidents.csv', csvFor(
         ['Ref', 'Date', 'Type', 'Site', 'Unit', 'What happened', 'Notifiable', 'WHSQ reference', 'Status', 'Reported by'],
-        shownIncidents.map(i => [i.ref, formatDate(i.occurred_at), incidentTypeLabel(i.type), i.site_name, i.unit_no, i.description, i.notifiable ? 'Yes' : 'No', i.whsq_reference, incidentStatusFor(i, actions.filter(a => a.source_id === i.id)).label, i.reporter_name])
+        shownIncidents.map(i => [i.ref, formatDate(i.occurred_at), incidentTypeLabel(i.type), i.site_name, i.unit_no, i.description, i.notifiable ? 'Yes' : 'No', i.whsq_reference, statusOf(i).label, i.reporter_name])
       ));
     } else {
       downloadCsv('hazards.csv', csvFor(
@@ -150,7 +161,7 @@ export function RegisterPage({ tab, user }: { tab: Tab; user: WhsUser }) {
             </thead>
             <tbody>
               {shownIncidents.map(i => {
-                const s = incidentStatusFor(i, actions.filter(a => a.source_id === i.id));
+                const s = statusOf(i);
                 return (
                   <tr key={i.id} onClick={e => rowOpens(e, () => panel.setOpenId(i.id))} aria-selected={panel.openId === i.id} className={rowCls(i.id)}>
                     <td className={`${td} pl-4 whitespace-nowrap`}><a href={hrefFor({ name: 'incident', id: i.id })} onClick={e => linkOpens(e, () => panel.setOpenId(i.id))} className="font-semibold">{i.ref}</a></td>

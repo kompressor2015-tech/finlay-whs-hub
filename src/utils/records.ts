@@ -202,9 +202,14 @@ export function hazardFixBy(hazard: Pick<Hazard, 'severity' | 'created_at'>): st
 // Status labels
 // ---------------------------------------------------------------------------------
 
-/** The status to show: once every action is done an incident in the actions stage is ready to close. */
-export function incidentStatusFor(incident: Pick<Incident, 'status'> & { investigation_waived?: boolean }, actions: Pick<WhsAction, 'status'>[]): { label: string; tone: Tone } {
-  if (incident.status === 'actions' && actions.every(a => a.status === 'done')) return { label: 'Ready to close', tone: 'green' };
+/** The status to show: an incident in the actions stage is ready to close only once nothing is left to do (`blockers` from closeBlockers; null when not known). */
+export function incidentStatusFor(incident: Pick<Incident, 'status'> & { investigation_waived?: boolean }, actions: Pick<WhsAction, 'status'>[], blockers: string[] | null = null): { label: string; tone: Tone } {
+  // "Ready to close" only when nothing is left (actions, investigation parts, open claims). With no blockers list (claims not visible) say only that the actions are done.
+  if (incident.status === 'actions' && actions.every(a => a.status === 'done')) {
+    if (blockers === null) return { label: 'Actions done', tone: 'amber' };
+    if (blockers.length === 0) return { label: 'Ready to close', tone: 'green' };
+    return { label: 'Actions open', tone: 'amber' };
+  }
   if (incident.status === 'investigating' && incident.investigation_waived) return { label: 'No investigation needed', tone: 'amber' };
   return incidentStatus(incident.status);
 }
