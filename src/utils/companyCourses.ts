@@ -6,6 +6,11 @@ import { addDays, brisbaneDay } from './dates.ts';
 
 export const COMPANY_COURSES = ['Fire extinguisher training'] as const;
 
+/** Online courses are chased with a "reminder sent" tick; in-person ones are booked for a date. */
+export type CourseDelivery = 'online' | 'in_person';
+export const COURSE_DELIVERY: Record<string, CourseDelivery> = { 'Fire extinguisher training': 'online' };
+export const deliveryOf = (course: string): CourseDelivery => COURSE_DELIVERY[course] ?? 'in_person';
+
 export type CourseState = 'current' | 'due_soon' | 'expired' | 'none';
 
 export interface CourseRow { person: Person; ticket: Ticket | null; state: CourseState }
