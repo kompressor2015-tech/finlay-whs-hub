@@ -1,6 +1,6 @@
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
-import { courseStatus, outstanding } from './companyCourses.ts';
+import { courseStatus, outstanding, reminderCounts, reminderFor, type CourseReminder } from './companyCourses.ts';
 import type { Person } from './incidentFile.ts';
 import type { Ticket } from './tickets.ts';
 
@@ -18,4 +18,18 @@ test('counts current, due soon, expired and none, leaving out archived and not-r
 test('only the newest ticket counts and other courses are ignored', () => {
   const s = courseStatus('Fire extinguisher training', [person('a')], [ticket('a', '2026-01-01'), { ...ticket('a', '2027-06-01'), issued_on: '2026-06-01', created_at: '2026-06-01' }, ticket('a', '2020-01-01', 'White card')], now);
   assert.equal(s.current, 1);
+});
+
+const rem = (person_id: string, sent_at: string, course = 'Fire extinguisher training'): CourseReminder => ({ id: person_id + sent_at, person_id, course, sent_at, sent_by_name: 'Gary' });
+test('a reminder counts for someone who never did it, and is matched by course', () => {
+  const s = courseStatus('Fire extinguisher training', [person('a'), person('b')], [], now);
+  const rs = [rem('a', '2026-11-18T01:00:00Z'), rem('b', '2026-11-18T01:00:00Z', 'White card')];
+  assert.equal(reminderFor(s.rows[0], s.course, rs)?.person_id, 'a');
+  assert.equal(reminderFor(s.rows[1], s.course, rs), null);
+  assert.deepEqual(reminderCounts(s.rows, s.course, rs), { sent: 1, notSent: 1 });
+});
+test('a reminder from an earlier round is ignored once the new ticket is nearly due again', () => {
+  const s = courseStatus('Fire extinguisher training', [person('a')], [ticket('a', '2027-10-01')], now);
+  assert.equal(reminderFor(s.rows[0], s.course, [rem('a', '2026-11-18T01:00:00Z')]), null);
+  assert.ok(reminderFor(s.rows[0], s.course, [rem('a', '2027-09-20T01:00:00Z')]));
 });
