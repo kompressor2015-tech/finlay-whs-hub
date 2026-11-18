@@ -126,7 +126,7 @@ export function InvestigationTab({ incident, user, actions, people, canEdit, off
             <div className="text-sm font-semibold">Investigation not required</div>
             <div className="text-sm text-muted">{incident.investigation_waived_reason}</div>
           </div>
-          {canEdit && <button type="button" disabled={busy} className={btn} onClick={() => run(() => updateIncident(incident.id, { investigation_waived: false, investigation_waived_reason: '' }))}>Investigate it after all</button>}
+          {canEdit && <button type="button" disabled={busy} className={btn} onClick={() => run(() => updateIncident(incident.id, { investigation_waived: false, investigation_waived_reason: '', ...(incident.status === 'actions' ? { status: 'investigating' as const } : {}) }))}>Investigate it after all</button>}
         </section>
       )}
       {!waived && canEdit && canWaiveInvestigation(incident) && (
@@ -136,7 +136,7 @@ export function InvestigationTab({ incident, user, actions, people, canEdit, off
               <div className="min-w-[260px] flex-1"><Field label="Why isn't an investigation needed?" htmlFor="inv-waive" hint="This is kept on the incident.">
                 <input id="inv-waive" className={inputClass} value={reason} onChange={e => setReason(e.target.value)} placeholder="e.g. Minor cut, first aid only, cause obvious and already fixed" />
               </Field></div>
-              <button type="button" disabled={busy || !reason.trim()} className={btnPri} onClick={async () => { if (await run(() => updateIncident(incident.id, { investigation_waived: true, investigation_waived_reason: reason.trim() }))) setWaiving(false); }}>Not required</button>
+              <button type="button" disabled={busy || !reason.trim()} className={btnPri} onClick={async () => { if (await run(() => updateIncident(incident.id, { investigation_waived: true, investigation_waived_reason: reason.trim(), ...(incident.status === 'investigating' ? { status: 'actions' as const } : {}) }))) setWaiving(false); }}>Not required</button>
               <button type="button" className={btn} onClick={() => setWaiving(false)}>Cancel</button>
             </section>
           )}

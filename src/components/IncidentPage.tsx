@@ -156,7 +156,7 @@ export function IncidentPage({ id, user, embedded, onDeleted }: { id: string; us
               </button>
             )}
             {incident.status === 'investigating' && (
-              <button type="button" disabled={saving} className={`${smallButton} border-0 bg-ink text-white`} onClick={() => save({ status: 'actions' })}>Investigation finished</button>
+              <button type="button" disabled={saving} className={`${smallButton} border-0 bg-ink text-white`} onClick={() => save({ status: 'actions' })}>{incident.investigation_waived ? 'Move to actions' : 'Investigation finished'}</button>
             )}
             {incident.status === 'closed' ? (
               officer && <button type="button" disabled={saving} className={`${smallButton} border border-[#D6D2CC] bg-white`} onClick={() => save({ status: 'actions' })}>Reopen</button>
