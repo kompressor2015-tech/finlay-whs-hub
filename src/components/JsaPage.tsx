@@ -7,6 +7,7 @@ import { isOfficeAccess } from '../utils/access.ts';
 import { brisbaneDay, formatDay } from '../utils/dates.ts';
 import { inScope } from '../utils/siteScope.ts';
 import { EMPTY_JSA, highAfter, jsaPill, jsaProblems, needsSwms, type Jsa, type JsaContent } from '../utils/jsa.ts';
+import { mergeLines, stageOf, STAGES, type LibraryTask, type Stage } from '../utils/jsaLibrary.ts';
 import { copyOf, takeJsaStart, type JsaStart } from '../utils/jsaDraft.ts';
 import { emptyStep, HIGH_RISK_AREAS, stepCode, stepLevel, type SwmsStep } from '../utils/swms.ts';
 import { LEVELS, type RiskLevel, riskLevel } from '../utils/risks.ts';
@@ -109,6 +110,18 @@ function JsaEditor({ jsa, start, onCopy, sites, officer, office, onClose }: { js
   const setStep = (i: number, p: Partial<SwmsStep>) => patch({ steps: d.steps.map((s, j) => (j === i ? { ...s, ...p } : s)) });
   const move = (i: number, by: -1 | 1) => { const a = [...d.steps]; [a[i], a[i + by]] = [a[i + by], a[i]]; patch({ steps: a }); };
   const swms = needsSwms(d);
+  const [pickStage, setPickStage] = useState<string>(STAGES[0].id);
+  const blank = (st: SwmsStep) => !st.step.trim() && !st.hazard.trim() && !st.controls.trim();
+  /** Adds a task from the list as a new step, using up a lone blank step if there is one. */
+  const addTask = (stage: Stage, t: LibraryTask) => {
+    const next = { ...emptyStep(stage.label), step: t.step, hazard: t.hazards.join('\n'), controls: t.controls.join('\n') };
+    patch({ steps: d.steps.length === 1 && blank(d.steps[0]) ? [next] : [...d.steps, next] });
+  };
+  /** Fills an existing step from a task: keeps what was typed and adds the task's hazards and controls. */
+  const fillStep = (i: number, stage: Stage, t: LibraryTask) => {
+    const st = d.steps[i];
+    setStep(i, { section: st.section || stage.label, step: st.step.trim() ? st.step : t.step, hazard: mergeLines(st.hazard, t.hazards), controls: mergeLines(st.controls, t.controls) });
+  };
   const hl = !!start && editable; // highlight what the crew still fills in on a draft made from an SWI or a copy
 
   async function save(then?: 'complete' | 'reopen') {
@@ -184,6 +197,31 @@ function JsaEditor({ jsa, start, onCopy, sites, officer, office, onClose }: { js
           </div>
         </Sec>
 
+        {editable && (
+          <Sec title="Pick tasks from the list" hint="Choose the stage of the job, then add the tasks you will do. Each one fills in the hazards and usual controls. You can change anything after, or type your own steps below.">
+            <div className="flex flex-wrap gap-1.5" role="tablist" aria-label="Stage of the job">
+              {STAGES.map(st => <button key={st.id} type="button" role="tab" aria-selected={pickStage === st.id} onClick={() => setPickStage(st.id)} className={`min-h-9 px-3 rounded-full border text-[13px] font-semibold cursor-pointer ${pickStage === st.id ? 'bg-ink text-white border-ink' : 'bg-white border-[#D6D2CC]'}`}>{st.label}</button>)}
+            </div>
+            {(() => {
+              const st = STAGES.find(x => x.id === pickStage) ?? STAGES[0];
+              return (
+                <div className="flex flex-col gap-1">
+                  <p className="m-0 text-[13px] text-muted">{st.hint}</p>
+                  {st.tasks.map(t => {
+                    const added = d.steps.some(x => x.step.trim().toLowerCase() === t.step.toLowerCase());
+                    return (
+                      <div key={t.step} className="flex items-start gap-3 border-t border-line-soft py-2">
+                        <div className="flex-1 min-w-0"><div className="text-sm font-semibold">{t.step}</div><div className="text-xs text-muted">{t.hazards.join(' · ')}</div></div>
+                        <button type="button" className={btn} disabled={added} onClick={() => addTask(st, t)}>{added ? 'Added' : '+ Add'}</button>
+                      </div>
+                    );
+                  })}
+                </div>
+              );
+            })()}
+          </Sec>
+        )}
+
         <section className="flex flex-col gap-3">
           <div><h2 className="m-0 text-base font-bold">Steps</h2><p className="m-0 mt-0.5 text-xs text-muted">Break the job into steps. Ratings use the Finlay matrix; High or Extreme after controls means the job should not start until the risk is lower or the manager approves.</p></div>
           {d.steps.map((s, i) => {
@@ -199,6 +237,24 @@ function JsaEditor({ jsa, start, onCopy, sites, officer, office, onClose }: { js
                     <button type="button" className={btn} onClick={() => patch({ steps: d.steps.filter((_, j) => j !== i) })}>Remove</button>
                   </div>}
                 </div>
+                {editable && (
+                  <div className="grid sm:grid-cols-2 gap-3">
+                    <Field label="Stage of the job" optional hint={stageOf(s.section)?.hint} htmlFor={`js-${i}-g`}>
+                      <select id={`js-${i}-g`} className={inputClass} value={s.section} onChange={e => setStep(i, { section: e.target.value })}>
+                        <option value="">Not set</option>
+                        {!stageOf(s.section) && s.section && <option value={s.section}>{s.section}</option>}
+                        {STAGES.map(st => <option key={st.id} value={st.label}>{st.label}</option>)}
+                      </select>
+                    </Field>
+                    <Field label="Fill in from the list" optional hint="Adds the hazards and controls for a common task" htmlFor={`js-${i}-p`}>
+                      <select id={`js-${i}-p`} className={inputClass} value="" onChange={e => { const [si, ti] = e.target.value.split(':').map(Number); const st = STAGES[si]; if (st?.tasks[ti]) fillStep(i, st, st.tasks[ti]); }}>
+                        <option value="">Pick a task…</option>
+                        {STAGES.map((st, si) => <optgroup key={st.id} label={st.label}>{st.tasks.map((t, ti) => <option key={t.step} value={`${si}:${ti}`}>{t.step}</option>)}</optgroup>)}
+                      </select>
+                    </Field>
+                  </div>
+                )}
+                {!editable && s.section && <div className="text-xs font-semibold text-muted uppercase tracking-wide">{s.section}</div>}
                 <Field label="What is done" htmlFor={`js-${i}-s`}><textarea id={`js-${i}-s`} rows={Math.min(8, Math.max(1, s.step.split('\n').length))} disabled={!editable} className={`${textareaClass} min-h-12`} value={s.step} onChange={e => setStep(i, { step: e.target.value })} /></Field>
                 <Field label="Hazards" hint="What could hurt someone in this step" htmlFor={`js-${i}-h`}><textarea id={`js-${i}-h`} rows={2} disabled={!editable} className={textareaClass} value={s.hazard} onChange={e => setStep(i, { hazard: e.target.value })} /></Field>
                 {editable && <Flag on={hl && (!s.before || !s.after)}><div className="flex flex-wrap gap-6">
@@ -263,7 +319,7 @@ function JsaPrint({ jsa, siteName }: { jsa: Jsa; siteName: string }) {
         <thead><tr><th className={head}>#</th><th className={head}>What is done</th><th className={head}>Hazards</th><th className={head}>Before</th><th className={head}>Controls</th><th className={head}>After</th><th className={head}>Action by</th></tr></thead>
         <tbody>
           {jsa.steps.map((s, i) => (
-            <tr key={i}><td className={cell}>{i + 1}</td><td className={`${cell} whitespace-pre-line`}>{s.step}</td><td className={`${cell} whitespace-pre-line`}>{s.hazard}</td><td className={cell}>{code(s.before)}</td><td className={cell}><ul className="m-0 pl-4">{lines(s.controls).map((l, k) => <li key={k}>{l}</li>)}</ul></td><td className={cell}>{code(s.after)}</td><td className={cell}>{s.who}</td></tr>
+            <tr key={i}><td className={cell}>{i + 1}</td><td className={`${cell} whitespace-pre-line`}>{s.section && <span className="block text-[9px] font-bold uppercase text-[#2A6FA8]">{s.section}</span>}{s.step}</td><td className={`${cell} whitespace-pre-line`}>{s.hazard}</td><td className={cell}>{code(s.before)}</td><td className={cell}><ul className="m-0 pl-4">{lines(s.controls).map((l, k) => <li key={k}>{l}</li>)}</ul></td><td className={cell}>{code(s.after)}</td><td className={cell}>{s.who}</td></tr>
           ))}
         </tbody>
       </table>
