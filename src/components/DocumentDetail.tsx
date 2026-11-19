@@ -1,12 +1,17 @@
 import { useEffect, useState, type FormEvent } from 'react';
 import { NameInput } from './NameInput.tsx';
 import type { WhsUser } from '../services/auth.ts';
-import { addReview, deleteDocument, deleteReview, getDocument, listReviews, openDocumentFile, updateDocument, updateVersion, uploadVersion } from '../services/documents.ts';
+import { addReview, deleteDocument, deleteReview, documentLink, getDocument, listReviews, openDocumentFile, updateDocument, updateVersion, uploadVersion } from '../services/documents.ts';
 import { hrefFor } from '../hooks/useRoute.ts';
 import { useSiteScope } from '../hooks/useSiteScope.tsx';
 import { isOfficeAccess } from '../utils/access.ts';
 import { formatDay, formatWhen } from '../utils/dates.ts';
 import { DOC_TYPES, today, currentVersion, docTypeLabel, fileKind, reviewBy, reviewPill, type DocReview, type DocType, type DocVersion, type WhsDocument } from '../utils/documents.ts';
+import { readPdfText } from '../services/pdfText.ts';
+import { setJsaStart } from '../utils/jsaDraft.ts';
+import { EMPTY_JSA } from '../utils/jsa.ts';
+import { swiToJsa } from '../utils/swiToJsa.ts';
+import { emptyStep } from '../utils/swms.ts';
 import { askConfirm } from './ConfirmHost.tsx';
 import { CategoryField } from './CategoryField.tsx';
 import { ErrorNote, Field, inputClass, textareaClass } from './Form.tsx';
@@ -25,6 +30,7 @@ export function DocumentDetail({ id, user, embedded, onChanged }: { id: string; 
   const [form, setForm] = useState<WhsDocument | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [busy, setBusy] = useState(false);
+  const [making, setMaking] = useState(false);
   const [file, setFile] = useState<File | null>(null);
   const [versionLabel, setVersionLabel] = useState('');
   const [issuedOn, setIssuedOn] = useState('');
@@ -144,6 +150,30 @@ export function DocumentDetail({ id, user, embedded, onChanged }: { id: string; 
   if (!doc || !form) return error ? <ErrorNote message={error} /> : <p className="text-sm text-muted">Loading…</p>;
 
   const current = currentVersion(versions);
+
+  /** Reads the SWI file and opens a new JSA with the steps, hazards, controls and PPE filled in. */
+  async function makeJsa() {
+    if (!doc || !current) return;
+    const meta = { docNo: doc.doc_no, title: doc.title, version: current.version || undefined };
+    setMaking(true);
+    setError(null);
+    let draft: ReturnType<typeof swiToJsa> | null = null;
+    try {
+      if (fileKind(current.file_name) === 'PDF') {
+        const url = await documentLink(current.file_path);
+        if (url) {
+          const blob = await (await fetch(url)).blob();
+          draft = swiToJsa(await readPdfText(new File([blob], current.file_name, { type: 'application/pdf' })), meta);
+        }
+      }
+    } catch { /* fall through to the empty draft below */ }
+    if (!draft) {
+      draft = { content: { title: `${doc.title} (from ${doc.doc_no || 'SWI'})`, work_covered: `Based on ${[doc.doc_no, doc.title].filter(Boolean).join(' ')}${meta.version ? `, version ${meta.version}` : ''}.`, steps: [emptyStep()], ppe: '', permits: '' }, notes: ['The SWI file could not be read here, so the steps are blank. Open the SWI alongside and add them.'] };
+    }
+    setMaking(false);
+    setJsaStart({ content: { ...EMPTY_JSA, ...draft.content }, from: [doc.doc_no, doc.title].filter(Boolean).join(' '), kind: 'swi', notes: draft.notes });
+    window.location.hash = '#/m/risk/jsa';
+  }
   const pill = reviewPill(doc);
   const by = reviewBy(doc);
   const set = <K extends keyof WhsDocument>(k: K, v: WhsDocument[K]) => setForm(f => (f ? { ...f, [k]: v } : f));
@@ -166,6 +196,7 @@ export function DocumentDetail({ id, user, embedded, onChanged }: { id: string; 
 
       <div className="flex flex-wrap gap-2">
         {current && <button type="button" onClick={() => void openDocumentFile(current.file_path)} className={primary}>Open the file</button>}
+        {office && doc.doc_type === 'swi' && current && <button type="button" onClick={() => void makeJsa()} disabled={making} className={btn} title="Start a JSA from this SWI">{making ? 'Reading the SWI…' : 'Make a JSA from this SWI'}</button>}
         {office && <button type="button" onClick={() => setReviewing(reviewing ? null : { on: today(), note: '' })} disabled={busy} className={btn}>Record a review</button>}
       </div>
 
