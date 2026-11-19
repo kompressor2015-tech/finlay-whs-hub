@@ -24,7 +24,7 @@ const card = 'bg-white border border-line rounded-xl px-4.5 py-4';
 const textareaClass = `${inputClass} min-h-[72px] py-2`;
 const MATRIX_BG: Record<RiskLevel, string> = { low: '#99CC00', medium: '#FFFF00', high: '#FFB000', extreme: '#FF0000' };
 
-const contentOf = (j: Jsa): JsaContent => ({ title: j.title, site_id: j.site_id, location: j.location, done_on: j.done_on, supervisor_name: j.supervisor_name, crew: j.crew, work_covered: j.work_covered, steps: j.steps, high_risk_areas: j.high_risk_areas, ppe: j.ppe, permits: j.permits, emergency: j.emergency });
+const contentOf = (j: Jsa): JsaContent => ({ title: j.title, site_id: j.site_id, site_name: j.site_name, location: j.location, done_on: j.done_on, supervisor_name: j.supervisor_name, crew: j.crew, work_covered: j.work_covered, steps: j.steps, high_risk_areas: j.high_risk_areas, ppe: j.ppe, permits: j.permits, emergency: j.emergency });
 
 /** Job Safety Analyses: a quick, job-specific risk assessment. High risk construction work needs a SWMS instead. */
 export function JsaPage({ user }: { user: WhsUser }) {
@@ -67,7 +67,7 @@ export function JsaPage({ user }: { user: WhsUser }) {
                 return (
                   <tr key={j.id} onClick={() => setOpen(j)} className="cursor-pointer hover:bg-[#FAF8F6]">
                     <td className={`${td} pl-4 font-semibold whitespace-nowrap`}>{j.ref}</td>
-                    <td className={td}><span className="font-semibold">{j.title}</span><span className="block text-xs text-muted">{sites.find(x => x.id === j.site_id)?.name ?? 'No site'}{j.location ? ` · ${j.location}` : ''}</span></td>
+                    <td className={td}><span className="font-semibold">{j.title}</span><span className="block text-xs text-muted">{j.site_name || sites.find(x => x.id === j.site_id)?.name || 'No site'}{j.location ? ` · ${j.location}` : ''}</span></td>
                     <td className={`${td} whitespace-nowrap`}>{j.done_on ? formatDay(j.done_on) : <span className="text-muted">—</span>}</td>
                     <td className={td}>{j.supervisor_name || <span className="text-muted">—</span>}</td>
                     <td className={`${td} pr-4`}><Pill tone={p.tone}>{p.label}</Pill>{needsSwms(j) && <span className="block mt-1"><Pill tone="red">Needs a SWMS</Pill></span>}</td>
@@ -165,7 +165,11 @@ function JsaEditor({ jsa, start, onCopy, sites, officer, office, onClose }: { js
         <Sec title="The job">
           <div className="grid sm:grid-cols-2 gap-3">
             <div className="sm:col-span-2"><Field label="Job or task" htmlFor="j-title"><input id="j-title" disabled={!editable} className={inputClass} value={d.title} onChange={e => patch({ title: e.target.value })} placeholder="e.g. Replace screen mesh on the Powerscreen" /></Field></div>
-            <Flag on={hl && !d.site_id}><Field label="Site" htmlFor="j-site"><select id="j-site" disabled={!editable} className={inputClass} value={d.site_id ?? ''} onChange={e => patch({ site_id: e.target.value || null })}><option value="">No site</option>{sites.map(s => <option key={s.id} value={s.id}>{s.name}</option>)}</select></Field></Flag>
+            <Flag on={hl && !d.site_name.trim()}><Field label="Site" hint="Start typing to pick one of ours, or type the customer's site." htmlFor="j-site">
+              <input id="j-site" list="j-sites" disabled={!editable} className={inputClass} value={d.site_name} autoComplete="off" placeholder="e.g. Customer quarry name"
+                onChange={e => { const t = e.target.value; const m = sites.find(s => s.name.toLowerCase() === t.trim().toLowerCase()); patch({ site_name: m ? m.name : t, site_id: m ? m.id : null }); }} />
+              <datalist id="j-sites">{sites.map(s => <option key={s.id} value={s.name} />)}</datalist>
+            </Field></Flag>
             <Flag on={hl && !d.location.trim()}><Field label="Location or address" optional htmlFor="j-loc"><input id="j-loc" disabled={!editable} className={inputClass} value={d.location} onChange={e => patch({ location: e.target.value })} /></Field></Flag>
             <Field label="Date of the job" htmlFor="j-date"><input id="j-date" type="date" disabled={!editable} className={inputClass} value={d.done_on ?? ''} onChange={e => patch({ done_on: e.target.value || null })} /></Field>
             <Flag on={hl && !d.supervisor_name.trim()}><Field label="Supervisor" htmlFor="j-sup">{editable ? <NameInput id="j-sup" value={d.supervisor_name} onChange={t => patch({ supervisor_name: t })} /> : <input id="j-sup" disabled className={inputClass} value={d.supervisor_name} readOnly />}</Field></Flag>
@@ -228,7 +232,7 @@ function JsaEditor({ jsa, start, onCopy, sites, officer, office, onClose }: { js
         )}
         {done && saved && <p className="m-0 text-xs text-muted">Completed {saved.completed_at ? formatDay(brisbaneDay(saved.completed_at)) : ''}{saved.completed_by_name ? ` by ${saved.completed_by_name}` : ''}. Reopen it to change anything.</p>}
       </div>
-      {saved && <JsaPrint jsa={saved} siteName={sites.find(s => s.id === saved.site_id)?.name ?? ''} />}
+      {saved && <JsaPrint jsa={saved} siteName={saved.site_name || sites.find(s => s.id === saved.site_id)?.name || ''} />}
     </div>
   );
 }

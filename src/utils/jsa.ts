@@ -11,6 +11,8 @@ export interface Jsa {
   ref: string;
   title: string;
   site_id: string | null;
+  /** The site as written: a Finlay site picked from the list, or any customer site typed in */
+  site_name: string;
   location: string;
   done_on: string | null;
   supervisor_name: string;
@@ -29,10 +31,10 @@ export interface Jsa {
   updated_at: string;
 }
 
-export type JsaContent = Pick<Jsa, 'title' | 'site_id' | 'location' | 'done_on' | 'supervisor_name' | 'crew' | 'work_covered' | 'steps' | 'high_risk_areas' | 'ppe' | 'permits' | 'emergency'>;
+export type JsaContent = Pick<Jsa, 'title' | 'site_id' | 'site_name' | 'location' | 'done_on' | 'supervisor_name' | 'crew' | 'work_covered' | 'steps' | 'high_risk_areas' | 'ppe' | 'permits' | 'emergency'>;
 
 export const EMPTY_JSA: JsaContent = {
-  title: '', site_id: null, location: '', done_on: null, supervisor_name: '', crew: '', work_covered: '', steps: [], high_risk_areas: [],
+  title: '', site_id: null, site_name: '', location: '', done_on: null, supervisor_name: '', crew: '', work_covered: '', steps: [], high_risk_areas: [],
   ppe: '', permits: '', emergency: '',
 };
 
@@ -42,9 +44,10 @@ export function needsSwms(j: Pick<Jsa, 'high_risk_areas'>): boolean {
 }
 
 /** What is missing before a JSA can be marked completed. Empty means ready. */
-export function jsaProblems(j: Pick<Jsa, 'title' | 'steps' | 'supervisor_name' | 'crew' | 'done_on'>): string[] {
+export function jsaProblems(j: Pick<Jsa, 'title' | 'steps' | 'supervisor_name' | 'crew' | 'done_on'> & Partial<Pick<Jsa, 'site_name'>>): string[] {
   const out: string[] = [];
   if (!j.title.trim()) out.push('Give the JSA a title.');
+  if (j.site_name !== undefined && !j.site_name.trim()) out.push('Enter the site.');
   if (!j.done_on) out.push('Enter the date of the job.');
   if (!j.supervisor_name.trim()) out.push('Enter the supervisor.');
   if (!j.crew.trim()) out.push('List the crew.');
