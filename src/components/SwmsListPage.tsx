@@ -86,7 +86,7 @@ export function SwmsListPage({ user }: { user: WhsUser }) {
         <div className="flex flex-wrap items-center gap-3">
           <div>
             <h2 className="m-0 text-[22px] font-bold">Safe work method statements</h2>
-            <p className="mt-1 mb-0 text-muted text-[15px]">Write, approve and review SWMS here. Only approved versions are used on site.</p>
+            <p className="mt-1 mb-0 text-muted text-[15px]">Write, approve and review SWMS here. Only approved versions are used on site. Not sure if you need a SWMS, a JSA or a SWI? <a href="#/m/risk/guide" className="font-semibold">See which document to use</a>.</p>
           </div>
           <span className="ml-auto flex gap-2">
             <button type="button" onClick={() => window.print()} className={btn}>Print register</button>
