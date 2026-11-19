@@ -12,6 +12,7 @@ import type { HistoryEntry } from '../utils/records.ts';
 import { afterLevel, beforeLevel, LEVELS, needsAttention, reviewBy, RISK_CATEGORIES, riskPill, riskIssues, sortRisks, type Risk, type RiskControl, type RiskReview } from '../utils/risks.ts';
 import { ErrorNote, Field, inputClass, textareaClass } from './Form.tsx';
 import { Pill } from './Pill.tsx';
+import { GuidedRating } from './GuidedRating.tsx';
 import { RatingGrid } from './RatingGrid.tsx';
 import { SidePanel, rowOpens, useListPanel } from './SidePanel.tsx';
 import { askConfirm } from './ConfirmHost.tsx';
@@ -210,9 +211,9 @@ function RiskForm({ risk, sites, onSaved, onCancel }: { risk?: Risk; sites: { id
         </Field>
       </div>
       <Field label="What could happen, and to whom" optional htmlFor="rk-desc"><textarea id="rk-desc" rows={3} value={f.description} onChange={e => setF({ ...f, description: e.target.value })} className={textareaClass} /></Field>
-      <div className="flex flex-wrap gap-6">
-        <RatingGrid label="Before controls" likelihood={before?.[0] ?? null} consequence={before?.[1] ?? null} onChange={(l, c) => setBefore([l, c])} />
-        <RatingGrid label="After controls (optional for now)" likelihood={after?.[0] ?? null} consequence={after?.[1] ?? null} onChange={(l, c) => setAfter([l, c])} />
+      <div className="grid md:grid-cols-2 gap-3 items-start">
+        <GuidedRating label="Before controls" question="How risky is this if nothing is done to control it?" likelihood={before?.[0] ?? null} consequence={before?.[1] ?? null} onChange={(l, c) => setBefore([l, c])} />
+        <GuidedRating label="After controls (optional for now)" question="How risky is it once the controls are in place?" likelihood={after?.[0] ?? null} consequence={after?.[1] ?? null} onChange={(l, c) => setAfter([l, c])} />
       </div>
       {!risk && (
         <div>
