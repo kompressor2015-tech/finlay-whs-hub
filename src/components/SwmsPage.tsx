@@ -17,7 +17,7 @@ import { contentOf, currentApproved, emptyStep, groupSteps, highAfterCount, HIGH
 import { askConfirm } from './ConfirmHost.tsx';
 import { ErrorNote, Field, inputClass, textareaClass } from './Form.tsx';
 import { Pill } from './Pill.tsx';
-import { RatingGrid } from './RatingGrid.tsx';
+import { GuidedRating } from './GuidedRating.tsx';
 import { SwmsPrint } from './SwmsPrint.tsx';
 import { SwmsSignOnSection } from './SwmsSignOnSection.tsx';
 import { SignaturePad } from './SignaturePad.tsx';
@@ -361,9 +361,9 @@ export function SwmsPage({ id, user }: { id: string; user: WhsUser }) {
                   </Field>
                   <Field label="Work sequence: what is done" htmlFor={`s-${i}-step`}><input id={`s-${i}-step`} value={s.step} onChange={e => setStep(i, { step: e.target.value })} className={inputClass} /></Field>
                   <Field label="Potential hazards" hint="What could hurt someone in this step" htmlFor={`s-${i}-haz`}><textarea id={`s-${i}-haz`} rows={2} value={s.hazard} onChange={e => setStep(i, { hazard: e.target.value })} className={textareaClass} /></Field>
-                  <div className="flex flex-wrap gap-6">
-                    <RatingGrid label="Inherent risk (before controls)" likelihood={s.before?.[0] ?? null} consequence={s.before?.[1] ?? null} onChange={(l, c) => setStep(i, { before: [l, c] })} />
-                    <RatingGrid label="Residual risk (after controls)" likelihood={s.after?.[0] ?? null} consequence={s.after?.[1] ?? null} onChange={(l, c) => setStep(i, { after: [l, c] })} />
+                  <div className="grid md:grid-cols-2 gap-3 items-start">
+                    <GuidedRating label="Inherent risk (before controls)" question="How risky is this step if nothing is done to control it?" likelihood={s.before?.[0] ?? null} consequence={s.before?.[1] ?? null} onChange={(l, c) => setStep(i, { before: [l, c] })} />
+                    <GuidedRating label="Residual risk (after controls)" question="How risky is it once the controls are in place?" likelihood={s.after?.[0] ?? null} consequence={s.after?.[1] ?? null} onChange={(l, c) => setStep(i, { after: [l, c] })} />
                   </div>
                   <Field label="Action / control measure" hint="One per line, best control first" htmlFor={`s-${i}-ctl`}><textarea id={`s-${i}-ctl`} rows={3} value={s.controls} onChange={e => setStep(i, { controls: e.target.value })} className={textareaClass} /></Field>
                   <Field label="Action by" optional htmlFor={`s-${i}-who`}><input id={`s-${i}-who`} value={s.who} onChange={e => setStep(i, { who: e.target.value })} className={inputClass} placeholder="Technician" /></Field>

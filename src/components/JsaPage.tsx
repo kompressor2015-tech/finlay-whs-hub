@@ -14,7 +14,7 @@ import { LEVELS, type RiskLevel, riskLevel } from '../utils/risks.ts';
 import { COMPANY } from '../utils/swms.ts';
 import { ErrorNote, Field, inputClass } from './Form.tsx';
 import { Pill } from './Pill.tsx';
-import { RatingGrid } from './RatingGrid.tsx';
+import { GuidedRating } from './GuidedRating.tsx';
 import { askConfirm } from './ConfirmHost.tsx';
 
 const th = 'px-2 py-3 font-semibold border-b border-[#EEEBE6] text-left';
@@ -257,9 +257,9 @@ function JsaEditor({ jsa, start, onCopy, sites, officer, office, onClose }: { js
                 {!editable && s.section && <div className="text-xs font-semibold text-muted uppercase tracking-wide">{s.section}</div>}
                 <Field label="What is done" htmlFor={`js-${i}-s`}><textarea id={`js-${i}-s`} rows={Math.min(8, Math.max(1, s.step.split('\n').length))} disabled={!editable} className={`${textareaClass} min-h-12`} value={s.step} onChange={e => setStep(i, { step: e.target.value })} /></Field>
                 <Field label="Hazards" hint="What could hurt someone in this step" htmlFor={`js-${i}-h`}><textarea id={`js-${i}-h`} rows={2} disabled={!editable} className={textareaClass} value={s.hazard} onChange={e => setStep(i, { hazard: e.target.value })} /></Field>
-                {editable && <Flag on={hl && (!s.before || !s.after)}><div className="flex flex-wrap gap-6">
-                  <RatingGrid label="Risk before controls" likelihood={s.before?.[0] ?? null} consequence={s.before?.[1] ?? null} onChange={(l, c) => setStep(i, { before: [l, c] })} />
-                  <RatingGrid label="Risk after controls" likelihood={s.after?.[0] ?? null} consequence={s.after?.[1] ?? null} onChange={(l, c) => setStep(i, { after: [l, c] })} />
+                {editable && <Flag on={hl && (!s.before || !s.after)}><div className="grid md:grid-cols-2 gap-3 items-start">
+                  <GuidedRating label="Risk before controls" question="How risky is this step if nothing is done to control it?" likelihood={s.before?.[0] ?? null} consequence={s.before?.[1] ?? null} onChange={(l, c) => setStep(i, { before: [l, c] })} />
+                  <GuidedRating label="Risk after controls" question="How risky is it once the controls above are in place?" likelihood={s.after?.[0] ?? null} consequence={s.after?.[1] ?? null} onChange={(l, c) => setStep(i, { after: [l, c] })} />
                 </div></Flag>}
                 <Field label="Controls" hint="One per line, best control first" htmlFor={`js-${i}-c`}><textarea id={`js-${i}-c`} rows={3} disabled={!editable} className={textareaClass} value={s.controls} onChange={e => setStep(i, { controls: e.target.value })} /></Field>
                 <Field label="Action by" optional htmlFor={`js-${i}-w`}><input id={`js-${i}-w`} disabled={!editable} className={inputClass} value={s.who} onChange={e => setStep(i, { who: e.target.value })} placeholder="Technician" /></Field>
