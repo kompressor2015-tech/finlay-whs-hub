@@ -1,6 +1,7 @@
 import { useCallback, useEffect, useMemo, useRef, useState, type FormEvent } from 'react';
 import { listDocuments } from '../services/documents.ts';
 import { docsForUnit } from '../utils/machineDocs.ts';
+import { takePlantUnit } from '../utils/plantOpen.ts';
 import { DOC_TYPES, docTypeLabel, reviewPill, type WhsDocument } from '../utils/documents.ts';
 import { clearFlag, latestFleetRatings, listChecks, listFleetUnits, listFlags, type FleetUnit } from '../services/checks.ts';
 import type { WhsUser } from '../services/auth.ts';
@@ -99,6 +100,12 @@ export function PlantPage({ user }: { user: WhsUser }) {
   // Panels are keyed by unit number, since a flagged unit may not be in the fleet register
   const panel = useListPanel(() => shown.map(u => u.unitNo));
   const rowCls = (unitNo: string) => `cursor-pointer ${panel.openId === unitNo ? 'bg-finlay-soft' : 'hover:bg-[#FAFAF9]'}`;
+  // Arriving from a document's "Our units" opens that unit
+  useEffect(() => {
+    const u = takePlantUnit();
+    if (u) panel.setOpenId(u);
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
   const openUnit = panel.openId ? panel.openId : null;
   const openUnitInfo = openUnit ? units.find(u => u.unitNo === openUnit) : undefined;
   const openUnitFlags = openUnit ? flags.filter(f => f.unit_no === openUnit) : [];
