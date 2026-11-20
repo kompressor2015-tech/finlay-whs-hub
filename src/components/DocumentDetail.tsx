@@ -3,6 +3,7 @@ import { NameInput } from './NameInput.tsx';
 import type { WhsUser } from '../services/auth.ts';
 import { listFleetUnits, type FleetUnit } from '../services/checks.ts';
 import { unitMatchesModel } from '../utils/machineDocs.ts';
+import { setPlantUnit } from '../utils/plantOpen.ts';
 import { addReview, deleteDocument, deleteReview, documentLink, getDocument, listReviews, openDocumentFile, updateDocument, updateVersion, uploadVersion } from '../services/documents.ts';
 import { hrefFor } from '../hooks/useRoute.ts';
 import { useSiteScope } from '../hooks/useSiteScope.tsx';
@@ -221,7 +222,7 @@ export function DocumentDetail({ id, user, embedded, onChanged }: { id: string; 
         {doc.machine_model && <><dt className="text-muted">Machine model</dt><dd className="m-0">{doc.machine_model}</dd></>}
         {doc.machine_model && <><dt className="text-muted">Our units</dt><dd className="m-0">{(() => {
           const units = fleet.filter(u => u.unitNo && unitMatchesModel(u.model, doc.machine_model));
-          return units.length ? units.map((u, i) => <span key={u.id}>{i > 0 && ', '}<a href={hrefFor({ name: 'module', id: 'plant' })} className="font-semibold text-finlay no-underline">{u.unitNo}</a></span>) : <span className="text-muted">None in the fleet register</span>;
+          return units.length ? units.map((u, i) => <span key={u.id}>{i > 0 && ', '}<a href={hrefFor({ name: 'module', id: 'plant' })} onClick={() => setPlantUnit(u.unitNo)} className="font-semibold text-finlay no-underline">{u.unitNo}</a></span>) : <span className="text-muted">None in the fleet register</span>;
         })()}</dd></>}
         {doc.notes && <><dt className="text-muted">Notes</dt><dd className="m-0 whitespace-pre-wrap">{doc.notes}</dd></>}
       </dl>
