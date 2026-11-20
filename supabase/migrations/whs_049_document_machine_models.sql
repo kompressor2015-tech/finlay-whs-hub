@@ -1,41 +1,36 @@
 -- whs_049: machine model on documents, spelled as the Fleet Hub model list (machine_models.model_name)
--- Fills blank models on SWI-055 onward and tidies earlier short forms. Only blank models are filled.
+-- One update per document. Only blank models are filled. The last query shows the result.
 
-update public.whs_documents d
-set machine_model = v.model
-from (values
-  ('055', '883+ Spaleck'),
-  ('057', '694+ Supertrak / 693 Supertrak'),
-  ('058', '683 Supertrak'),
-  ('060', 'C-1550'),
-  ('062', '984 Horizontal Screen'),
-  ('063', 'I-140RS'),
-  ('064', 'C-1545P'),
-  ('072', 'TC-80'),
-  ('075', 'I-120RS'),
-  ('076', 'I-140 / I-120RS'),
-  ('081', 'C-1550'),
-  ('083', 'TDS V20'),
-  ('084', 'TDS 820'),
-  ('085', 'TTS 620'),
-  ('090', 'C-1545P'),
-  ('091', 'IC-110RS'),
-  ('092', '696 2D Supertrak / 696 3D Supertrak'),
-  ('093', '696 2D Supertrak / 696 3D Supertrak'),
-  ('096', 'J-1480'),
-  ('097', 'C-1550'),
-  ('099', 'TTS 620T')
-) as v(n, model)
-where d.doc_type = 'swi'
-  and regexp_replace(d.doc_no, '[^0-9]', '', 'g') = v.n
-  and coalesce(trim(d.machine_model), '') = '';
+update public.whs_documents set machine_model = '883+ Spaleck' where doc_type = 'swi' and regexp_replace(doc_no, '[^0-9]', '', 'g') = '055' and coalesce(trim(machine_model), '') = '';
+update public.whs_documents set machine_model = '694+ Supertrak / 693 Supertrak' where doc_type = 'swi' and regexp_replace(doc_no, '[^0-9]', '', 'g') = '057' and coalesce(trim(machine_model), '') = '';
+update public.whs_documents set machine_model = '683 Supertrak' where doc_type = 'swi' and regexp_replace(doc_no, '[^0-9]', '', 'g') = '058' and coalesce(trim(machine_model), '') = '';
+update public.whs_documents set machine_model = 'C-1550' where doc_type = 'swi' and regexp_replace(doc_no, '[^0-9]', '', 'g') = '060' and coalesce(trim(machine_model), '') = '';
+update public.whs_documents set machine_model = '984 Horizontal Screen' where doc_type = 'swi' and regexp_replace(doc_no, '[^0-9]', '', 'g') = '062' and coalesce(trim(machine_model), '') = '';
+update public.whs_documents set machine_model = 'I-140RS' where doc_type = 'swi' and regexp_replace(doc_no, '[^0-9]', '', 'g') = '063' and coalesce(trim(machine_model), '') = '';
+update public.whs_documents set machine_model = 'C-1545P' where doc_type = 'swi' and regexp_replace(doc_no, '[^0-9]', '', 'g') = '064' and coalesce(trim(machine_model), '') = '';
+update public.whs_documents set machine_model = 'TC-80' where doc_type = 'swi' and regexp_replace(doc_no, '[^0-9]', '', 'g') = '072' and coalesce(trim(machine_model), '') = '';
+update public.whs_documents set machine_model = 'I-120RS' where doc_type = 'swi' and regexp_replace(doc_no, '[^0-9]', '', 'g') = '075' and coalesce(trim(machine_model), '') = '';
+update public.whs_documents set machine_model = 'I-140 / I-120RS' where doc_type = 'swi' and regexp_replace(doc_no, '[^0-9]', '', 'g') = '076' and coalesce(trim(machine_model), '') = '';
+update public.whs_documents set machine_model = 'C-1550' where doc_type = 'swi' and regexp_replace(doc_no, '[^0-9]', '', 'g') = '081' and coalesce(trim(machine_model), '') = '';
+update public.whs_documents set machine_model = 'TDS V20' where doc_type = 'swi' and regexp_replace(doc_no, '[^0-9]', '', 'g') = '083' and coalesce(trim(machine_model), '') = '';
+update public.whs_documents set machine_model = 'TDS 820' where doc_type = 'swi' and regexp_replace(doc_no, '[^0-9]', '', 'g') = '084' and coalesce(trim(machine_model), '') = '';
+update public.whs_documents set machine_model = 'TTS 620' where doc_type = 'swi' and regexp_replace(doc_no, '[^0-9]', '', 'g') = '085' and coalesce(trim(machine_model), '') = '';
+update public.whs_documents set machine_model = 'C-1545P' where doc_type = 'swi' and regexp_replace(doc_no, '[^0-9]', '', 'g') = '090' and coalesce(trim(machine_model), '') = '';
+update public.whs_documents set machine_model = 'IC-110RS' where doc_type = 'swi' and regexp_replace(doc_no, '[^0-9]', '', 'g') = '091' and coalesce(trim(machine_model), '') = '';
+update public.whs_documents set machine_model = '696 2D Supertrak / 696 3D Supertrak' where doc_type = 'swi' and regexp_replace(doc_no, '[^0-9]', '', 'g') = '092' and coalesce(trim(machine_model), '') = '';
+update public.whs_documents set machine_model = '696 2D Supertrak / 696 3D Supertrak' where doc_type = 'swi' and regexp_replace(doc_no, '[^0-9]', '', 'g') = '093' and coalesce(trim(machine_model), '') = '';
+update public.whs_documents set machine_model = 'J-1480' where doc_type = 'swi' and regexp_replace(doc_no, '[^0-9]', '', 'g') = '096' and coalesce(trim(machine_model), '') = '';
+update public.whs_documents set machine_model = 'C-1550' where doc_type = 'swi' and regexp_replace(doc_no, '[^0-9]', '', 'g') = '097' and coalesce(trim(machine_model), '') = '';
+update public.whs_documents set machine_model = 'TTS 620T' where doc_type = 'swi' and regexp_replace(doc_no, '[^0-9]', '', 'g') = '099' and coalesce(trim(machine_model), '') = '';
 
 -- Earlier short forms to the Fleet Hub spelling
-update public.whs_documents set machine_model = '683 Supertrak' where machine_model = '683';
-update public.whs_documents set machine_model = '693 Supertrak' where machine_model = '693';
+update public.whs_documents set machine_model = '683 Supertrak' where machine_model in ('683');
+update public.whs_documents set machine_model = '693 Supertrak' where machine_model in ('693');
 update public.whs_documents set machine_model = '694+ Supertrak' where machine_model in ('694', '694+');
 update public.whs_documents set machine_model = '883+ Spaleck' where machine_model in ('883', '883+');
-update public.whs_documents set machine_model = '984 Horizontal Screen' where machine_model = '984';
+update public.whs_documents set machine_model = '984 Horizontal Screen' where machine_model in ('984');
 update public.whs_documents set machine_model = 'C-1540 / C-1540P' where machine_model in ('C-1540', 'C-1540P');
 
 notify pgrst, 'reload schema';
+
+select doc_no, title, machine_model from public.whs_documents where doc_type = 'swi' and machine_model <> '' order by doc_no;
