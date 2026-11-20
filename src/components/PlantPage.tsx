@@ -1,4 +1,7 @@
 import { useCallback, useEffect, useMemo, useRef, useState, type FormEvent } from 'react';
+import { listDocuments } from '../services/documents.ts';
+import { docsForUnit } from '../utils/machineDocs.ts';
+import { DOC_TYPES, docTypeLabel, reviewPill, type WhsDocument } from '../utils/documents.ts';
 import { clearFlag, latestFleetRatings, listChecks, listFleetUnits, listFlags, type FleetUnit } from '../services/checks.ts';
 import type { WhsUser } from '../services/auth.ts';
 import { hrefFor } from '../hooks/useRoute.ts';
@@ -66,12 +69,14 @@ export function PlantPage({ user }: { user: WhsUser }) {
   const [units, setUnits] = useState<FleetUnit[]>([]);
   const [ratings, setRatings] = useState<Map<string, { rating: string; at: string }>>(new Map());
   const [prestarts, setPrestarts] = useState<Check[]>([]);
+  const [docs, setDocs] = useState<WhsDocument[]>([]);
   const [error, setError] = useState<string | null>(null);
   const [clearing, setClearing] = useState<PlantFlag | null>(null);
   const [q, setQ] = useState('');
 
   const load = useCallback(async () => {
-    const [f, u, r, c] = await Promise.all([listFlags(), listFleetUnits(), latestFleetRatings(), listChecks(60)]);
+    const [f, u, r, c, d] = await Promise.all([listFlags(), listFleetUnits(), latestFleetRatings(), listChecks(60), listDocuments()]);
+    setDocs(d.data ?? []);
     setError(f.error ?? null);
     setFlags(f.data ?? []);
     setUnits(u);
@@ -97,6 +102,7 @@ export function PlantPage({ user }: { user: WhsUser }) {
   const openUnit = panel.openId ? panel.openId : null;
   const openUnitInfo = openUnit ? units.find(u => u.unitNo === openUnit) : undefined;
   const openUnitFlags = openUnit ? flags.filter(f => f.unit_no === openUnit) : [];
+  const openUnitDocs = useMemo(() => (openUnitInfo ? docsForUnit(openUnitInfo.model, docs) : []), [openUnitInfo, docs]);
   const openUnitChecks = openUnit ? prestarts.filter(c => c.unit_no === openUnit).slice(0, 8) : [];
 
   return (
@@ -205,6 +211,23 @@ export function PlantPage({ user }: { user: WhsUser }) {
             <div><dt className="text-muted text-[13px]">Guarding</dt><dd className="mt-0.5 ml-0 font-medium">{openUnitInfo?.guarding ? openUnitInfo.guarding.charAt(0) + openUnitInfo.guarding.slice(1).toLowerCase().replace('_', ' ') : 'Not checked'}</dd></div>
             {openUnitInfo?.hours != null && <div><dt className="text-muted text-[13px]">Hours</dt><dd className="mt-0.5 ml-0 font-medium">{openUnitInfo.hours.toLocaleString('en-AU')}</dd></div>}
           </dl>
+
+          <section>
+            <h3 className="mt-0 mb-2 text-[15px] font-semibold">Documents for this machine</h3>
+            {openUnitDocs.length === 0 ? <p className="m-0 text-sm text-muted">{openUnitInfo ? 'No documents are linked to this model yet. A document is linked when its machine model matches.' : 'Not in the fleet register.'}</p> : (
+              <ul className="m-0 p-0 list-none border border-line rounded-xl overflow-hidden">
+                {DOC_TYPES.filter(t => openUnitDocs.some(d => d.doc_type === t.id)).flatMap(t => openUnitDocs.filter(d => d.doc_type === t.id).map(d => {
+                  const rp = reviewPill(d);
+                  return (
+                    <li key={d.id} className="flex items-center gap-3 px-3.5 py-2.5 border-b border-line-soft last:border-b-0 text-sm">
+                      <a href={hrefFor({ name: 'document', id: d.id })} className="flex-1 min-w-0"><span className="text-muted">{docTypeLabel(d.doc_type)}{d.doc_no ? ` ${d.doc_no}` : ''}</span><span className="block font-medium">{d.title}</span></a>
+                      <Pill tone={rp.tone}>{rp.label}</Pill>
+                    </li>
+                  );
+                }))}
+              </ul>
+            )}
+          </section>
 
           <section>
             <h3 className="mt-0 mb-2 text-[15px] font-semibold">Recent pre-starts</h3>

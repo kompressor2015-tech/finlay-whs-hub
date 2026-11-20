@@ -1,6 +1,8 @@
 import { useEffect, useState, type FormEvent } from 'react';
 import { NameInput } from './NameInput.tsx';
 import type { WhsUser } from '../services/auth.ts';
+import { listFleetUnits, type FleetUnit } from '../services/checks.ts';
+import { unitMatchesModel } from '../utils/machineDocs.ts';
 import { addReview, deleteDocument, deleteReview, documentLink, getDocument, listReviews, openDocumentFile, updateDocument, updateVersion, uploadVersion } from '../services/documents.ts';
 import { hrefFor } from '../hooks/useRoute.ts';
 import { useSiteScope } from '../hooks/useSiteScope.tsx';
@@ -27,6 +29,8 @@ export function DocumentDetail({ id, user, embedded, onChanged }: { id: string; 
   const { sites } = useSiteScope();
   const [doc, setDoc] = useState<WhsDocument | null>(null);
   const [versions, setVersions] = useState<DocVersion[]>([]);
+  const [fleet, setFleet] = useState<FleetUnit[]>([]);
+  useEffect(() => { void listFleetUnits().then(setFleet); }, []);
   const [form, setForm] = useState<WhsDocument | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [busy, setBusy] = useState(false);
@@ -215,6 +219,10 @@ export function DocumentDetail({ id, user, embedded, onChanged }: { id: string; 
         <dt className="text-muted">Last reviewed</dt><dd className="m-0">{doc.reviewed_on ? `${formatDay(doc.reviewed_on)}${doc.reviewed_by_name ? ` by ${doc.reviewed_by_name}` : ''}` : 'Not yet'}</dd>
         <dt className="text-muted">Review by</dt><dd className="m-0">{by ? formatDay(by) : 'Set when it is first reviewed'}</dd>
         {doc.machine_model && <><dt className="text-muted">Machine model</dt><dd className="m-0">{doc.machine_model}</dd></>}
+        {doc.machine_model && <><dt className="text-muted">Our units</dt><dd className="m-0">{(() => {
+          const units = fleet.filter(u => u.unitNo && unitMatchesModel(u.model, doc.machine_model));
+          return units.length ? units.map((u, i) => <span key={u.id}>{i > 0 && ', '}<a href={hrefFor({ name: 'module', id: 'plant' })} className="font-semibold text-finlay no-underline">{u.unitNo}</a></span>) : <span className="text-muted">None in the fleet register</span>;
+        })()}</dd></>}
         {doc.notes && <><dt className="text-muted">Notes</dt><dd className="m-0 whitespace-pre-wrap">{doc.notes}</dd></>}
       </dl>
 
